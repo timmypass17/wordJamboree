@@ -6,6 +6,9 @@
 //
 
 import UIKit
+import FirebaseCore
+import GoogleSignIn
+import FirebaseAuth
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -14,7 +17,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        FirebaseApp.configure()
         return true
+    }
+    
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+      return GIDSignIn.sharedInstance.handle(url)
     }
 
     // MARK: UISceneSession Lifecycle
@@ -34,3 +42,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 }
 
+
+func startSignInWithGoogleFlow(_ viewControlller: UIViewController) async -> AuthDataResult? {
+    guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
+    
+    let config = GIDConfiguration(clientID: clientID)
+    GIDSignIn.sharedInstance.configuration = config
+    
+    // Start the google sign in flow!
+    do {
+        let result: GIDSignInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller)
+        let user: GIDGoogleUser = result.user
+        guard let idToken = user.idToken?.tokenString else { return nil }
+        
+        let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
+        let res = try await Auth.auth().signIn(with: credential)
+        
+        return res
+    } catch {
+        print("Error google signing: \(error)")
+        return nil
+    }
+}
