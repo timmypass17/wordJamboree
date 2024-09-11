@@ -13,13 +13,13 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "timmypass21's room"
+//        label.text = "timmypass21's room"
         return label
     }()
     
     let codeLabel: UILabel = {
         let label = UILabel()
-        label.text = "#ACAS"
+        label.text = "#ABCD"
         label.textColor = .secondaryLabel
         return label
     }()
@@ -34,7 +34,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     let playersCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "2 / 4"
+        label.text = "0 / 4"
         return label
     }()
     
@@ -97,6 +97,10 @@ class RoomCollectionViewCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
+    func update(room: Room) {
+        titleLabel.text = room.title
+        playersCountLabel.text = "\(room.currentPlayerCount) / 4"
+    }
 }
 
 #Preview("RoomCollectionViewCell") {

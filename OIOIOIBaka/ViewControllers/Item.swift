@@ -9,10 +9,18 @@ import Foundation
 
 enum Item: Hashable {
     case buttons
-    case room(Room)
+    case room(String, Room)
+    
+    var roomID: String? {
+        if case .room(let roomID, _) = self {
+            return roomID
+        } else {
+            return nil
+        }
+    }
     
     var room: Room? {
-        if case .room(let room) = self {
+        if case .room(_, let room) = self {
             return room
         } else {
             return nil

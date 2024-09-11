@@ -61,9 +61,12 @@ class HomeViewController: UIViewController {
         setupCollectionView()
         
         loadRooms()
+        
     }
     
     private func setupCollectionView() {
+        collectionView.delegate = self
+        
         view.addSubview(collectionView)
 
         NSLayoutConstraint.activate([
@@ -171,7 +174,7 @@ class HomeViewController: UIViewController {
     
     private func createDataSource() -> UICollectionViewDiffableDataSource<Section, Item> {
         // Manages data and provides cells
-        let dataSource = UICollectionViewDiffableDataSource<Section, Item>(collectionView: collectionView) { collectionView, indexPath, itemIdentifier in
+        let dataSource = UICollectionViewDiffableDataSource<Section, Item>(collectionView: collectionView) { collectionView, indexPath, item in
             let section = self.sections[indexPath.section]
             switch section {
             case .header:
@@ -180,6 +183,7 @@ class HomeViewController: UIViewController {
                 return cell
             case .rooms:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RoomCollectionViewCell.reuseIdentifier, for: indexPath) as! RoomCollectionViewCell
+                cell.update(room: item.room!)
                 return cell
             }
         }
@@ -234,21 +238,50 @@ class HomeViewController: UIViewController {
     }
     
     private func loadRooms() {
-        service.loadRooms { rooms in
-            print("Got rooms: \(rooms.count)")
+        service.getRooms { roomsDict in
             var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
             snapshot.appendSections([.header, .rooms])
             snapshot.appendItems([.buttons], toSection: .header)
-            snapshot.appendItems(rooms.map { Item.room($0.value) }, toSection: .rooms)
+            snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }, toSection: .rooms)
             self.dataSource.apply(snapshot)
         }
     }
 
 }
 
+extension HomeViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let item = dataSource.itemIdentifier(for: indexPath),
+              let user = service.currentUser
+        else {
+            return
+        }
+        
+        // client side validation
+        guard item.room!.currentPlayerCount < 4 else {
+            roomFullErrorAlert(self)
+            return
+        }
+
+        Task {
+            do {
+                try await service.addUserToRoom(user: user, roomID: item.roomID!)
+                let gameViewController = GameViewController()
+                navigationController?.pushViewController(gameViewController, animated: true)
+            } catch {
+                // security rule validaiton
+                roomFullErrorAlert(self)
+            }
+        }
+    }
+}
+
 extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
     func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapCreateRoom: Bool) {
-        guard let user = service.currentUser else { return }
+        guard let user = service.currentUser else {
+            print("User not found")
+            return
+        }
         let createRoomViewController = CreateRoomViewController()
         createRoomViewController.service = service
         createRoomViewController.navigationItem.title = "\(user.name)'s room"

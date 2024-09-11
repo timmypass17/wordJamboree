@@ -23,6 +23,13 @@
 		326F93E42C8CEA0C00B28F04 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 326F93E32C8CEA0C00B28F04 /* GoogleSignIn */; };
 		326F93E62C8CEA0C00B28F04 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 326F93E52C8CEA0C00B28F04 /* GoogleSignInSwift */; };
 		32C06C592C90E85200D3676D /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C582C90E85200D3676D /* Item.swift */; };
+		32C06C5B2C90F41900D3676D /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C5A2C90F41900D3676D /* PlayerView.swift */; };
+		32C06C5D2C90F6D800D3676D /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C5C2C90F6D800D3676D /* ProfileImageView.swift */; };
+		32C06C5F2C9104DB00D3676D /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C5E2C9104DB00D3676D /* GameViewController.swift */; };
+		32C06C612C9106A200D3676D /* CurrentWordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C602C9106A200D3676D /* CurrentWordView.swift */; };
+		32C06C632C91082200D3676D /* GameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C622C91082200D3676D /* GameManager.swift */; };
+		32C06C652C9132B200D3676D /* HeartsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C642C9132B200D3676D /* HeartsView.swift */; };
+		32C06C672C91473F00D3676D /* IncomingMove.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C662C91473F00D3676D /* IncomingMove.swift */; };
 		32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D22C8E70D4000850A5 /* FirebaseService.swift */; };
 		32EF33D62C8E7247000850A5 /* MyUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D52C8E7247000850A5 /* MyUser.swift */; };
 		32EF33D82C8E7E81000850A5 /* CreateRoomViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D72C8E7E81000850A5 /* CreateRoomViewController.swift */; };
@@ -44,6 +51,13 @@
 		326F93D32C8BE2B100B28F04 /* RoomCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCollectionViewCell.swift; sourceTree = "<group>"; };
 		326F93E02C8CE9C600B28F04 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		32C06C582C90E85200D3676D /* Item.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Item.swift; sourceTree = "<group>"; };
+		32C06C5A2C90F41900D3676D /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
+		32C06C5C2C90F6D800D3676D /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
+		32C06C5E2C9104DB00D3676D /* GameViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
+		32C06C602C9106A200D3676D /* CurrentWordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentWordView.swift; sourceTree = "<group>"; };
+		32C06C622C91082200D3676D /* GameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameManager.swift; sourceTree = "<group>"; };
+		32C06C642C9132B200D3676D /* HeartsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartsView.swift; sourceTree = "<group>"; };
+		32C06C662C91473F00D3676D /* IncomingMove.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingMove.swift; sourceTree = "<group>"; };
 		32EF33D22C8E70D4000850A5 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		32EF33D52C8E7247000850A5 /* MyUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyUser.swift; sourceTree = "<group>"; };
 		32EF33D72C8E7E81000850A5 /* CreateRoomViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRoomViewController.swift; sourceTree = "<group>"; };
@@ -100,6 +114,7 @@
 				326F93BE2C8B928F00B28F04 /* Info.plist */,
 				326F93E02C8CE9C600B28F04 /* GoogleService-Info.plist */,
 				32EF33D22C8E70D4000850A5 /* FirebaseService.swift */,
+				32C06C622C91082200D3676D /* GameManager.swift */,
 			);
 			path = OIOIOIBaka;
 			sourceTree = "<group>";
@@ -110,6 +125,7 @@
 				326F93B42C8B928E00B28F04 /* HomeViewController.swift */,
 				32EF33D72C8E7E81000850A5 /* CreateRoomViewController.swift */,
 				32C06C582C90E85200D3676D /* Item.swift */,
+				32C06C5E2C9104DB00D3676D /* GameViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -118,6 +134,10 @@
 			isa = PBXGroup;
 			children = (
 				326F93D12C8BD95600B28F04 /* LineView.swift */,
+				32C06C5A2C90F41900D3676D /* PlayerView.swift */,
+				32C06C5C2C90F6D800D3676D /* ProfileImageView.swift */,
+				32C06C602C9106A200D3676D /* CurrentWordView.swift */,
+				32C06C642C9132B200D3676D /* HeartsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -137,6 +157,7 @@
 			children = (
 				32EF33D52C8E7247000850A5 /* MyUser.swift */,
 				32EF33DB2C8E8E2D000850A5 /* Room.swift */,
+				32C06C662C91473F00D3676D /* IncomingMove.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -232,6 +253,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				32C06C672C91473F00D3676D /* IncomingMove.swift in Sources */,
 				326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */,
 				32EF33DA2C8E801F000850A5 /* RoomTitleTableViewCell.swift in Sources */,
 				326F93B12C8B928E00B28F04 /* AppDelegate.swift in Sources */,
@@ -239,7 +261,13 @@
 				32C06C592C90E85200D3676D /* Item.swift in Sources */,
 				326F93D22C8BD95600B28F04 /* LineView.swift in Sources */,
 				32EF33D82C8E7E81000850A5 /* CreateRoomViewController.swift in Sources */,
+				32C06C632C91082200D3676D /* GameManager.swift in Sources */,
+				32C06C652C9132B200D3676D /* HeartsView.swift in Sources */,
+				32C06C5B2C90F41900D3676D /* PlayerView.swift in Sources */,
+				32C06C5D2C90F6D800D3676D /* ProfileImageView.swift in Sources */,
 				32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */,
+				32C06C612C9106A200D3676D /* CurrentWordView.swift in Sources */,
+				32C06C5F2C9104DB00D3676D /* GameViewController.swift in Sources */,
 				326F93CD2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift in Sources */,
 				326F93D42C8BE2B200B28F04 /* RoomCollectionViewCell.swift in Sources */,
 				32EF33D62C8E7247000850A5 /* MyUser.swift in Sources */,

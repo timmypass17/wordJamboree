@@ -12,4 +12,5 @@ struct Room: Codable, Hashable { // hashable for collection item
     var creatorID: String
     var title: String
     var createdAt = FirebaseFirestore.Timestamp()
+    var currentPlayerCount: Int
 }
