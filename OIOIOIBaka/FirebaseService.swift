@@ -58,11 +58,27 @@ class FirebaseService {
         guard let currentUser else { return }
 
         do {
+            let roomRef = ref.child("rooms").childByAutoId()
+            let roomID = roomRef.key!
+            
             let room = Room(creatorID: currentUser.uid, title: title, currentPlayerCount: 1)
-            try await ref.child("rooms").childByAutoId().setValue(room.toDictionary())
-            print("Created room successfully")
+            
+            let game = Game(players: [
+                currentUser.uid: true
+            ])
+            
+            // simultaneous updates
+            let updates: [String: Any] = [
+                "/rooms/\(roomID)": room.toDictionary()!,
+                "/games/\(roomID)": game.toDictionary()!
+            ]
+            
+            // atomic - either all updates succeed or all updates fail
+            try await ref.updateChildValues(updates)
+            
+            print("Created room and game successfully with roomID: \(roomID)")
         } catch {
-            print("Error creating user: \(error)")
+            print("Error creating room and game: \(error)")
         }
     }
     
