@@ -48,38 +48,45 @@ class FirebaseService {
         do {
             let userToAdd = MyUser(name: generateRandomUsername(), uid: user.uid)
             try await ref.child("users").child(user.uid).setValue(userToAdd.toDictionary())
+            currentUser = userToAdd
             print("Created user successfully: \(user.uid)")
         } catch {
             print("Error creating user: \(error)")
         }
     }
     
-    func createRoom(title: String) async {
-        guard let currentUser else { return }
+    func createRoom(title: String) async throws -> (String, Room) {
+        guard let currentUser else { throw FirebaseServiceError.userNotLoggedIn }
 
-        do {
-            let roomRef = ref.child("rooms").childByAutoId()
-            let roomID = roomRef.key!
-            
-            let room = Room(creatorID: currentUser.uid, title: title, currentPlayerCount: 1)
-            
-            let game = Game(players: [
+        let roomRef = ref.child("rooms").childByAutoId()
+        let roomID = roomRef.key!
+        
+        let room = Room(creatorID: currentUser.uid, title: title, currentPlayerCount: 1)
+        
+        let game = Game(
+            roomID: roomID,
+            currentLetters: GameManager.generateRandomLetters(),
+            players: [
                 currentUser.uid: true
-            ])
-            
-            // simultaneous updates
-            let updates: [String: Any] = [
-                "/rooms/\(roomID)": room.toDictionary()!,
-                "/games/\(roomID)": game.toDictionary()!
-            ]
-            
-            // atomic - either all updates succeed or all updates fail
-            try await ref.updateChildValues(updates)
-            
-            print("Created room and game successfully with roomID: \(roomID)")
-        } catch {
-            print("Error creating room and game: \(error)")
-        }
+            ],
+            positions: [
+                currentUser.uid: 0
+            ],
+            currentPlayerTurn: currentUser.uid
+        )
+        
+        // simultaneous updates (u can observe nodes only, but can update specific fields using path)
+        let updates: [String: Any] = [
+            "/rooms/\(roomID)": room.toDictionary()!,
+            "/games/\(roomID)": game.toDictionary()!
+        ]
+        
+        // atomic - either all updates succeed or all updates fail
+        try await ref.updateChildValues(updates)
+        print("Created room and game successfully with roomID: \(roomID)")
+        
+        return (roomID, room)
+        
     }
     
     func getRooms(completion: @escaping ([String: Room]) -> ()) {
@@ -93,16 +100,80 @@ class FirebaseService {
         }
     }
     
-    // 1. increment room's player count (client, cloud functions detect updated room and do 2.)
-    // 2. add user to game's document's players array (see google doc)
-    func addUserToRoom(user: MyUser, roomID: String) async throws {
-        try await ref.child("rooms").child(roomID).updateChildValues([
-            "currentPlayerCount": ServerValue.increment(1)
-        ])
-        print("Added \(user.name) to room \(roomID) successfully")
+    // Note: Firebase rules rejects this join request if room is full
+    func addUserToRoom(user: MyUser, room: Room, roomID: String) async throws {
+        // simple client side validation (do client and security rule and cloud funtions?)
+        // Check if room is full
+        guard room.currentPlayerCount < 4 else { throw RoomError.roomFull }
+        
+        let gameSnapshot = try await ref.child("games").child(roomID).getData()    // can only ref nodes, not fields directly
+        guard let game = gameSnapshot.toObject(Game.self) else { throw FirebaseServiceError.invalidObject }
+        
+        // players nil means empty room
+        if let players = game.players {
+            guard players[user.uid] == nil else { throw RoomError.alreadyJoined }
+        }
+        
+        do {
+            try await ref.updateChildValues([
+                "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1),
+                "/games/\(roomID)/players/\(user.uid)": true
+            ])
+            print("Added \(user.name) to room \(roomID) successfully")
+        } catch {
+            throw RoomError.securityRule
+        }
     }
     
+    
     func addIncomingMove(incomingMove: IncomingMove) {
+    }
+    
+//    func getGame(roomID: String, completion: @escaping (Game) -> ()) {
+//        ref.child("games").child(roomID).observe(.value) { snapshot in
+//            guard let game = snapshot.toObject(Game.self) else {
+//                completion()
+//                return
+//            }
+//            
+//            completion(game)
+//        }
+//    }
+    
+    
+}
+
+extension FirebaseService {
+    enum RoomError: Error {
+        case roomFull
+        case alreadyJoined
+        case securityRule
+        
+        var localizedDescription: String {
+            switch self {
+            case .roomFull:
+                return "Can not join room, room is full"
+            case .alreadyJoined:
+                return "User is already in room"
+            case .securityRule:
+                return "Security rule did not allow this request"
+            }
+        }
+    }
+    
+}
+
+enum FirebaseServiceError: Error {
+    case userNotLoggedIn
+    case invalidObject
+    
+    var localizedDescription: String {
+        switch self {
+        case .userNotLoggedIn:
+            return "User is not logged in. Please log in to continue."
+        case .invalidObject:
+            return "Failed to convert snapshot to object"
+        }
     }
 }
 
@@ -166,3 +237,14 @@ func roomFullErrorAlert(_ viewController: UIViewController) {
     alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Default action"), style: .default, handler: { _ in }))
     viewController.present(alert, animated: true, completion: nil)
 }
+
+func alreadyJoinedErrorAlert(_ viewController: UIViewController) {
+    let alert = UIAlertController(
+        title: "Already joined.",
+        message: "This shouldn't happen, user should removed when leaving game",
+        preferredStyle: .alert)
+    
+    alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Default action"), style: .default, handler: { _ in }))
+    viewController.present(alert, animated: true, completion: nil)
+}
+

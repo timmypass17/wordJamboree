@@ -7,6 +7,10 @@
 
 import UIKit
 
+protocol CreateRoomViewControllerDelegate: AnyObject {
+    func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String)
+}
+
 class CreateRoomViewController: UIViewController, UITableViewDelegate {
     
     let tableView: UITableView = {
@@ -18,13 +22,13 @@ class CreateRoomViewController: UIViewController, UITableViewDelegate {
     enum Section: Int, CaseIterable {
         case title
     }
-    
-//    let sections: [Section] = [.title]
-    
+        
     var cancelButton: UIBarButtonItem!
     var createButton: UIBarButtonItem!
     
-    var service: FirebaseService?
+    var service: FirebaseService!
+    
+    weak var delegate: CreateRoomViewControllerDelegate?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -58,7 +62,12 @@ class CreateRoomViewController: UIViewController, UITableViewDelegate {
         return UIAction { _ in
             // Create Room document in Firebase
             Task {
-                await self.service?.createRoom(title: "timmy's room")
+                do {
+                    let (roomID, room) = try await self.service.createRoom(title: "timmy's room")
+                    self.delegate?.createRoomViewController(self, didCreateRoom: room, roomID: roomID)
+                } catch let error as FirebaseServiceError {
+                    print("Failed to create room: \(error.localizedDescription)")
+                }
             }
             self.dismiss(animated: true)
         }

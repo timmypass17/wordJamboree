@@ -251,27 +251,50 @@ class HomeViewController: UIViewController {
 
 extension HomeViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        didTapRoom(at: indexPath)
+    }
+    
+    func didTapRoom(at indexPath: IndexPath) {
         guard let item = dataSource.itemIdentifier(for: indexPath),
               let user = service.currentUser
         else {
+            print("User not found")
             return
         }
         
-        // client side validation
-        guard item.room!.currentPlayerCount < 4 else {
-            roomFullErrorAlert(self)
-            return
-        }
-
         Task {
-            do {
-                try await service.addUserToRoom(user: user, roomID: item.roomID!)
-                let gameViewController = GameViewController()
-                navigationController?.pushViewController(gameViewController, animated: true)
-            } catch {
-                // security rule validaiton
+            await addUserToRoom(user: user, room: item.room!, roomID: item.roomID!)
+        }
+    }
+    
+    func addUserToRoom(user: MyUser, room: Room, roomID: String) async {
+        do {
+            try await service.addUserToRoom(user: user, room: room, roomID: roomID)
+            let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
+            navigationController?.pushViewController(gameViewController, animated: true)
+        } catch let error as FirebaseService.RoomError  {
+            switch error {
+            case .roomFull:
                 roomFullErrorAlert(self)
+                break
+            case .alreadyJoined:
+                alreadyJoinedErrorAlert(self)
+                break
+            case .securityRule:
+                break
             }
+        } catch let error as FirebaseServiceError {
+            switch error {
+            case .userNotLoggedIn:
+                print("User not logged in")
+                break
+            case .invalidObject:
+                // TODO: Uncomment in production, should never fail, for debugging
+                fatalError(error.localizedDescription)
+                break
+            }
+        } catch {
+            print("Some other error: \(error)")
         }
     }
 }
@@ -284,6 +307,7 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
         }
         let createRoomViewController = CreateRoomViewController()
         createRoomViewController.service = service
+        createRoomViewController.delegate = self
         createRoomViewController.navigationItem.title = "\(user.name)'s room"
         present(UINavigationController(rootViewController: createRoomViewController), animated: true)
     }
@@ -292,6 +316,12 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
         print(#function)
     }
     
+}
+extension HomeViewController: CreateRoomViewControllerDelegate {
+    func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String) {
+        let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
+        navigationController?.pushViewController(gameViewController, animated: true)
+    }
 }
 
 #Preview {

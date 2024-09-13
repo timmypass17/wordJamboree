@@ -20,6 +20,7 @@ class GameViewController: UIViewController {
         let p2View = PlayerView()
         p2View.nameLabel.text = "P2"
         p2View.wordTextField.isEnabled = false
+//        p2View.isHidden = true
         p2View.translatesAutoresizingMaskIntoConstraints = false
         return p2View
     }()
@@ -30,10 +31,25 @@ class GameViewController: UIViewController {
         return currentWordView
     }()
     
-    let gameManager = GameManager()
+    var gameManager: GameManager
+    
+    var exitBarButton: UIBarButtonItem!
+    
+    init(gameManager: GameManager) {
+        self.gameManager = gameManager
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        navigationItem.setHidesBackButton(true, animated: true)
+        exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
+        navigationItem.rightBarButtonItem = exitBarButton
+        
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillDisappear), name: UIResponder.keyboardWillHideNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillAppear), name: UIResponder.keyboardWillShowNotification, object: nil)
         
@@ -55,11 +71,12 @@ class GameViewController: UIViewController {
             p1View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
         ])
         
-        gameManager.generateRandomLetters()
-        currentWordView.wordLabel.text = gameManager.currentLetters
+        currentWordView.wordLabel.text = gameManager.game?.currentLetters
         p1View.wordTextField.delegate = self
         
         p1View.wordTextField.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+        
+        
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -69,10 +86,17 @@ class GameViewController: UIViewController {
     
 
     @objc func textFieldDidChange(_ textField: UITextField) {
-        guard let potentialWord = textField.text else { return }
-        updateUserWordTextColor(word: potentialWord, matching: gameManager.currentLetters)
-        // Send word as user types
-        
+        guard let partialWord = textField.text,
+              let currentLetters = gameManager.game?.currentLetters
+        else { return }
+        updateUserWordTextColor(word: partialWord, matching: currentLetters)
+        Task {
+            do {
+                try await gameManager.typing(partialWord)
+            } catch {
+                print("Error sending typing: \(error)")
+            }
+        }
     }
     
     private var originalSize: CGSize?
@@ -96,6 +120,20 @@ class GameViewController: UIViewController {
                 self.originalSize = nil
             }
     }
+    
+    func didTapExitButton() -> UIAction {
+        return UIAction { [self] _ in
+            Task {
+                do {
+                    guard let currentUser = gameManager.service.currentUser else { return}
+                    try await gameManager.removePlayer(playerID: currentUser.uid)
+                } catch {
+                    print("Error removing player: \(error)")
+                }
+            }
+            navigationController?.popViewController(animated: true)
+        }
+    }
 }
 
 extension GameViewController: UITextFieldDelegate {
@@ -107,10 +145,22 @@ extension GameViewController: UITextFieldDelegate {
     
     
     func didTapDoneButton(_ textField: UITextField) {
-        guard let potentialWord = textField.text else { return }
-        if potentialWord.isWord && potentialWord.contains(gameManager.currentLetters) {
-            gameManager.generateRandomLetters()
-            currentWordView.wordLabel.text = gameManager.currentLetters
+        guard let word = textField.text,
+              let letters = gameManager.game?.currentLetters
+        else { return }
+
+        if word.isWord && word.contains(letters) {
+            Task {
+                do {
+                    try await gameManager.submit(word)
+                    
+                } catch {
+                    print("Error submitting word \(word): \(error)")
+                }
+            }
+            // debug
+//            gameManager.game?.currentLetters = GameManager.generateRandomLetters()
+//            currentWordView.wordLabel.text = gameManager.game?.currentLetters
         } else {
             shakePlayer()
         }
@@ -137,5 +187,5 @@ extension GameViewController: UITextFieldDelegate {
 }
 
 #Preview("GameViewController") {
-    GameViewController()
+    GameViewController(gameManager: GameManager(roomID: "", service: FirebaseService()))
 }
