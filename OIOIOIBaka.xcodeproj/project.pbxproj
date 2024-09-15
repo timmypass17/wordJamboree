@@ -31,6 +31,7 @@
 		32C06C652C9132B200D3676D /* HeartsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C642C9132B200D3676D /* HeartsView.swift */; };
 		32C06C672C91473F00D3676D /* IncomingMove.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C662C91473F00D3676D /* IncomingMove.swift */; };
 		32C06C692C92163A00D3676D /* Game.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C682C92163A00D3676D /* Game.swift */; };
+		32C06C6B2C93C4B600D3676D /* Shake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C6A2C93C4B600D3676D /* Shake.swift */; };
 		32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D22C8E70D4000850A5 /* FirebaseService.swift */; };
 		32EF33D62C8E7247000850A5 /* MyUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D52C8E7247000850A5 /* MyUser.swift */; };
 		32EF33D82C8E7E81000850A5 /* CreateRoomViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D72C8E7E81000850A5 /* CreateRoomViewController.swift */; };
@@ -60,6 +61,7 @@
 		32C06C642C9132B200D3676D /* HeartsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartsView.swift; sourceTree = "<group>"; };
 		32C06C662C91473F00D3676D /* IncomingMove.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingMove.swift; sourceTree = "<group>"; };
 		32C06C682C92163A00D3676D /* Game.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game.swift; sourceTree = "<group>"; };
+		32C06C6A2C93C4B600D3676D /* Shake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shake.swift; sourceTree = "<group>"; };
 		32EF33D22C8E70D4000850A5 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		32EF33D52C8E7247000850A5 /* MyUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyUser.swift; sourceTree = "<group>"; };
 		32EF33D72C8E7E81000850A5 /* CreateRoomViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRoomViewController.swift; sourceTree = "<group>"; };
@@ -161,6 +163,7 @@
 				32EF33DB2C8E8E2D000850A5 /* Room.swift */,
 				32C06C662C91473F00D3676D /* IncomingMove.swift */,
 				32C06C682C92163A00D3676D /* Game.swift */,
+				32C06C6A2C93C4B600D3676D /* Shake.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -267,6 +270,7 @@
 				32C06C632C91082200D3676D /* GameManager.swift in Sources */,
 				32C06C652C9132B200D3676D /* HeartsView.swift in Sources */,
 				32C06C5B2C90F41900D3676D /* PlayerView.swift in Sources */,
+				32C06C6B2C93C4B600D3676D /* Shake.swift in Sources */,
 				32C06C692C92163A00D3676D /* Game.swift in Sources */,
 				32C06C5D2C90F6D800D3676D /* ProfileImageView.swift in Sources */,
 				32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */,

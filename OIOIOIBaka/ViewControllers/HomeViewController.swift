@@ -320,6 +320,7 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
 extension HomeViewController: CreateRoomViewControllerDelegate {
     func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String) {
         let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
+        
         navigationController?.pushViewController(gameViewController, animated: true)
     }
 }

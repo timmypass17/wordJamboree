@@ -75,10 +75,20 @@ class FirebaseService {
             currentPlayerTurn: currentUser.uid
         )
         
+        let shake = Shake(
+            players: [
+                currentUser.uid: false
+            ]
+        )
+        
+        // TODO: 1. Maybe just create room and add cloud function to detect new room created and create other realted objects from cloud function
+        // TODO: 2. Or let client create "Incoming Room" object and detect new Incoming Room and create full Room object and other objects
+        //          - see doc on incomingMove reference
         // simultaneous updates (u can observe nodes only, but can update specific fields using path)
         let updates: [String: Any] = [
             "/rooms/\(roomID)": room.toDictionary()!,
-            "/games/\(roomID)": game.toDictionary()!
+            "/games/\(roomID)": game.toDictionary()!,
+            "/shake/\(roomID)": shake.toDictionary()!
         ]
         
         // atomic - either all updates succeed or all updates fail
