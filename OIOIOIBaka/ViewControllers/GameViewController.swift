@@ -9,6 +9,7 @@ import UIKit
 import FirebaseDatabaseInternal
 import SwiftUI
 
+// TODO: Adjust bottom padding whenever keyboard is shown instead of adjust frame size. I want to have a bottom gap even if keyboard is not shown.
 class GameViewController: UIViewController {
 
     let p0View: PlayerView = {
@@ -90,9 +91,19 @@ class GameViewController: UIViewController {
 
     @objc func textFieldDidChange(_ textField: UITextField) {
         guard let partialWord = textField.text,
-              let currentLetters = gameManager.game?.currentLetters
+              let currentLetters = gameManager.game?.currentLetters,
+              let currentUser = gameManager.service.currentUser,
+              let position = gameManager.getPosition(currentUser.uid)
         else { return }
-        updateUserWordTextColor(word: partialWord, matching: currentLetters)
+        
+        // Update current user locally for faster results
+        if position == 0 {
+            print("1. word: \(partialWord), matching: \(currentLetters)")
+            p0View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+        } else if position == 1 {
+            p1View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+        }
+                
         Task {
             do {
                 try await gameManager.typing(partialWord)
@@ -100,6 +111,7 @@ class GameViewController: UIViewController {
                 print("Error sending typing: \(error)")
             }
         }
+        
     }
     
     private var originalSize: CGSize?
@@ -179,12 +191,12 @@ extension GameViewController: UITextFieldDelegate {
         }
     }
     
-    func updateUserWordTextColor(word: String, matching letters: String) {
-        let attributedString = NSMutableAttributedString(string: word)
-        let lettersRange = (word as NSString).range(of: letters)
-        attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
-        p0View.wordTextField.attributedText = attributedString
-    }
+//    func updateUserWordTextColor(word: String, matching letters: String) {
+//        let attributedString = NSMutableAttributedString(string: word)
+//        let lettersRange = (word as NSString).range(of: letters)
+//        attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
+//        p0View.wordTextField.attributedText = attributedString
+//    }
 }
 
 extension GameViewController: GameManagerDelegate {
@@ -215,15 +227,26 @@ extension GameViewController: GameManagerDelegate {
     
     private func updateUserTextInputs(game: Game) {
         guard let positions = game.positions,
-              let playerWords = game.playerWords
+              let playerWords = game.playerWords,
+              let currentUser = gameManager.service.currentUser
         else { return }
         
-        for (playerID, word) in playerWords {
+        for (playerID, updatedWord) in playerWords {
             guard let position = positions[playerID] else { continue }
+            
             if position == 0 {
-                p0View.wordTextField.text = word
+                guard let originalWord = p0View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                print("2. word: \(updatedWord), matching: \(game.currentLetters)")
+                p0View.updateUserWordTextColor(word: updatedWord, matching: game.currentLetters)
             } else if position == 1 {
-                p1View.wordTextField.text = word
+                guard let originalWord = p1View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                p1View.updateUserWordTextColor(word: updatedWord, matching: game.currentLetters)
             }
         }
     }

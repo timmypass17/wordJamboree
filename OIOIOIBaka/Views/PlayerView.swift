@@ -80,6 +80,19 @@ class PlayerView: UIView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    func updateUserWordTextColor(word: String, matching letters: String) {
+        let attributedString = NSMutableAttributedString(string: word)
+        
+        // Set the entire text color to white
+        let fullRange = NSRange(location: 0, length: word.count)
+        attributedString.addAttribute(.foregroundColor, value: UIColor.white, range: fullRange)
+        
+        // Set the color of the matching letters to green
+        let lettersRange = (word as NSString).range(of: letters)
+        attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
+        wordTextField.attributedText = attributedString
+    }
 }
 
 #Preview("PlayerView") {
