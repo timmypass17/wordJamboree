@@ -111,12 +111,13 @@ class FirebaseService {
     }
     
     // Note: Firebase rules rejects this join request if room is full
+    // TODO: Do transaction
     func addUserToRoom(user: MyUser, room: Room, roomID: String) async throws {
         // simple client side validation (do client and security rule and cloud funtions?)
         // Check if room is full
         guard room.currentPlayerCount < 4 else { throw RoomError.roomFull }
         
-        let gameSnapshot = try await ref.child("games").child(roomID).getData()    // can only ref nodes, not fields directly
+        let gameSnapshot = try await ref.child("games").child(roomID).getData()
         guard let game = gameSnapshot.toObject(Game.self) else { throw FirebaseServiceError.invalidObject }
         
         // players nil means empty room

@@ -16,6 +16,7 @@ class GameViewController: UIViewController {
         let p1View = PlayerView()
         p1View.nameLabel.text = "P0"
         p1View.translatesAutoresizingMaskIntoConstraints = false
+        p1View.isHidden = true
         return p1View
     }()
     
@@ -23,6 +24,7 @@ class GameViewController: UIViewController {
         let p2View = PlayerView()
         p2View.nameLabel.text = "P1"
         p2View.translatesAutoresizingMaskIntoConstraints = false
+        p2View.isHidden = true
         return p2View
     }()
     
@@ -36,7 +38,8 @@ class GameViewController: UIViewController {
     var ref = Database.database().reference()
 
     var exitBarButton: UIBarButtonItem!
-    
+    private var originalSize: CGSize?
+
     init(gameManager: GameManager) {
         self.gameManager = gameManager
         super.init(nibName: nil, bundle: nil)
@@ -98,7 +101,6 @@ class GameViewController: UIViewController {
         
         // Update current user locally for faster results
         if position == 0 {
-            print("1. word: \(partialWord), matching: \(currentLetters)")
             p0View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
         } else if position == 1 {
             p1View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
@@ -113,9 +115,7 @@ class GameViewController: UIViewController {
         }
         
     }
-    
-    private var originalSize: CGSize?
-    
+        
     @objc func keyboardWillAppear(notification: NSNotification) {
         if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
             if self.originalSize == nil {
@@ -204,6 +204,9 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, gameStateUpdated game: Game) {
         print("game stat updated")
         updateCurrentLetters(newLetters: game.currentLetters)
+        Task {
+            await updateUserViews(game: game)
+        }
         updateUserTextInputs(game: game)
         updateControls(game: game)
     }
@@ -221,14 +224,72 @@ extension GameViewController: GameManagerDelegate {
         
     }
     
+    private func updateUserViews(game: Game) async {
+        guard let players = gameManager.game?.players
+        else { return }
+        
+        do {
+            try await withThrowingTaskGroup(of: MyUser.self) { group in
+                for (playerID, position) in players {
+                    if let cachedUser = self.gameManager.playerInfos[playerID] {
+                        group.addTask {
+                            return cachedUser
+                        }
+                    } else {
+                        group.addTask {
+                            let userSnapshot = try await self.ref.child("users/\(playerID)").getData()
+                            guard let user = userSnapshot.toObject(MyUser.self) else { throw FirebaseServiceError.invalidObject }
+                            return user
+                        }
+                    }
+                }
+                
+                // Update player infos as they come in
+                for try await user in group {
+                    guard let position = gameManager.getPosition(user.uid) else { continue }
+                    gameManager.playerInfos[user.uid] = user
+                }
+            }
+            
+            // Reset views
+            p0View.isHidden = true
+            p1View.isHidden = true
+            
+            // Update view now that we have an updated playerInfos
+            for (uid, user) in gameManager.playerInfos {
+                guard let position = gameManager.getPosition(uid) else { continue }
+
+                if position == 0 {
+                    print("p0: \(user.name)")
+                    p0View.nameLabel.text = user.name
+                    p0View.isHidden = false
+                    
+                } else if position == 1 {
+                    print("p1: \(user.name)")
+                    p1View.nameLabel.text = user.name
+                    p1View.isHidden = false
+                }
+            }
+        } catch {
+            print("Error fetching users: \(error)")
+        }
+        
+//        let playerCount = positions.count
+//        if playerCount <= 2 {
+//
+//        }
+//        else if playerCount <= 3 {
+//
+//        }
+    }
+    
     private func updateCurrentLetters(newLetters: String) {
         currentWordView.wordLabel.text = newLetters
     }
     
     private func updateUserTextInputs(game: Game) {
         guard let positions = game.positions,
-              let playerWords = game.playerWords,
-              let currentUser = gameManager.service.currentUser
+              let playerWords = game.playerWords
         else { return }
         
         for (playerID, updatedWord) in playerWords {

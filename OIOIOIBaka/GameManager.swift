@@ -21,6 +21,7 @@ class GameManager {
     var service: FirebaseService
     var ref = Database.database().reference()
     weak var delegate: GameManagerDelegate?
+    var playerInfos: [String: MyUser] = [:]
     
     init(roomID: String, service: FirebaseService) {
         self.service = service
