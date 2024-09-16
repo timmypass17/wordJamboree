@@ -34,6 +34,12 @@ class GameViewController: UIViewController {
         return currentWordView
     }()
     
+    let arrowView: ArrowView = {
+        let arrowView = ArrowView()
+        arrowView.translatesAutoresizingMaskIntoConstraints = false
+        return arrowView
+    }()
+    
     var gameManager: GameManager
     var ref = Database.database().reference()
 
@@ -61,6 +67,7 @@ class GameViewController: UIViewController {
         
         view.addSubview(p0View)
         view.addSubview(p1View)
+        view.addSubview(arrowView)
         view.addSubview(currentWordView)
         
         NSLayoutConstraint.activate([
@@ -75,6 +82,9 @@ class GameViewController: UIViewController {
             // Position p2View at the top
             p0View.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
             p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            
+            arrowView.centerXAnchor.constraint(equalTo: currentWordView.centerXAnchor),
+            arrowView.centerYAnchor.constraint(equalTo: currentWordView.centerYAnchor)
         ])
         
         currentWordView.wordLabel.text = gameManager.game?.currentLetters
@@ -209,6 +219,7 @@ extension GameViewController: GameManagerDelegate {
         }
         updateUserTextInputs(game: game)
         updateControls(game: game)
+        updateArrowView(game: game)
     }
     
     func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int) {
@@ -220,8 +231,17 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    private func resetAttachments() {
+    private func updateArrowView(game: Game) {
+        guard let positions = game.positions,
+              let currentPlayerPosition = positions[game.currentPlayerTurn]
+        else { return }
         
+        if currentPlayerPosition == 0 {
+            arrowView.pointArrow(at: p0View, in: view)
+        } else if currentPlayerPosition == 1 {
+            arrowView.pointArrow(at: p1View, in: view)
+        }
+
     }
     
     private func updateUserViews(game: Game) async {
