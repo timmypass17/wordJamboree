@@ -8,6 +8,7 @@
 import Foundation
 import UIKit
 import FirebaseDatabaseInternal
+import FirebaseAuth
 
 protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, gameStateUpdated game: Game)
@@ -17,6 +18,7 @@ protocol GameManagerDelegate: AnyObject {
 
 class GameManager {
     var game: Game?
+    var room: Room?
     var roomID: String
     
     var service: FirebaseService
@@ -29,13 +31,17 @@ class GameManager {
         self.roomID = roomID
     }
     
-    func start() {
+    func startGame() {
         // Only room master can start game
+        guard let creatorID = room?.creatorID,
+              let currentUserID = service.currentUser?.uid
+        else { return }
         
-        ref.updateChildValues([
-//            "games/\(roomID)/currentLetters": GameManager.generateRandomLetters(),
-            "rooms/\(roomID)/status": Room.Status.inProgress
-        ])
+        if creatorID == currentUserID {
+            ref.updateChildValues([
+                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue
+            ])
+        }
         
     }
     
@@ -46,8 +52,9 @@ class GameManager {
     }
     
     func observeRoom() {
-        ref.child("rooms/\(roomID)").observe(.value) { snapshot in
+        ref.child("rooms/\(roomID)").observe(.value) { [self] snapshot in
             guard let updatedRoom = snapshot.toObject(Room.self) else { return }
+            room = updatedRoom
             self.delegate?.gameManager(self, roomStateUpdated: updatedRoom)
         }
     }
@@ -64,10 +71,10 @@ class GameManager {
     }
     
     func removePlayer(playerID: String) async throws {
-        try await ref.updateChildValues([
-            "games/\(roomID)/players/\(playerID)": NSNull(),
-            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-        ])
+//        try await ref.updateChildValues([
+//            "games/\(roomID)/players/\(playerID)": NSNull(),  # Don't remove player, set player status to "dead'
+//            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+//        ])
     }
     
     func typing(_ partialWord: String) async throws {

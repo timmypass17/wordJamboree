@@ -230,14 +230,17 @@ extension GameViewController: UITextFieldDelegate {
     
     func didTapStartButton() -> UIAction {
         return UIAction { [self] _ in
-            startCountDown()
+//            startCountDown()
+            gameManager.startGame()
         }
     }
     
     private func startCountDown() {
         countDownLabel.isHidden = false
-        startButton.isHidden = true
         countDownLabel.text = "\(countdownValue)"
+        startButton.isHidden = true
+        arrowView.isHidden = true
+        currentWordView.isHidden = true
         
         soundManager.playCountdownSound()
         // Create a timer to update every second
@@ -253,9 +256,10 @@ extension GameViewController: UITextFieldDelegate {
         
         if countdownValue == 0 {
             countdownTimer?.invalidate() // Stop the timer
+            arrowView.isHidden = false
+            currentWordView.isHidden = false
             countDownLabel.isHidden = true
             soundManager.playBonkSound()
-            //        gameManager.start()
         } else {
             soundManager.playCountdownSound()
         }
@@ -283,15 +287,13 @@ extension GameViewController: GameManagerDelegate {
     func updateBoard(room: Room) {
         switch room.status {
         case .notStarted:
-            print("not started")
-            currentWordView.isHidden = true
-            arrowView.isHidden = true
             startButton.isHidden = false
+            countDownLabel.isHidden = true
+            arrowView.isHidden = true
+            currentWordView.isHidden = true
+            break
         case .inProgress:
-            print("in progress")
-            currentWordView.isHidden = false
-            arrowView.isHidden = false
-            startButton.isHidden = true
+            startCountDown()
         }
     }
     
@@ -393,7 +395,6 @@ extension GameViewController: GameManagerDelegate {
                       originalWord != updatedWord else {
                     continue
                 }
-                print("2. word: \(updatedWord), matching: \(game.currentLetters)")
                 p0View.updateUserWordTextColor(word: updatedWord, matching: game.currentLetters)
             } else if position == 1 {
                 guard let originalWord = p1View.wordTextField.text,

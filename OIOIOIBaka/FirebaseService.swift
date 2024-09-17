@@ -133,19 +133,24 @@ class FirebaseService {
 //    }
     
     
-    func addUserToRoom(user: MyUser, roomID: String) async throws {
+    func addUserToRoom(user: MyUser, roomID: String) async throws -> Bool {
         let roomRef = ref.child("rooms").child(roomID)
 
         // Perform transaction to ensure atomic update
         let (result, updatedSnapshot): (Bool, DataSnapshot) = try await roomRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
             guard var room = currentData.value as? [String: AnyObject],
-                  var currentPlayerCount = room["currentPlayerCount"] as? Int
+                  var currentPlayerCount = room["currentPlayerCount"] as? Int,
+                  var statusString = room["status"] as? String,
+                  var roomStatus = Room.Status(rawValue: statusString)
             else {
                 return .abort()
             }
 
-            // Check if room is full
-            if currentPlayerCount >= 4 {
+            guard currentPlayerCount < 4,
+                  roomStatus == .notStarted
+                  // check if player not in list of players
+                  // TODO: Add players field to Room
+            else {
                 return .abort()
             }
             
@@ -159,8 +164,9 @@ class FirebaseService {
             return .success(withValue: currentData)
         }
         
+        // User join sucessfully, update other values
         if result {
-            guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return }
+            guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return false }
             try await ref.updateChildValues([
                 "/games/\(roomID)/players/\(user.uid)": true,
                 "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
@@ -168,6 +174,7 @@ class FirebaseService {
             ])
         }
         
+        return result
     }
     
     func addIncomingMove(incomingMove: IncomingMove) {

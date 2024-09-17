@@ -269,33 +269,15 @@ extension HomeViewController: UICollectionViewDelegate {
     
     func addUserToRoom(user: MyUser, room: Room, roomID: String) async {
         do {
-            try await service.addUserToRoom(user: user, roomID: roomID)
-//            try await service.addUserToRoom(user: user, room: room, roomID: roomID)
-            let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
-            navigationController?.pushViewController(gameViewController, animated: true)
-        } catch let error as FirebaseService.RoomError  {
-            switch error {
-            case .roomFull:
-                roomFullErrorAlert(self)
-                break
-            case .alreadyJoined:
-                alreadyJoinedErrorAlert(self)
-                break
-            case .securityRule:
-                break
-            }
-        } catch let error as FirebaseServiceError {
-            switch error {
-            case .userNotLoggedIn:
-                print("User not logged in")
-                break
-            case .invalidObject:
-                // TODO: Uncomment in production, should never fail, for debugging
-                fatalError(error.localizedDescription)
-                break
+            let result = try await service.addUserToRoom(user: user, roomID: roomID)
+            if result {
+                let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
+                navigationController?.pushViewController(gameViewController, animated: true)
+            } else {
+                print("Could not join room. room full?")
             }
         } catch {
-            print("Some other error: \(error)")
+            print("Error joining room: \(error)")
         }
     }
 }
