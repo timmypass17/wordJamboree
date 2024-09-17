@@ -15,6 +15,7 @@ struct Game: Codable {
     var currentPlayerTurn: String
     var playerWords: [String: String]?
     var shakePlayers: [String: Bool]?
+    var rounds: Int
 }
 
 // players is optional because there could be an empty room and fields that are empty (e.g. empty dictionaries) are deleted in firebase rtdb

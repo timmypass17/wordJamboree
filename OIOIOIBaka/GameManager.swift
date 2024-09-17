@@ -12,6 +12,7 @@ import FirebaseDatabaseInternal
 protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, gameStateUpdated game: Game)
     func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int)
+    func gameManager(_ manager: GameManager, roomStateUpdated room: Room)
 }
 
 class GameManager {
@@ -22,15 +23,33 @@ class GameManager {
     var ref = Database.database().reference()
     weak var delegate: GameManagerDelegate?
     var playerInfos: [String: MyUser] = [:]
-    
+        
     init(roomID: String, service: FirebaseService) {
         self.service = service
         self.roomID = roomID
     }
     
     func start() {
+        // Only room master can start game
+        
+        ref.updateChildValues([
+//            "games/\(roomID)/currentLetters": GameManager.generateRandomLetters(),
+            "rooms/\(roomID)/status": Room.Status.inProgress
+        ])
+        
+    }
+    
+    func setup() {
+        observeRoom()
         getPlayers()
         handleShakePlayers()
+    }
+    
+    func observeRoom() {
+        ref.child("rooms/\(roomID)").observe(.value) { snapshot in
+            guard let updatedRoom = snapshot.toObject(Room.self) else { return }
+            self.delegate?.gameManager(self, roomStateUpdated: updatedRoom)
+        }
     }
     
     func getPlayers() {
@@ -78,14 +97,19 @@ class GameManager {
         let playerCount = positions.count
         let newLetters = GameManager.generateRandomLetters()
         let nextPosition = (currentPosition + 1) % playerCount
+        let isLastTurn = currentPosition == positions.count - 1
         
         guard let nextPlayerUID = (positions.first(where: { $0.value == nextPosition }))?.key else { return }
         
-        let updates = [
+        var updates: [String: Any] = [
             "games/\(roomID)/currentLetters": newLetters,       // create new letters
             "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
             "games/\(roomID)/playerWords/\(nextPlayerUID)": ""  // reset next player's input
         ]
+        
+        if isLastTurn {
+            updates["games/\(roomID)/rounds"] = ServerValue.increment(1)
+        }
         
         try await ref.updateChildValues(updates)
     }

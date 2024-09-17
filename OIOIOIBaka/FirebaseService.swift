@@ -61,7 +61,7 @@ class FirebaseService {
         let roomRef = ref.child("rooms").childByAutoId()
         let roomID = roomRef.key!
         
-        let room = Room(creatorID: currentUser.uid, title: title, currentPlayerCount: 1)
+        let room = Room(creatorID: currentUser.uid, title: title, currentPlayerCount: 1, status: .notStarted)
         
         let game = Game(
             roomID: roomID,
@@ -72,7 +72,8 @@ class FirebaseService {
             positions: [
                 currentUser.uid: 0
             ],
-            currentPlayerTurn: currentUser.uid
+            currentPlayerTurn: currentUser.uid,
+            rounds: 1
         )
         
         let shake = Shake(

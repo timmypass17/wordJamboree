@@ -8,6 +8,7 @@
 import UIKit
 import FirebaseDatabaseInternal
 import SwiftUI
+import AVFAudio
 
 // TODO: Adjust bottom padding whenever keyboard is shown instead of adjust frame size. I want to have a bottom gap even if keyboard is not shown.
 class GameViewController: UIViewController {
@@ -40,11 +41,31 @@ class GameViewController: UIViewController {
         return arrowView
     }()
     
+    let startButton: UIButton = {
+        let button = UIButton(configuration: .filled())
+        button.setTitle("Start Game", for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    let countDownLabel: UILabel = {
+        let label = UILabel()
+        label.isHidden = true
+        label.font = UIFont.systemFont(ofSize: 32, weight: .bold)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
     var gameManager: GameManager
+    let soundManager = SoundManager()
     var ref = Database.database().reference()
 
     var exitBarButton: UIBarButtonItem!
     private var originalSize: CGSize?
+
+    var countdownTimer: Timer?
+    var countdownValue = 3
 
     init(gameManager: GameManager) {
         self.gameManager = gameManager
@@ -57,6 +78,8 @@ class GameViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        startButton.addAction(didTapStartButton(), for: .touchUpInside)
+
         gameManager.delegate = self
         navigationItem.setHidesBackButton(true, animated: true)
         exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
@@ -67,8 +90,12 @@ class GameViewController: UIViewController {
         
         view.addSubview(p0View)
         view.addSubview(p1View)
+        
+        // TODO: Move this all to one object
         view.addSubview(arrowView)
         view.addSubview(currentWordView)
+        view.addSubview(startButton)
+        view.addSubview(countDownLabel)
         
         NSLayoutConstraint.activate([
             currentWordView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -84,7 +111,13 @@ class GameViewController: UIViewController {
             p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             
             arrowView.centerXAnchor.constraint(equalTo: currentWordView.centerXAnchor),
-            arrowView.centerYAnchor.constraint(equalTo: currentWordView.centerYAnchor)
+            arrowView.centerYAnchor.constraint(equalTo: currentWordView.centerYAnchor),
+            
+            startButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            startButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            
+            countDownLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            countDownLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
         
         currentWordView.wordLabel.text = gameManager.game?.currentLetters
@@ -92,8 +125,7 @@ class GameViewController: UIViewController {
         p0View.wordTextField.isUserInteractionEnabled = false
         p1View.wordTextField.isUserInteractionEnabled = false
         
-        gameManager.start()
-        
+        gameManager.setup()        
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -168,11 +200,6 @@ extension GameViewController: UITextFieldDelegate {
         return true
     }
     
-    //
-//    func textFieldShouldEndEditing(_ textField: UITextField) -> Bool {
-//        return false
-//    }
-    
     // Prevents text editing
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         guard let currentUser = gameManager.service.currentUser,
@@ -201,12 +228,39 @@ extension GameViewController: UITextFieldDelegate {
         }
     }
     
-//    func updateUserWordTextColor(word: String, matching letters: String) {
-//        let attributedString = NSMutableAttributedString(string: word)
-//        let lettersRange = (word as NSString).range(of: letters)
-//        attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
-//        p0View.wordTextField.attributedText = attributedString
-//    }
+    func didTapStartButton() -> UIAction {
+        return UIAction { [self] _ in
+            startCountDown()
+        }
+    }
+    
+    private func startCountDown() {
+        countDownLabel.isHidden = false
+        startButton.isHidden = true
+        countDownLabel.text = "\(countdownValue)"
+        
+        soundManager.playCountdownSound()
+        // Create a timer to update every second
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            self?.updateCountdown()
+        }
+    }
+    
+    private func updateCountdown() {
+        countdownValue -= 1
+        countDownLabel.text = "\(countdownValue)"
+        
+        
+        if countdownValue == 0 {
+            countdownTimer?.invalidate() // Stop the timer
+            countDownLabel.isHidden = true
+            soundManager.playBonkSound()
+            //        gameManager.start()
+        } else {
+            soundManager.playCountdownSound()
+        }
+    }
+
 }
 
 extension GameViewController: GameManagerDelegate {
@@ -220,6 +274,25 @@ extension GameViewController: GameManagerDelegate {
         updateUserTextInputs(game: game)
         updateControls(game: game)
         updateArrowView(game: game)
+    }
+    
+    func gameManager(_ manager: GameManager, roomStateUpdated room: Room) {
+        updateBoard(room: room)
+    }
+
+    func updateBoard(room: Room) {
+        switch room.status {
+        case .notStarted:
+            print("not started")
+            currentWordView.isHidden = true
+            arrowView.isHidden = true
+            startButton.isHidden = false
+        case .inProgress:
+            print("in progress")
+            currentWordView.isHidden = false
+            arrowView.isHidden = false
+            startButton.isHidden = true
+        }
     }
     
     func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int) {
@@ -387,6 +460,18 @@ extension GameViewController: GameManagerDelegate {
         }
     }
 
+}
+
+extension GameViewController: GameNotStartedViewDelegate {
+    func gameNotStartedView(_ sender: GameNotStartedView, didTapStartButton: Bool) {
+        print("did tap start button")
+    }
+    
+    func gameNotStartedView(_ sender: GameNotStartedView, gameDidStart: Bool) {
+        print("Game did start")
+    }
+    
+    
 }
 
 #Preview("GameViewController") {
