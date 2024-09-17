@@ -18,7 +18,6 @@ class ArrowView: UIView {
     
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        self.setupArrow()
     }
     
     private func setupArrow() {
@@ -48,24 +47,6 @@ class ArrowView: UIView {
         
         // Add the arrow to the view's layer
         self.layer.addSublayer(arrowLayer)
-    }
-    
-    func pointArrow(at targetView: UIView, in superview: UIView) {
-        guard let targetFrame = targetView.superview?.convert(targetView.frame, to: superview) else { return }
-        
-        // Calculate the angle between arrow and target
-        let arrowCenter = CGPoint(x: frame.midX, y: frame.midY)
-        let targetCenter = CGPoint(x: targetFrame.midX, y: targetFrame.midY)
-        let angle = atan2(targetCenter.y - arrowCenter.y, targetCenter.x - arrowCenter.x)
-        
-        // Animate the rotation
-        
-            UIView.animate(withDuration: 0.25, // Duration of the animation in seconds
-                           delay: 0,          // Delay before the animation starts
-                           options: .curveEaseInOut, // Easing option for smooth animation
-                           animations: {
-                               self.transform = CGAffineTransform(rotationAngle: angle)
-                           }, completion: nil)
     }
 }
 

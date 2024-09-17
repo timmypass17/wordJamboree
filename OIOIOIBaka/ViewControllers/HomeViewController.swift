@@ -8,7 +8,6 @@
 import UIKit
 import FirebaseAuth
 
-// TODO: Add header view ("Join a public room        120 players")
 class HomeViewController: UIViewController {
     
     var collectionView: UICollectionView = {
@@ -274,7 +273,7 @@ extension HomeViewController: UICollectionViewDelegate {
                 let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
                 navigationController?.pushViewController(gameViewController, animated: true)
             } else {
-                print("Could not join room. room full?")
+                print("Could not join room. room full? room in progress")
             }
         } catch {
             print("Error joining room: \(error)")

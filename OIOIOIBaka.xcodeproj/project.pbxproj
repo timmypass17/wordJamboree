@@ -12,6 +12,7 @@
 		32610AF12C9929390011946E /* ding.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF02C9929390011946E /* ding.mp3 */; };
 		32610AF32C992D2B0011946E /* bonk.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF22C992D2B0011946E /* bonk.mp3 */; };
 		32610AF52C9930140011946E /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AF42C9930140011946E /* SoundManager.swift */; };
+		32610AF72C9A28CB0011946E /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AF62C9A28CB0011946E /* GameView.swift */; };
 		326F93B12C8B928E00B28F04 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B02C8B928E00B28F04 /* AppDelegate.swift */; };
 		326F93B32C8B928E00B28F04 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B22C8B928E00B28F04 /* SceneDelegate.swift */; };
 		326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B42C8B928E00B28F04 /* HomeViewController.swift */; };
@@ -51,6 +52,7 @@
 		32610AF02C9929390011946E /* ding.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = ding.mp3; sourceTree = "<group>"; };
 		32610AF22C992D2B0011946E /* bonk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bonk.mp3; sourceTree = "<group>"; };
 		32610AF42C9930140011946E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+		32610AF62C9A28CB0011946E /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
 		326F93AD2C8B928E00B28F04 /* OIOIOIBaka.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OIOIOIBaka.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		326F93B02C8B928E00B28F04 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		326F93B22C8B928E00B28F04 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -158,6 +160,7 @@
 		326F93C52C8BBAF600B28F04 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				32610AF62C9A28CB0011946E /* GameView.swift */,
 				326F93D12C8BD95600B28F04 /* LineView.swift */,
 				32C06C5A2C90F41900D3676D /* PlayerView.swift */,
 				32C06C5C2C90F6D800D3676D /* ProfileImageView.swift */,
@@ -298,6 +301,7 @@
 				32C06C652C9132B200D3676D /* HeartsView.swift in Sources */,
 				32C06C5B2C90F41900D3676D /* PlayerView.swift in Sources */,
 				32C06C6B2C93C4B600D3676D /* Shake.swift in Sources */,
+				32610AF72C9A28CB0011946E /* GameView.swift in Sources */,
 				32C06C692C92163A00D3676D /* Game.swift in Sources */,
 				32C06C5D2C90F6D800D3676D /* ProfileImageView.swift in Sources */,
 				32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */,

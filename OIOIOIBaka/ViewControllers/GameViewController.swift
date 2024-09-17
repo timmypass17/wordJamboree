@@ -35,12 +35,6 @@ class GameViewController: UIViewController {
         return currentWordView
     }()
     
-    let arrowView: ArrowView = {
-        let arrowView = ArrowView()
-        arrowView.translatesAutoresizingMaskIntoConstraints = false
-        return arrowView
-    }()
-    
     let startButton: UIButton = {
         let button = UIButton(configuration: .filled())
         button.setTitle("Start Game", for: .normal)
@@ -92,7 +86,6 @@ class GameViewController: UIViewController {
         view.addSubview(p1View)
         
         // TODO: Move this all to one object
-        view.addSubview(arrowView)
         view.addSubview(currentWordView)
         view.addSubview(startButton)
         view.addSubview(countDownLabel)
@@ -109,10 +102,7 @@ class GameViewController: UIViewController {
             // Position p2View at the top
             p0View.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
             p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            
-            arrowView.centerXAnchor.constraint(equalTo: currentWordView.centerXAnchor),
-            arrowView.centerYAnchor.constraint(equalTo: currentWordView.centerYAnchor),
-            
+
             startButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             startButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             
@@ -239,7 +229,7 @@ extension GameViewController: UITextFieldDelegate {
         countDownLabel.isHidden = false
         countDownLabel.text = "\(countdownValue)"
         startButton.isHidden = true
-        arrowView.isHidden = true
+//        arrowView.isHidden = true
         currentWordView.isHidden = true
         
         soundManager.playCountdownSound()
@@ -256,7 +246,7 @@ extension GameViewController: UITextFieldDelegate {
         
         if countdownValue == 0 {
             countdownTimer?.invalidate() // Stop the timer
-            arrowView.isHidden = false
+//            arrowView.isHidden = false
             currentWordView.isHidden = false
             countDownLabel.isHidden = true
             soundManager.playBonkSound()
@@ -289,7 +279,6 @@ extension GameViewController: GameManagerDelegate {
         case .notStarted:
             startButton.isHidden = false
             countDownLabel.isHidden = true
-            arrowView.isHidden = true
             currentWordView.isHidden = true
             break
         case .inProgress:
@@ -312,11 +301,10 @@ extension GameViewController: GameManagerDelegate {
         else { return }
         
         if currentPlayerPosition == 0 {
-            arrowView.pointArrow(at: p0View, in: view)
+            currentWordView.pointArrow(at: p0View, self)
         } else if currentPlayerPosition == 1 {
-            arrowView.pointArrow(at: p1View, in: view)
+            currentWordView.pointArrow(at: p1View, self)
         }
-
     }
     
     private func updateUserViews(game: Game) async {
