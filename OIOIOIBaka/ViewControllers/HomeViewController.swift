@@ -269,7 +269,8 @@ extension HomeViewController: UICollectionViewDelegate {
     
     func addUserToRoom(user: MyUser, room: Room, roomID: String) async {
         do {
-            try await service.addUserToRoom(user: user, room: room, roomID: roomID)
+            try await service.addUserToRoom(user: user, roomID: roomID)
+//            try await service.addUserToRoom(user: user, room: room, roomID: roomID)
             let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
             navigationController?.pushViewController(gameViewController, animated: true)
         } catch let error as FirebaseService.RoomError  {

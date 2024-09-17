@@ -111,32 +111,64 @@ class FirebaseService {
         }
     }
     
-    // Note: Firebase rules rejects this join request if room is full
-    // TODO: Do transaction
-    func addUserToRoom(user: MyUser, room: Room, roomID: String) async throws {
-        // simple client side validation (do client and security rule and cloud funtions?)
-        // Check if room is full
-        guard room.currentPlayerCount < 4 else { throw RoomError.roomFull }
-        
-        let gameSnapshot = try await ref.child("games").child(roomID).getData()
-        guard let game = gameSnapshot.toObject(Game.self) else { throw FirebaseServiceError.invalidObject }
-        
-        // players nil means empty room
-        if let players = game.players {
-            guard players[user.uid] == nil else { throw RoomError.alreadyJoined }
-        }
-        
-        do {
-            try await ref.updateChildValues([
-                "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1),
-                "/games/\(roomID)/players/\(user.uid)": true
-            ])
-            print("Added \(user.name) to room \(roomID) successfully")
-        } catch {
-            throw RoomError.securityRule
-        }
-    }
+//    func addUserToRoom(user: MyUser, room: Room, roomID: String) async throws {
+//        // simple client side validation (do client and security rule and cloud funtions?)
+//        // Check if room is full
+//        guard room.currentPlayerCount < 4 else { throw RoomError.roomFull }
+//
+//        do {
+//
+//            // Note: Firebase rules rejects this join request if room is full
+//            try await ref.updateChildValues([
+//                "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1),
+//                "/games/\(roomID)/players/\(user.uid)": true,
+//                "/games/\(roomID)/positions/\(user.uid)": room.currentPlayerCount,
+//                "/shake/\(roomID)/players/\(user.uid)": user.uid
+//            ])
+//            
+//            print("Added \(user.name) to room \(roomID) successfully")
+//        } catch {
+//            throw RoomError.securityRule
+//        }
+//    }
     
+    
+    func addUserToRoom(user: MyUser, roomID: String) async throws {
+        let roomRef = ref.child("rooms").child(roomID)
+
+        // Perform transaction to ensure atomic update
+        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await roomRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
+            guard var room = currentData.value as? [String: AnyObject],
+                  var currentPlayerCount = room["currentPlayerCount"] as? Int
+            else {
+                return .abort()
+            }
+
+            // Check if room is full
+            if currentPlayerCount >= 4 {
+                return .abort()
+            }
+            
+            // Update value
+            currentPlayerCount += 1
+            
+            // Apply changes
+            room["currentPlayerCount"] = currentPlayerCount as AnyObject
+            
+            currentData.value = room
+            return .success(withValue: currentData)
+        }
+        
+        if result {
+            guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return }
+            try await ref.updateChildValues([
+                "/games/\(roomID)/players/\(user.uid)": true,
+                "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
+                "/shake/\(roomID)/players/\(user.uid)": user.uid
+            ])
+        }
+        
+    }
     
     func addIncomingMove(incomingMove: IncomingMove) {
     }
