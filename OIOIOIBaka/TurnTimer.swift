@@ -7,9 +7,15 @@
 
 import Foundation
 
+protocol TurnTimerDelegate: AnyObject {
+    func turnTimer(_ sender: TurnTimer, timeRanOut: Bool)
+}
+
 class TurnTimer {
     var timer: Timer?
     let soundManager: SoundManager
+    
+    weak var delegate: TurnTimerDelegate?
 
     init(soundManager: SoundManager) {
         self.soundManager = soundManager
@@ -28,6 +34,7 @@ class TurnTimer {
                 // User is exploded
                 soundManager.playBonkSound()
                 self.timer?.invalidate()
+                delegate?.turnTimer(self, timeRanOut: true)
             } else if timeRemaining == 10 {
                 soundManager.playTickingSound()
             }

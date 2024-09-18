@@ -93,6 +93,20 @@ class PlayerView: UIView {
         attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
         wordTextField.attributedText = attributedString
     }
+    
+    func setHearts(to livesRemaining: Int) {
+        var currentHeartCount = heartsView.container.arrangedSubviews.count
+        while livesRemaining < currentHeartCount {
+            removeHeart()
+            currentHeartCount -= 1
+        }
+    }
+    
+    private func removeHeart() {
+        guard let lastHeart = heartsView.container.arrangedSubviews.last else { return }
+        heartsView.container.removeArrangedSubview(lastHeart)  // remove from stack view
+        lastHeart.removeFromSuperview()             // remove from view hierarchy
+    }
 }
 
 #Preview("PlayerView") {

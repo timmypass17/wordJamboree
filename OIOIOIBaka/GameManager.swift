@@ -16,7 +16,7 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String)
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String)
     func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String: String])
-    func gameManager(_ manager: GameManager, playerUpdated players: [String: Bool])
+    func gameManager(_ manager: GameManager, playersUpdated players: [String: Int])
 }
 
 class GameManager {
@@ -25,7 +25,7 @@ class GameManager {
     var playerWords: [String: String] = [:]
     var currentPlayerTurn: String = ""
     var positions: [String: Int] = [:]
-    var players: [String: Bool] = [:]
+    var players: [String: Int] = [:]
     var secondsPerTurn: Int = -1
     var rounds: Int = 1
     let minimumTime = 5
@@ -44,6 +44,7 @@ class GameManager {
         self.service = service
         self.roomID = roomID
         turnTimer = TurnTimer(soundManager: soundManager)
+        turnTimer?.delegate = self
     }
     
     func startingGame() {
@@ -129,10 +130,9 @@ class GameManager {
     
     func observePlayers() {
         ref.child("games/\(roomID)/players").observe(.value) { [self] snapshot in
-            print("Players changed")
-            guard let players = snapshot.value as? [String: Bool] else { return }
+            guard let players = snapshot.value as? [String: Int] else { return }
             self.players = players
-            delegate?.gameManager(self, playerUpdated: players)
+            delegate?.gameManager(self, playersUpdated: players)
         }
     }
 
@@ -217,25 +217,6 @@ class GameManager {
         return commonLetterCombinations.randomElement()!.uppercased()
     }
     
-//    var turnTimer: Timer?
-//
-//    func startTurnTimer() {
-//        print("Timer started: \(secondsPerTurn)")
-//        var timeRemaining = secondsPerTurn
-//        turnTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
-//            if timeRemaining == 0 {
-//                // User is exploded
-//                soundManager.playBonkSound()
-//                self.turnTimer?.invalidate()
-//            } else if timeRemaining == 10 {
-//                soundManager.playTickingSound()
-//            }
-//            
-//            print(timeRemaining)
-//            timeRemaining -= 1
-//        }
-//    }
-    
     func observeRounds() {
         Task {
             do {
@@ -263,7 +244,43 @@ class GameManager {
             self.secondsPerTurn = seconds
         }
     }
+    
+    func damagePlayer(playerID: String) {
+        guard playerID == service.currentUser?.uid else { return }
+        ref.updateChildValues([
+            "games/\(roomID)/players/\(playerID)": ServerValue.increment(-1),
+            "shake/\(roomID)/players/\(playerID)": true
+        ])
+    }
 }
+
+extension GameManager: TurnTimerDelegate {
+    func turnTimer(_ sender: TurnTimer, timeRanOut: Bool) {
+        guard currentPlayerTurn == service.currentUser?.uid else { return }
+        damagePlayer(playerID: currentPlayerTurn)
+        
+        // Get next player's turn
+        guard let currentPosition = getPosition(currentPlayerTurn) else { return }
+        let playerCount = positions.count
+        let nextPosition = (currentPosition + 1) % playerCount
+        let isLastTurn = currentPosition == positions.count - 1
+        
+        guard let nextPlayerUID = (positions.first(where: { $0.value == nextPosition }))?.key else { return }
+        
+        var updates: [String: Any] = [
+            "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
+            "games/\(roomID)/playerWords/\(nextPlayerUID)": ""   // reset next player's input
+        ]
+        
+        if isLastTurn {
+            updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
+        }
+        
+        ref.updateChildValues(updates)
+    }
+    
+}
+
 extension GameManager {
     enum WordError: Error {
         case invalidWord

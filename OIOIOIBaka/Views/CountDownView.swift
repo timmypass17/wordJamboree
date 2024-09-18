@@ -45,28 +45,22 @@ class CountDownView: UIView {
     
     func startCountDown() {
         isHidden = false
-        countDownLabel.text = "\(countdownValue)"
-        soundManager.playCountdownSound()
         
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            self?.updateCountdown()
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+            countDownLabel.text = "\(countdownValue)"
+            if countdownValue == 0 {
+                stopCountDown()
+            } else {
+                soundManager.playCountdownSound()
+            }
+            
+            countdownValue -= 1
         }
         
         delegate?.countDownView(self, didStartCountDown: true)
     }
     
-    private func updateCountdown() {
-        countdownValue -= 1
-        countDownLabel.text = "\(countdownValue)"
-        
-        if countdownValue == 0 {
-            endCountDown()
-        } else {
-            soundManager.playCountdownSound()
-        }
-    }
-    
-    private func endCountDown() {
+    private func stopCountDown() {
         isHidden = true
         countdownTimer?.invalidate()
         soundManager.playBonkSound()

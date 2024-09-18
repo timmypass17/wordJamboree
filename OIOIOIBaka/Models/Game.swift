@@ -10,11 +10,10 @@ import Foundation
 struct Game: Codable {
     var roomID: String
     var currentLetters: String
-    var players: [String: Bool]? // does support arrays but using dicitonary is recommended
+    var players: [String: Int]? // does support arrays but using dicitonary is recommended
     var positions: [String: Int]?
     var currentPlayerTurn: String
     var playerWords: [String: String]?
-    var shakePlayers: [String: Bool]?
     var rounds: Int
     var secondsPerTurn: Int
 }

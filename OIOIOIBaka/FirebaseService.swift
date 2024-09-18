@@ -67,7 +67,7 @@ class FirebaseService {
             roomID: roomID,
             currentLetters: GameManager.generateRandomLetters(),
             players: [
-                currentUser.uid: true
+                currentUser.uid: 3
             ],
             positions: [
                 currentUser.uid: 0
@@ -151,7 +151,7 @@ class FirebaseService {
         if result {
             guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return false }
             try await ref.updateChildValues([
-                "/games/\(roomID)/players/\(user.uid)": true,
+                "/games/\(roomID)/players/\(user.uid)": 3,
                 "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
                 "/shake/\(roomID)/players/\(user.uid)": user.uid
             ])

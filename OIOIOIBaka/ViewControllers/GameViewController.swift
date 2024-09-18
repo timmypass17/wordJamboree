@@ -135,27 +135,7 @@ class GameViewController: UIViewController {
         }
         
     }
-        
-    @objc func keyboardWillAppear(notification: NSNotification) {
-        if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
-            if self.originalSize == nil {
-                let originalSize = self.view.frame.size
-                self.originalSize = originalSize
-                self.view.frame.size = CGSize(
-                    width: originalSize.width,
-                    height: originalSize.height - keyboardSize.height
-                )
-            }
-        }
-    }
 
-    @objc func keyboardWillDisappear(notification: NSNotification) {
-        if let originalSize = self.originalSize {
-                self.view.frame.size = originalSize
-                self.originalSize = nil
-            }
-    }
-    
     func didTapExitButton() -> UIAction {
         return UIAction { [self] _ in
             Task {
@@ -168,6 +148,41 @@ class GameViewController: UIViewController {
             }
             navigationController?.popViewController(animated: true)
         }
+    }
+    
+    func didTapStartButton() -> UIAction {
+        return UIAction { [self] _ in
+            gameManager.startingGame()
+        }
+    }
+    
+    @objc func keyboardWillAppear(notification: NSNotification) {
+        if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
+            if self.originalSize == nil {
+                let originalSize = self.view.frame.size
+                self.originalSize = originalSize
+                self.view.frame.size = CGSize(
+                    width: originalSize.width,
+                    height: originalSize.height - keyboardSize.height
+                )
+            }
+        }
+    }
+    
+    @objc func keyboardWillDisappear(notification: NSNotification) {
+        if let originalSize = self.originalSize {
+            self.view.frame.size = originalSize
+            self.originalSize = nil
+        }
+    }
+
+}
+
+extension GameViewController: UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        didTapDoneButton(textField)
+        return true
     }
     
     func didTapDoneButton(_ textField: UITextField) {
@@ -186,20 +201,6 @@ class GameViewController: UIViewController {
         }
     }
     
-    func didTapStartButton() -> UIAction {
-        return UIAction { [self] _ in
-            gameManager.startingGame()
-        }
-    }
-}
-
-extension GameViewController: UITextFieldDelegate {
-    
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        didTapDoneButton(textField)
-        return true
-    }
-    
     // Prevents text editing
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         guard let currentUser = gameManager.service.currentUser
@@ -214,9 +215,21 @@ extension GameViewController: UITextFieldDelegate {
 
 extension GameViewController: GameManagerDelegate {
     
-    func gameManager(_ manager: GameManager, playerUpdated players: [String : Bool]) {
+    func gameManager(_ manager: GameManager, playersUpdated players: [String : Int]) {
         Task {
-            await updateUserViews(players: players)
+            await updateUserViews(players: players.map { $0.key })
+        }
+        updateHearts(players: players)
+    }
+    
+    func updateHearts(players: [String: Int]) {
+        for (playerID, livesRemaining) in players {
+            guard let position = gameManager.positions[playerID] else { continue }
+            if position == 0 {
+                p0View.setHearts(to: livesRemaining)
+            } else if position == 1 {
+                p1View.setHearts(to: livesRemaining)
+            }
         }
     }
     
@@ -282,10 +295,10 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    private func updateUserViews(players: [String: Bool]) async {
+    private func updateUserViews(players: [String]) async {
         do {
             try await withThrowingTaskGroup(of: MyUser.self) { group in
-                for (playerID, _) in players {
+                for playerID in players {
                     if let cachedUser = self.gameManager.playerInfos[playerID] {
                         group.addTask {
                             return cachedUser
@@ -406,7 +419,6 @@ extension GameViewController: GameManagerDelegate {
             }
         }
     }
-
 }
 
 extension GameViewController: CountDownViewDelegate {
@@ -418,8 +430,6 @@ extension GameViewController: CountDownViewDelegate {
     func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
         currentWordView.isHidden = false
         gameManager.startGame()
-
-//        gameManager.startTurnTimer()
     }
     
     
