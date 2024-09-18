@@ -26,21 +26,27 @@ class GameManager {
     var currentPlayerTurn: String = ""
     var positions: [String: Int] = [:]
     var players: [String: Bool] = [:]
+    var secondsPerTurn: Int = -1
+    var rounds: Int = 1
+    let minimumTime = 5
 
     var room: Room?
     var roomID: String
     
     var service: FirebaseService
+    let soundManager = SoundManager()
     var ref = Database.database().reference()
     weak var delegate: GameManagerDelegate?
     var playerInfos: [String: MyUser] = [:]
+    var turnTimer: TurnTimer?
         
     init(roomID: String, service: FirebaseService) {
         self.service = service
         self.roomID = roomID
+        turnTimer = TurnTimer(soundManager: soundManager)
     }
     
-    func startGame() {
+    func startingGame() {
         // Only room master can start game
         guard let creatorID = room?.creatorID,
               let currentUserID = service.currentUser?.uid
@@ -48,21 +54,31 @@ class GameManager {
         
         if creatorID == currentUserID {
             ref.updateChildValues([
-                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue,
-                "games/\(roomID)/currentPlayerTurn": currentUserID  // or random?
+                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue
+//                "games/\(roomID)/currentPlayerTurn": currentUserID  // or random?
             ])
         }
+    }
+    
+    func startGame() {
+        guard let creatorID = room?.creatorID else { return }
         
+        ref.updateChildValues([
+            "games/\(roomID)/currentPlayerTurn": creatorID
+        ])
     }
     
     func setup() {
+        // .value gets called once intially
         observeRoom()
         observeShakes()
-        observePlayerTurn()
         observeCurrentLetters()
         observePlayerWords()
         observePositions()
         observePlayers()
+        observeRounds()
+        observeSecondsPerTurn()
+        observePlayerTurn()
     }
     
     func observePlayerWords() {
@@ -84,9 +100,12 @@ class GameManager {
     
     func observePlayerTurn() {
         ref.child("games/\(roomID)/currentPlayerTurn").observe(.value) { [self] snapshot in
-            guard let currentPlayerTurn = snapshot.value as? String else { return }
-            print("Current Turn: \(currentPlayerTurn)")
+            guard let currentPlayerTurn = snapshot.value as? String,
+                  currentPlayerTurn != ""   // note: .value gets called for initial data and then listens
+            else { return }
             self.currentPlayerTurn = currentPlayerTurn
+            
+            turnTimer?.startTimer(duration: secondsPerTurn)
             delegate?.gameManager(self, playerTurnChanged: currentPlayerTurn)
         }
     }
@@ -146,9 +165,9 @@ class GameManager {
         guard let nextPlayerUID = (positions.first(where: { $0.value == nextPosition }))?.key else { return }
         
         var updates: [String: Any] = [
-            "games/\(roomID)/currentLetters": newLetters,       // create new letters
+            "games/\(roomID)/currentLetters": newLetters,        // create new letters
             "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
-            "games/\(roomID)/playerWords/\(nextPlayerUID)": ""  // reset next player's input
+            "games/\(roomID)/playerWords/\(nextPlayerUID)": ""   // reset next player's input
         ]
         
         if isLastTurn {
@@ -198,6 +217,52 @@ class GameManager {
         return commonLetterCombinations.randomElement()!.uppercased()
     }
     
+//    var turnTimer: Timer?
+//
+//    func startTurnTimer() {
+//        print("Timer started: \(secondsPerTurn)")
+//        var timeRemaining = secondsPerTurn
+//        turnTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+//            if timeRemaining == 0 {
+//                // User is exploded
+//                soundManager.playBonkSound()
+//                self.turnTimer?.invalidate()
+//            } else if timeRemaining == 10 {
+//                soundManager.playTickingSound()
+//            }
+//            
+//            print(timeRemaining)
+//            timeRemaining -= 1
+//        }
+//    }
+    
+    func observeRounds() {
+        Task {
+            do {
+                // Get most up to date seconds
+                let secondsSnapshot = try await ref.child("games/\(roomID)/secondsPerTurn").getData()
+                self.secondsPerTurn = secondsSnapshot.value as! Int
+                
+                ref.child("games/\(roomID)/rounds").observe(.value) { [self] snapshot in
+                    guard let rounds = snapshot.value as? Int else { return }
+                    self.rounds = rounds
+                    
+                    ref.updateChildValues([
+                        "games/\(roomID)/secondsPerTurn": max(minimumTime, secondsPerTurn - 1)  // decrease turn time
+                    ])
+                }
+            } catch {
+                print("Error fetching secondsperTurn: \(error)")
+            }
+        }
+    }
+    
+    func observeSecondsPerTurn() {
+        ref.child("games/\(roomID)/secondsPerTurn").observe(.value) { [self] snapshot in
+            guard let seconds = snapshot.value as? Int else { return }
+            self.secondsPerTurn = seconds
+        }
+    }
 }
 extension GameManager {
     enum WordError: Error {

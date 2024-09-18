@@ -44,6 +44,8 @@
 		32EF33DA2C8E801F000850A5 /* RoomTitleTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D92C8E801F000850A5 /* RoomTitleTableViewCell.swift */; };
 		32EF33DC2C8E8E2D000850A5 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33DB2C8E8E2D000850A5 /* Room.swift */; };
 		32EF33DF2C8FAFE8000850A5 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 32EF33DE2C8FAFE8000850A5 /* FirebaseDatabase */; };
+		32F64FEE2C9B6C6B0046C20E /* ticking.wav in Resources */ = {isa = PBXBuildFile; fileRef = 32F64FED2C9B6C6B0046C20E /* ticking.wav */; };
+		32F64FF02C9B77A50046C20E /* TurnTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F64FEF2C9B77A50046C20E /* TurnTimer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -79,6 +81,8 @@
 		32EF33D72C8E7E81000850A5 /* CreateRoomViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRoomViewController.swift; sourceTree = "<group>"; };
 		32EF33D92C8E801F000850A5 /* RoomTitleTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTitleTableViewCell.swift; sourceTree = "<group>"; };
 		32EF33DB2C8E8E2D000850A5 /* Room.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
+		32F64FED2C9B6C6B0046C20E /* ticking.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ticking.wav; sourceTree = "<group>"; };
+		32F64FEF2C9B77A50046C20E /* TurnTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnTimer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +106,7 @@
 		32610AEF2C99291F0011946E /* SoundEffects */ = {
 			isa = PBXGroup;
 			children = (
+				32F64FED2C9B6C6B0046C20E /* ticking.wav */,
 				32610AF02C9929390011946E /* ding.mp3 */,
 				32610AF22C992D2B0011946E /* bonk.mp3 */,
 			);
@@ -142,6 +147,7 @@
 				32EF33D22C8E70D4000850A5 /* FirebaseService.swift */,
 				32C06C622C91082200D3676D /* GameManager.swift */,
 				32610AF42C9930140011946E /* SoundManager.swift */,
+				32F64FEF2C9B77A50046C20E /* TurnTimer.swift */,
 			);
 			path = OIOIOIBaka;
 			sourceTree = "<group>";
@@ -272,6 +278,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				32F64FEE2C9B6C6B0046C20E /* ticking.wav in Resources */,
 				32610AF12C9929390011946E /* ding.mp3 in Resources */,
 				32610AF32C992D2B0011946E /* bonk.mp3 in Resources */,
 				326F93BA2C8B928F00B28F04 /* Assets.xcassets in Resources */,
@@ -303,6 +310,7 @@
 				32C06C6B2C93C4B600D3676D /* Shake.swift in Sources */,
 				32610AF72C9A28CB0011946E /* GameView.swift in Sources */,
 				32C06C692C92163A00D3676D /* Game.swift in Sources */,
+				32F64FF02C9B77A50046C20E /* TurnTimer.swift in Sources */,
 				32C06C5D2C90F6D800D3676D /* ProfileImageView.swift in Sources */,
 				32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */,
 				32610AF52C9930140011946E /* SoundManager.swift in Sources */,

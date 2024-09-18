@@ -188,7 +188,7 @@ class GameViewController: UIViewController {
     
     func didTapStartButton() -> UIAction {
         return UIAction { [self] _ in
-            gameManager.startGame()
+            gameManager.startingGame()
         }
     }
 }
@@ -247,13 +247,6 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String) {
         updateControls()
         pointArrow(to: playerID)
-        if playerID == manager.service.currentUser?.uid {
-            startTimer()
-        }
-    }
-    
-    private func startTimer() {
-        
     }
     
     private func pointArrow(to playerID: String) {
@@ -424,6 +417,9 @@ extension GameViewController: CountDownViewDelegate {
     
     func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
         currentWordView.isHidden = false
+        gameManager.startGame()
+
+//        gameManager.startTurnTimer()
     }
     
     

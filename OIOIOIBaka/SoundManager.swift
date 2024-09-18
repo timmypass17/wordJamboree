@@ -14,6 +14,7 @@ class SoundManager {
     init() {
         prepareSound(named: "ding", withExtension: "mp3")
         prepareSound(named: "bonk", withExtension: "mp3")
+        prepareSound(named: "ticking", withExtension: "wav")
     }
     
     func playCountdownSound() {
@@ -24,10 +25,22 @@ class SoundManager {
         playSound(players["bonk"])
     }
     
+    func playTickingSound() {
+        playSound(players["ticking"])
+    }
+    
+    func stopTickingSound() {
+        stopSound(players["ticking"])
+    }
+    
     private func playSound(_ player: AVAudioPlayer?) {
         player?.stop()          // Stop the current playback
         player?.currentTime = 0 // Reset to the beginning of the sound
         player?.play()          // Play the sound
+    }
+    
+    private func stopSound(_ player: AVAudioPlayer?) {
+        player?.stop()
     }
     
     private func prepareSound(named soundName: String, withExtension ext: String) {

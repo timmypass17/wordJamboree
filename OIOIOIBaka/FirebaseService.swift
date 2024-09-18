@@ -76,7 +76,8 @@ class FirebaseService {
             playerWords: [
                 currentUser.uid: ""
             ],
-            rounds: 1
+            rounds: 1,
+            secondsPerTurn: Int.random(in: 10...30)
         )
         
         let shake = Shake(
