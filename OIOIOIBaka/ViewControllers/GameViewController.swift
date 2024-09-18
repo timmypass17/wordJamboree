@@ -42,13 +42,10 @@ class GameViewController: UIViewController {
         return button
     }()
     
-    let countDownLabel: UILabel = {
-        let label = UILabel()
-        label.isHidden = true
-        label.font = UIFont.systemFont(ofSize: 32, weight: .bold)
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
+    let countDownView: CountDownView = {
+        let countDownView = CountDownView()
+        countDownView.translatesAutoresizingMaskIntoConstraints = false
+        return countDownView
     }()
     
     var gameManager: GameManager
@@ -57,9 +54,6 @@ class GameViewController: UIViewController {
 
     var exitBarButton: UIBarButtonItem!
     private var originalSize: CGSize?
-
-    var countdownTimer: Timer?
-    var countdownValue = 3
 
     init(gameManager: GameManager) {
         self.gameManager = gameManager
@@ -73,6 +67,7 @@ class GameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         gameManager.delegate = self
+        countDownView.delegate = self
         navigationItem.setHidesBackButton(true, animated: true)
         
         startButton.addAction(didTapStartButton(), for: .touchUpInside)
@@ -85,26 +80,24 @@ class GameViewController: UIViewController {
         view.addSubview(p1View)
         view.addSubview(currentWordView)
         view.addSubview(startButton)
-        view.addSubview(countDownLabel)
+        view.addSubview(countDownView)
         
         NSLayoutConstraint.activate([
             currentWordView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             currentWordView.topAnchor.constraint(equalTo: p0View.bottomAnchor),
             currentWordView.bottomAnchor.constraint(equalTo: p1View.topAnchor),
 
-            // Position p1View at the bottom
             p1View.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -50),
             p1View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             
-            // Position p2View at the top
             p0View.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
             p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
             startButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             startButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            
-            countDownLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            countDownLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+
+            countDownView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            countDownView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
 
         p0View.wordTextField.isUserInteractionEnabled = false
@@ -198,35 +191,6 @@ class GameViewController: UIViewController {
             gameManager.startGame()
         }
     }
-    
-    private func startCountDown() {
-        countDownLabel.isHidden = false
-        countDownLabel.text = "\(countdownValue)"
-        startButton.isHidden = true
-//        arrowView.isHidden = true
-        currentWordView.isHidden = true
-        
-        soundManager.playCountdownSound()
-        // Create a timer to update every second
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            self?.updateCountdown()
-        }
-    }
-    
-    private func updateCountdown() {
-        countdownValue -= 1
-        countDownLabel.text = "\(countdownValue)"
-        
-        
-        if countdownValue == 0 {
-            countdownTimer?.invalidate()
-            currentWordView.isHidden = false
-            countDownLabel.isHidden = true
-            soundManager.playBonkSound()
-        } else {
-            soundManager.playCountdownSound()
-        }
-    }
 }
 
 extension GameViewController: UITextFieldDelegate {
@@ -283,6 +247,13 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String) {
         updateControls()
         pointArrow(to: playerID)
+        if playerID == manager.service.currentUser?.uid {
+            startTimer()
+        }
+    }
+    
+    private func startTimer() {
+        
     }
     
     private func pointArrow(to playerID: String) {
@@ -302,11 +273,11 @@ extension GameViewController: GameManagerDelegate {
         switch room.status {
         case .notStarted:
             startButton.isHidden = false
-            countDownLabel.isHidden = true
+            countDownView.isHidden = true
             currentWordView.isHidden = true
             break
         case .inProgress:
-            startCountDown()
+            countDownView.startCountDown()
         }
     }
     
@@ -443,6 +414,19 @@ extension GameViewController: GameManagerDelegate {
         }
     }
 
+}
+
+extension GameViewController: CountDownViewDelegate {
+    func countDownView(_ sender: CountDownView, didStartCountDown: Bool) {
+        startButton.isHidden = true
+        currentWordView.isHidden = true
+    }
+    
+    func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
+        currentWordView.isHidden = false
+    }
+    
+    
 }
 
 #Preview("GameViewController") {

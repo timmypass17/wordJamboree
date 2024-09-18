@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		32610AEC2C98C9440011946E /* ArrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AEB2C98C9440011946E /* ArrowView.swift */; };
-		32610AEE2C9903250011946E /* GameNotStartedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AED2C9903250011946E /* GameNotStartedView.swift */; };
 		32610AF12C9929390011946E /* ding.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF02C9929390011946E /* ding.mp3 */; };
 		32610AF32C992D2B0011946E /* bonk.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF22C992D2B0011946E /* bonk.mp3 */; };
 		32610AF52C9930140011946E /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AF42C9930140011946E /* SoundManager.swift */; };
 		32610AF72C9A28CB0011946E /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AF62C9A28CB0011946E /* GameView.swift */; };
+		32610AFB2C9A6D420011946E /* CountDownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AFA2C9A6D420011946E /* CountDownView.swift */; };
 		326F93B12C8B928E00B28F04 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B02C8B928E00B28F04 /* AppDelegate.swift */; };
 		326F93B32C8B928E00B28F04 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B22C8B928E00B28F04 /* SceneDelegate.swift */; };
 		326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B42C8B928E00B28F04 /* HomeViewController.swift */; };
@@ -48,11 +48,11 @@
 
 /* Begin PBXFileReference section */
 		32610AEB2C98C9440011946E /* ArrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrowView.swift; sourceTree = "<group>"; };
-		32610AED2C9903250011946E /* GameNotStartedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameNotStartedView.swift; sourceTree = "<group>"; };
 		32610AF02C9929390011946E /* ding.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = ding.mp3; sourceTree = "<group>"; };
 		32610AF22C992D2B0011946E /* bonk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bonk.mp3; sourceTree = "<group>"; };
 		32610AF42C9930140011946E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		32610AF62C9A28CB0011946E /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		32610AFA2C9A6D420011946E /* CountDownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountDownView.swift; sourceTree = "<group>"; };
 		326F93AD2C8B928E00B28F04 /* OIOIOIBaka.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OIOIOIBaka.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		326F93B02C8B928E00B28F04 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		326F93B22C8B928E00B28F04 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -167,7 +167,7 @@
 				32C06C602C9106A200D3676D /* CurrentWordView.swift */,
 				32C06C642C9132B200D3676D /* HeartsView.swift */,
 				32610AEB2C98C9440011946E /* ArrowView.swift */,
-				32610AED2C9903250011946E /* GameNotStartedView.swift */,
+				32610AFA2C9A6D420011946E /* CountDownView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -287,8 +287,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				32610AEE2C9903250011946E /* GameNotStartedView.swift in Sources */,
 				32C06C672C91473F00D3676D /* IncomingMove.swift in Sources */,
+				32610AFB2C9A6D420011946E /* CountDownView.swift in Sources */,
 				326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */,
 				32EF33DA2C8E801F000850A5 /* RoomTitleTableViewCell.swift in Sources */,
 				326F93B12C8B928E00B28F04 /* AppDelegate.swift in Sources */,
