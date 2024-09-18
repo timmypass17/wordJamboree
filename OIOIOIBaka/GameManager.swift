@@ -11,13 +11,22 @@ import FirebaseDatabaseInternal
 import FirebaseAuth
 
 protocol GameManagerDelegate: AnyObject {
-    func gameManager(_ manager: GameManager, gameStateUpdated game: Game)
-    func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int)
     func gameManager(_ manager: GameManager, roomStateUpdated room: Room)
+    func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int)
+    func gameManager(_ manager: GameManager, playerTurnChanged playerID: String)
+    func gameManager(_ manager: GameManager, currentLettersUpdated letters: String)
+    func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String: String])
+    func gameManager(_ manager: GameManager, playerUpdated players: [String: Bool])
 }
 
 class GameManager {
-    var game: Game?
+//    var game: Game?
+    var currentLetters: String = ""
+    var playerWords: [String: String] = [:]
+    var currentPlayerTurn: String = ""
+    var positions: [String: Int] = [:]
+    var players: [String: Bool] = [:]
+
     var room: Room?
     var roomID: String
     
@@ -39,7 +48,8 @@ class GameManager {
         
         if creatorID == currentUserID {
             ref.updateChildValues([
-                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue
+                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue,
+                "games/\(roomID)/currentPlayerTurn": currentUserID  // or random?
             ])
         }
         
@@ -47,8 +57,38 @@ class GameManager {
     
     func setup() {
         observeRoom()
-        getPlayers()
-        handleShakePlayers()
+        observeShakes()
+        observePlayerTurn()
+        observeCurrentLetters()
+        observePlayerWords()
+        observePositions()
+        observePlayers()
+    }
+    
+    func observePlayerWords() {
+        ref.child("games/\(roomID)/playerWords").observe(.value) { [self] snapshot in
+            guard let playerWords = snapshot.value as? [String: String] else { return }
+            self.playerWords = playerWords
+            delegate?.gameManager(self, playerWordsUpdated: playerWords)
+        }
+    }
+    
+    
+    func observeCurrentLetters() {
+        ref.child("games/\(roomID)/currentLetters").observe(.value) { [self] snapshot in
+            guard let letters = snapshot.value as? String else { return }
+            self.currentLetters = letters
+            delegate?.gameManager(self, currentLettersUpdated: letters)
+        }
+    }
+    
+    func observePlayerTurn() {
+        ref.child("games/\(roomID)/currentPlayerTurn").observe(.value) { [self] snapshot in
+            guard let currentPlayerTurn = snapshot.value as? String else { return }
+            print("Current Turn: \(currentPlayerTurn)")
+            self.currentPlayerTurn = currentPlayerTurn
+            delegate?.gameManager(self, playerTurnChanged: currentPlayerTurn)
+        }
     }
     
     func observeRoom() {
@@ -59,24 +99,24 @@ class GameManager {
         }
     }
     
-    func getPlayers() {
-        ref.child("games").child(roomID).observe(.value) { [self] snapshot in
-            guard let updatedGame = snapshot.toObject(Game.self) else {
-                print("Fail to convert game")
-                return
-            }
-            game = updatedGame
-            delegate?.gameManager(self, gameStateUpdated: updatedGame)
+//    Players and Positions: In observePlayers() and observePositions(), you are observing the entire node. If the positions and players change frequently, this can become expensive in terms of bandwidth and Firebase read costs.
+//    Optimization: Use .childChanged to observe specific changes rather than downloading the entire set of positions or players every time.
+    func observePositions() {
+        ref.child("games/\(roomID)/positions").observe(.value) { [self] snapshot in
+            guard let positions = snapshot.value as? [String: Int] else { return }
+            self.positions = positions
         }
     }
     
-    func removePlayer(playerID: String) async throws {
-//        try await ref.updateChildValues([
-//            "games/\(roomID)/players/\(playerID)": NSNull(),  # Don't remove player, set player status to "dead'
-//            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-//        ])
+    func observePlayers() {
+        ref.child("games/\(roomID)/players").observe(.value) { [self] snapshot in
+            print("Players changed")
+            guard let players = snapshot.value as? [String: Bool] else { return }
+            self.players = players
+            delegate?.gameManager(self, playerUpdated: players)
+        }
     }
-    
+
     func typing(_ partialWord: String) async throws {
         guard let currentUser = service.currentUser else { return }
         try await ref.updateChildValues([
@@ -85,9 +125,7 @@ class GameManager {
     }
     
     func submit(_ word: String) async throws {
-        guard let currentUser = service.currentUser,
-            let letters = game?.currentLetters else { return }
-        let wordIsValid = word.isWord && word.contains(letters)
+        let wordIsValid = word.isWord && word.contains(currentLetters)
         if wordIsValid {
             try await handleSubmitSuccess()
         } else {
@@ -97,7 +135,6 @@ class GameManager {
     
     private func handleSubmitSuccess() async throws {
         guard let currentUser = service.currentUser,
-              let positions = game?.positions,
               let currentPosition = getPosition(currentUser.uid)
         else { return }
         
@@ -129,7 +166,7 @@ class GameManager {
         throw WordError.invalidWord
     }
     
-    func handleShakePlayers() {
+    func observeShakes() {
         ref.child("shake/\(roomID)/players").observe(.value) { [self] snapshot in
             guard let shakePlayers = snapshot.toObject([String: Bool].self) else {
                 print("Failed to convert snapshot to shakePlayers")
@@ -145,18 +182,19 @@ class GameManager {
     }
     
     func getPosition(_ uid: String?) -> Int? {
-        guard let uid = uid,
-              let positions = game?.positions else { return nil }
+        guard let uid = uid else { return nil }
         return positions[uid]
     }
 
+    
+    static let commonLetterCombinations = [
+        // 2-letter combinations
+        "th", "he", "in", "er", "an", "re", "on", "at", "en", "nd", "st", "es", "ng", "ou",
+        // 3-letter combinations
+        "the", "and", "ing", "ent", "ion", "tio", "for", "ere", "her", "ate", "est", "all", "int", "ter"
+    ]
+    
     static func generateRandomLetters() -> String {
-        let commonLetterCombinations = [
-            // 2-letter combinations
-            "th", "he", "in", "er", "an", "re", "on", "at", "en", "nd", "st", "es", "ng", "ou",
-            // 3-letter combinations
-            "the", "and", "ing", "ent", "ion", "tio", "for", "ere", "her", "ate", "est", "all", "int", "ter"
-        ]
         return commonLetterCombinations.randomElement()!.uppercased()
     }
     
@@ -176,3 +214,12 @@ extension String {
         return misspelledRange.location == NSNotFound
     }
 }
+
+//Reduce Firebase Reads:
+//  - Use more targeted listeners (.childAdded, .childChanged) and avoid .value where unnecessary.
+//Throttling Updates:
+//  - If certain data (like typing() or submit()) is updated very frequently, consider batching those updates or introducing a debounce mechanism to avoid flooding Firebase with writes.
+//Error Handling and UI Feedback:
+//  - Ensure that all thrown errors are caught and handled appropriately, providing feedback to the user (especially for invalid word submissions).
+//Use Transactions for Critical Data:
+//  - For game-critical data like currentPlayerTurn or the number of rounds, transactions would ensure that updates happen atomically and without conflict.

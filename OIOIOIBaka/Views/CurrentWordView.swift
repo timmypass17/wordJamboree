@@ -11,7 +11,7 @@ class CurrentWordView: UIView {
     
     let wordLabel: UILabel = {
         let label = UILabel()
-        label.text = "ING"
+        label.text = "-"
         label.font = .preferredFont(forTextStyle: .title1)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -42,9 +42,7 @@ class CurrentWordView: UIView {
         NSLayoutConstraint.activate([
             container.centerXAnchor.constraint(equalTo: centerXAnchor),
             container.centerYAnchor.constraint(equalTo: centerYAnchor),
-            
-//            container.widthAnchor.constraint(equalTo: container.heightAnchor),  // for circle
-            
+                        
             wordLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: padding),
             wordLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -padding),
             wordLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: padding),
@@ -54,7 +52,6 @@ class CurrentWordView: UIView {
             arrowView.centerYAnchor.constraint(equalTo: centerYAnchor),
             
         ])
-        
     }
     
     required init?(coder: NSCoder) {
@@ -63,7 +60,9 @@ class CurrentWordView: UIView {
 
     func pointArrow(at targetView: UIView, _ viewController: UIViewController) {
         // Convert frame's in respect to viewController
-        // - view frames are relative to their parent's view, we treat arrowView's frame as if it were in the viewControllers's view box frame
+        // - view frames are relative to their parent's view (e.g. (0,0) is top left corner of view's superview)
+        // - we treat arrowView's frame as if it were in the viewControllers's view box frame
+        // This converts the targetView's frame from the coordinate system of its superview into the coordinate system of the viewController.view
         guard let targetFrame = targetView.superview?.convert(targetView.frame, to: viewController.view),
               let arrowFrame = arrowView.superview?.convert(arrowView.frame, to: viewController.view)
         else { return }
@@ -80,6 +79,8 @@ class CurrentWordView: UIView {
                        animations: {
             self.arrowView.transform = CGAffineTransform(rotationAngle: angle)
         }, completion: nil)
+        
+        print("pointArrow")
     }
 }
 

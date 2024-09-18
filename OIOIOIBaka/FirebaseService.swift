@@ -22,7 +22,7 @@ class FirebaseService {
     init() {
         
         authListener = Auth.auth().addStateDidChangeListener { auth, user in
-            if let user {
+            if user != nil {
                 Task {
                     await self.loadUser()
                 }
@@ -72,7 +72,10 @@ class FirebaseService {
             positions: [
                 currentUser.uid: 0
             ],
-            currentPlayerTurn: currentUser.uid,
+            currentPlayerTurn: "",
+            playerWords: [
+                currentUser.uid: ""
+            ],
             rounds: 1
         )
         
@@ -101,6 +104,7 @@ class FirebaseService {
     }
     
     func getRooms(completion: @escaping ([String: Room]) -> ()) {
+        // TODO: Listen to only non-full rooms, consider using .childAdded because we only care about rooms being added
         ref.child("rooms").observe(.value) { snapshot in
             guard let rooms = snapshot.toObject([String: Room].self) else {
                 completion([:])
@@ -111,28 +115,6 @@ class FirebaseService {
         }
     }
     
-//    func addUserToRoom(user: MyUser, room: Room, roomID: String) async throws {
-//        // simple client side validation (do client and security rule and cloud funtions?)
-//        // Check if room is full
-//        guard room.currentPlayerCount < 4 else { throw RoomError.roomFull }
-//
-//        do {
-//
-//            // Note: Firebase rules rejects this join request if room is full
-//            try await ref.updateChildValues([
-//                "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1),
-//                "/games/\(roomID)/players/\(user.uid)": true,
-//                "/games/\(roomID)/positions/\(user.uid)": room.currentPlayerCount,
-//                "/shake/\(roomID)/players/\(user.uid)": user.uid
-//            ])
-//            
-//            print("Added \(user.name) to room \(roomID) successfully")
-//        } catch {
-//            throw RoomError.securityRule
-//        }
-//    }
-    
-    
     func addUserToRoom(user: MyUser, roomID: String) async throws -> Bool {
         let roomRef = ref.child("rooms").child(roomID)
 
@@ -140,8 +122,8 @@ class FirebaseService {
         let (result, updatedSnapshot): (Bool, DataSnapshot) = try await roomRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
             guard var room = currentData.value as? [String: AnyObject],
                   var currentPlayerCount = room["currentPlayerCount"] as? Int,
-                  var statusString = room["status"] as? String,
-                  var roomStatus = Room.Status(rawValue: statusString)
+                  let statusString = room["status"] as? String,
+                  let roomStatus = Room.Status(rawValue: statusString)
             else {
                 return .abort()
             }

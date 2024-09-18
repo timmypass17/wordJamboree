@@ -72,20 +72,17 @@ class GameViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        startButton.addAction(didTapStartButton(), for: .touchUpInside)
-
         gameManager.delegate = self
         navigationItem.setHidesBackButton(true, animated: true)
+        
+        startButton.addAction(didTapStartButton(), for: .touchUpInside)
         exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
         navigationItem.rightBarButtonItem = exitBarButton
-        
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillDisappear), name: UIResponder.keyboardWillHideNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillAppear), name: UIResponder.keyboardWillShowNotification, object: nil)
         
         view.addSubview(p0View)
         view.addSubview(p1View)
-        
-        // TODO: Move this all to one object
         view.addSubview(currentWordView)
         view.addSubview(startButton)
         view.addSubview(countDownLabel)
@@ -109,13 +106,11 @@ class GameViewController: UIViewController {
             countDownLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             countDownLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
-        
-        currentWordView.wordLabel.text = gameManager.game?.currentLetters
-        
+
         p0View.wordTextField.isUserInteractionEnabled = false
         p1View.wordTextField.isUserInteractionEnabled = false
         
-        gameManager.setup()        
+        gameManager.setup()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -126,10 +121,10 @@ class GameViewController: UIViewController {
 
     @objc func textFieldDidChange(_ textField: UITextField) {
         guard let partialWord = textField.text,
-              let currentLetters = gameManager.game?.currentLetters,
               let currentUser = gameManager.service.currentUser,
               let position = gameManager.getPosition(currentUser.uid)
         else { return }
+        let currentLetters = gameManager.currentLetters
         
         // Update current user locally for faster results
         if position == 0 {
@@ -173,7 +168,7 @@ class GameViewController: UIViewController {
             Task {
                 do {
                     guard let currentUser = gameManager.service.currentUser else { return}
-                    try await gameManager.removePlayer(playerID: currentUser.uid)
+                    // Kill that user
                 } catch {
                     print("Error removing player: \(error)")
                 }
@@ -181,31 +176,11 @@ class GameViewController: UIViewController {
             navigationController?.popViewController(animated: true)
         }
     }
-}
-
-extension GameViewController: UITextFieldDelegate {
-    
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        didTapDoneButton(textField)
-        return true
-    }
-    
-    // Prevents text editing
-    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        guard let currentUser = gameManager.service.currentUser,
-              let currentPlayerTurn = gameManager.game?.currentPlayerTurn
-        else {
-            return false
-        }
-        
-        return currentUser.uid == currentPlayerTurn
-    }
     
     func didTapDoneButton(_ textField: UITextField) {
         
         guard let currentUser = gameManager.service.currentUser,
-              let currentPlayerTurn = gameManager.game?.currentPlayerTurn,
-              currentUser.uid == currentPlayerTurn,
+              currentUser.uid == gameManager.currentPlayerTurn,
               let word = textField.text
         else { return }
         
@@ -220,7 +195,6 @@ extension GameViewController: UITextFieldDelegate {
     
     func didTapStartButton() -> UIAction {
         return UIAction { [self] _ in
-//            startCountDown()
             gameManager.startGame()
         }
     }
@@ -245,8 +219,7 @@ extension GameViewController: UITextFieldDelegate {
         
         
         if countdownValue == 0 {
-            countdownTimer?.invalidate() // Stop the timer
-//            arrowView.isHidden = false
+            countdownTimer?.invalidate()
             currentWordView.isHidden = false
             countDownLabel.isHidden = true
             soundManager.playBonkSound()
@@ -254,20 +227,71 @@ extension GameViewController: UITextFieldDelegate {
             soundManager.playCountdownSound()
         }
     }
+}
+
+extension GameViewController: UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        didTapDoneButton(textField)
+        return true
+    }
+    
+    // Prevents text editing
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        guard let currentUser = gameManager.service.currentUser
+        else {
+            return false
+        }
+        
+        return currentUser.uid == gameManager.currentPlayerTurn
+    }
 
 }
 
 extension GameViewController: GameManagerDelegate {
     
-    func gameManager(_ manager: GameManager, gameStateUpdated game: Game) {
-        print("game stat updated")
-        updateCurrentLetters(newLetters: game.currentLetters)
+    func gameManager(_ manager: GameManager, playerUpdated players: [String : Bool]) {
         Task {
-            await updateUserViews(game: game)
+            await updateUserViews(players: players)
         }
-        updateUserTextInputs(game: game)
-        updateControls(game: game)
-        updateArrowView(game: game)
+    }
+    
+    func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String : String]) {
+        for (playerID, updatedWord) in manager.playerWords {
+            guard let position = manager.positions[playerID] else { continue }
+            
+            if position == 0 {
+                guard let originalWord = p0View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                p0View.updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
+            } else if position == 1 {
+                guard let originalWord = p1View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                p1View.updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
+            }
+        }
+    }
+    
+    func gameManager(_ manager: GameManager, currentLettersUpdated letters: String) {
+        currentWordView.wordLabel.text = letters
+    }
+    
+    func gameManager(_ manager: GameManager, playerTurnChanged playerID: String) {
+        updateControls()
+        pointArrow(to: playerID)
+    }
+    
+    private func pointArrow(to playerID: String) {
+        guard let position = gameManager.positions[playerID] else { return }
+        if position == 0 {
+            currentWordView.pointArrow(at: p0View, self)
+        } else if position == 1 {
+            currentWordView.pointArrow(at: p1View, self)
+        }
     }
     
     func gameManager(_ manager: GameManager, roomStateUpdated room: Room) {
@@ -287,7 +311,6 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int) {
-        print("Shaking player \(playerID) at position \(position)")
         if position == 0 {
             shakePlayer(p0View)
         } else if position == 1 {
@@ -295,25 +318,10 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    private func updateArrowView(game: Game) {
-        guard let positions = game.positions,
-              let currentPlayerPosition = positions[game.currentPlayerTurn]
-        else { return }
-        
-        if currentPlayerPosition == 0 {
-            currentWordView.pointArrow(at: p0View, self)
-        } else if currentPlayerPosition == 1 {
-            currentWordView.pointArrow(at: p1View, self)
-        }
-    }
-    
-    private func updateUserViews(game: Game) async {
-        guard let players = gameManager.game?.players
-        else { return }
-        
+    private func updateUserViews(players: [String: Bool]) async {
         do {
             try await withThrowingTaskGroup(of: MyUser.self) { group in
-                for (playerID, position) in players {
+                for (playerID, _) in players {
                     if let cachedUser = self.gameManager.playerInfos[playerID] {
                         group.addTask {
                             return cachedUser
@@ -343,12 +351,10 @@ extension GameViewController: GameManagerDelegate {
                 guard let position = gameManager.getPosition(uid) else { continue }
 
                 if position == 0 {
-                    print("p0: \(user.name)")
                     p0View.nameLabel.text = user.name
                     p0View.isHidden = false
                     
                 } else if position == 1 {
-                    print("p1: \(user.name)")
                     p1View.nameLabel.text = user.name
                     p1View.isHidden = false
                 }
@@ -356,18 +362,6 @@ extension GameViewController: GameManagerDelegate {
         } catch {
             print("Error fetching users: \(error)")
         }
-        
-//        let playerCount = positions.count
-//        if playerCount <= 2 {
-//
-//        }
-//        else if playerCount <= 3 {
-//
-//        }
-    }
-    
-    private func updateCurrentLetters(newLetters: String) {
-        currentWordView.wordLabel.text = newLetters
     }
     
     private func updateUserTextInputs(game: Game) {
@@ -409,7 +403,7 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    func updateControls(game: Game) {
+    func updateControls() {
         // Reset listeners
         p0View.wordTextField.removeTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
         p1View.wordTextField.removeTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
@@ -428,7 +422,7 @@ extension GameViewController: GameManagerDelegate {
             p0View.wordTextField.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
             p0View.wordTextField.delegate = self
             
-            if game.currentPlayerTurn == currentUserID {
+            if gameManager.currentPlayerTurn == currentUserID {
                 p0View.wordTextField.isUserInteractionEnabled = true
                 p0View.wordTextField.tintColor = UIColor(Color.accentColor)
             } else {
@@ -439,7 +433,7 @@ extension GameViewController: GameManagerDelegate {
             p1View.wordTextField.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
             p1View.wordTextField.delegate = self
             
-            if game.currentPlayerTurn == currentUserID {
+            if gameManager.currentPlayerTurn == currentUserID {
                 p1View.wordTextField.isUserInteractionEnabled = true
                 p1View.wordTextField.tintColor = UIColor(Color.accentColor)
             } else {
@@ -449,18 +443,6 @@ extension GameViewController: GameManagerDelegate {
         }
     }
 
-}
-
-extension GameViewController: GameNotStartedViewDelegate {
-    func gameNotStartedView(_ sender: GameNotStartedView, didTapStartButton: Bool) {
-        print("did tap start button")
-    }
-    
-    func gameNotStartedView(_ sender: GameNotStartedView, gameDidStart: Bool) {
-        print("Game did start")
-    }
-    
-    
 }
 
 #Preview("GameViewController") {

@@ -13,17 +13,9 @@ class ArrowView: UIView {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        self.setupArrow()
-    }
-    
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-    }
-    
-    private func setupArrow() {
         // Create the arrow shape using UIBezierPath ->
         let arrowPath = UIBezierPath()
-        let arrowLength: CGFloat = 50 // -
+        let arrowLength: CGFloat = 50  // -
         let arrowWidth: CGFloat = 20   // >
         let arrowHeadLength: CGFloat = 10
         
@@ -47,6 +39,10 @@ class ArrowView: UIView {
         
         // Add the arrow to the view's layer
         self.layer.addSublayer(arrowLayer)
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
     }
 }
 
