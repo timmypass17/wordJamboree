@@ -159,10 +159,17 @@ class GameManager {
         
         let playerCount = positions.count
         let newLetters = GameManager.generateRandomLetters()
-        let nextPosition = (currentPosition + 1) % playerCount
+        var nextPosition = (currentPosition + 1) % playerCount
         let isLastTurn = currentPosition == positions.count - 1
         
-        guard let nextPlayerUID = (positions.first(where: { $0.value == nextPosition }))?.key else { return }
+        // Get next alive user
+        while !isAlive(getUserID(position: nextPosition) ?? "") {
+            nextPosition = (nextPosition + 1) % playerCount
+        }
+        
+        guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
+        
+        print(nextPlayerUID)
         
         var updates: [String: Any] = [
             "games/\(roomID)/currentLetters": newLetters,        // create new letters
@@ -175,6 +182,14 @@ class GameManager {
         }
         
         try await ref.updateChildValues(updates)
+    }
+    
+    private func getUserID(position: Int) -> String? {
+        return positions.first(where: { $0.value == position })?.key
+    }
+    
+    private func isAlive(_ playerID: String) -> Bool {
+        return players[playerID, default: 0] != 0
     }
     
     private func handleSubmitFail() async throws {
@@ -283,10 +298,15 @@ extension GameManager: TurnTimerDelegate {
         // Get next player's turn
         guard let currentPosition = getPosition(currentPlayerTurn) else { return }
         let playerCount = positions.count
-        let nextPosition = (currentPosition + 1) % playerCount
+        var nextPosition = (currentPosition + 1) % playerCount
         let isLastTurn = currentPosition == positions.count - 1
         
-        guard let nextPlayerUID = (positions.first(where: { $0.value == nextPosition }))?.key else { return }
+        // Get next alive user
+        while !isAlive(getUserID(position: nextPosition) ?? "") {
+            nextPosition = (nextPosition + 1) % playerCount
+        }
+        
+        guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
         
         var updates: [String: Any] = [
             "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
