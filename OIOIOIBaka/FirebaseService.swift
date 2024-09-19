@@ -61,7 +61,15 @@ class FirebaseService {
         let roomRef = ref.child("rooms").childByAutoId()
         let roomID = roomRef.key!
         
-        let room = Room(creatorID: currentUser.uid, title: title, currentPlayerCount: 1, status: .notStarted)
+        let room = Room(
+            creatorID: currentUser.uid,
+            title: title,
+            currentPlayerCount: 1,
+            status: .notStarted,
+            isReady: [
+                currentUser.uid: false
+            ]
+        )
         
         let game = Game(
             roomID: roomID,
@@ -153,7 +161,8 @@ class FirebaseService {
             try await ref.updateChildValues([
                 "/games/\(roomID)/players/\(user.uid)": 3,
                 "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
-                "/shake/\(roomID)/players/\(user.uid)": user.uid
+                "/shake/\(roomID)/players/\(user.uid)": user.uid,
+                "/rooms/\(roomID)/isReady/\(user.uid)": false
             ])
         }
         

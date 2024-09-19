@@ -35,17 +35,16 @@ class GameViewController: UIViewController {
         return currentWordView
     }()
     
-    let startButton: UIButton = {
-        let button = UIButton(configuration: .filled())
-        button.setTitle("Start Game", for: .normal)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-    
     let countDownView: CountDownView = {
         let countDownView = CountDownView()
         countDownView.translatesAutoresizingMaskIntoConstraints = false
         return countDownView
+    }()
+    
+    let readyView: ReadyView = {
+        let readyView = ReadyView()
+        readyView.translatesAutoresizingMaskIntoConstraints = false
+        return readyView
     }()
     
     var gameManager: GameManager
@@ -68,9 +67,10 @@ class GameViewController: UIViewController {
         super.viewDidLoad()
         gameManager.delegate = self
         countDownView.delegate = self
+        readyView.delegate = self
         navigationItem.setHidesBackButton(true, animated: true)
         
-        startButton.addAction(didTapStartButton(), for: .touchUpInside)
+//        startButton.addAction(didTapStartButton(), for: .touchUpInside)
         exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
         navigationItem.rightBarButtonItem = exitBarButton
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillDisappear), name: UIResponder.keyboardWillHideNotification, object: nil)
@@ -79,8 +79,9 @@ class GameViewController: UIViewController {
         view.addSubview(p0View)
         view.addSubview(p1View)
         view.addSubview(currentWordView)
-        view.addSubview(startButton)
+//        view.addSubview(startButton)
         view.addSubview(countDownView)
+        view.addSubview(readyView)
         
         NSLayoutConstraint.activate([
             currentWordView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -93,11 +94,14 @@ class GameViewController: UIViewController {
             p0View.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
             p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            startButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            startButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+//            startButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+//            startButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
 
             countDownView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            countDownView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+            countDownView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            
+            readyView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            readyView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
         ])
 
         p0View.wordTextField.isUserInteractionEnabled = false
@@ -279,10 +283,9 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, roomStateUpdated room: Room) {
         switch room.status {
         case .notStarted:
-            startButton.isHidden = false
+            readyView.isHidden = false
             countDownView.isHidden = true
             currentWordView.isHidden = true
-            break
         case .inProgress:
             countDownView.startCountDown()
         case .ended:
@@ -292,6 +295,10 @@ extension GameViewController: GameManagerDelegate {
             }
             print("Show winner")
         }
+    }
+    
+    func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String : Bool]) {
+        readyView.update(currentUserID: manager.service.currentUser?.uid, isReady: isReady)
     }
     
     func showWinner(userID: String) {
@@ -441,13 +448,23 @@ extension GameViewController: GameManagerDelegate {
 
 extension GameViewController: CountDownViewDelegate {
     func countDownView(_ sender: CountDownView, didStartCountDown: Bool) {
-        startButton.isHidden = true
+        readyView.isHidden = true
         currentWordView.isHidden = true
     }
     
     func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
         currentWordView.isHidden = false
         gameManager.startGame()
+    }
+}
+
+extension GameViewController: ReadyViewDelegate {
+    func readyView(_ sender: ReadyView, didTapReadyButton: Bool) {
+        gameManager.ready()
+    }
+    
+    func readyView(_ sender: ReadyView, didTapUnReadyButton: Bool) {
+        gameManager.unready()
     }
     
     

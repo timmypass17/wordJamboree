@@ -12,6 +12,7 @@ import FirebaseAuth
 
 protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, roomStateUpdated room: Room)
+    func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String: Bool])
     func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int)
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String)
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String)
@@ -70,8 +71,8 @@ class GameManager {
     }
     
     func setup() {
-        // .value gets called once intially
         observeRoom()
+        observeReady()
         observeShakes()
         observeCurrentLetters()
         observePlayerWords()
@@ -116,6 +117,13 @@ class GameManager {
             guard let updatedRoom = snapshot.toObject(Room.self) else { return }
             room = updatedRoom
             self.delegate?.gameManager(self, roomStateUpdated: updatedRoom)
+        }
+    }
+    
+    func observeReady() {
+        ref.child("rooms/\(roomID)/isReady").observe(.value) { [self] snapshot in
+            guard let isReady = snapshot.value as? [String: Bool] else { return }
+            self.delegate?.gameManager(self, playersReadyUpdated: isReady)
         }
     }
     
@@ -330,6 +338,19 @@ class GameManager {
         return gameEnded
     }
     
+    func ready() {
+        guard let currentUser = service.currentUser else { return }
+        ref.updateChildValues([
+            "/rooms/\(roomID)/isReady/\(currentUser.uid)": true
+        ])
+    }
+    
+    func unready() {
+        guard let currentUser = service.currentUser else { return }
+        ref.updateChildValues([
+            "/rooms/\(roomID)/isReady/\(currentUser.uid)": false
+        ])
+    }
 }
 
 extension GameManager: TurnTimerDelegate {
