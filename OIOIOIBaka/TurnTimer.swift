@@ -22,9 +22,7 @@ class TurnTimer {
     }
     
     func startTimer(duration: Int) {
-        // New turn, stop timers
-        timer?.invalidate()
-        soundManager.stopTickingSound()
+        stopTimer()
         
         // Start turn timer for everyone so we can play ticking sound for everyone, but do something extra if it's the current player turn
         print("Timer started: \(duration)")
@@ -41,5 +39,11 @@ class TurnTimer {
             print(timeRemaining)
             timeRemaining -= 1
         }
+    }
+    
+    func stopTimer() {
+        print("Stop turn timer")
+        timer?.invalidate()
+        soundManager.stopTickingSound()
     }
 }

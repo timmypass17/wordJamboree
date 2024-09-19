@@ -130,6 +130,7 @@ class GameManager {
     
     func observePlayers() {
         ref.child("games/\(roomID)/players").observe(.value) { [self] snapshot in
+            print("Players updated")
             guard let players = snapshot.value as? [String: Int] else { return }
             self.players = players
             delegate?.gameManager(self, playersUpdated: players)
@@ -168,9 +169,7 @@ class GameManager {
         }
         
         guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-        
-        print(nextPlayerUID)
-        
+                
         var updates: [String: Any] = [
             "games/\(roomID)/currentLetters": newLetters,        // create new letters
             "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
@@ -264,6 +263,8 @@ class GameManager {
         guard playerID == service.currentUser?.uid else { return }
         let playerRef = ref.child("games/\(roomID)/players/\(playerID)")
 
+        var localPlayers = players // avoid race conditions (either make another fetch to get latest players or use cloud functions?)
+        
         // Perform transaction to ensure atomic update
         let (result, updatedSnapshot): (Bool, DataSnapshot) = try await playerRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
             guard var livesRemaining = currentData.value as? Int else { return .abort() }
@@ -276,15 +277,56 @@ class GameManager {
         }
         
         if result {
-            guard let updatedLivesRemaining = updatedSnapshot.value as? Int else { return }
-            try await ref.updateChildValues([
-                "/shake/\(roomID)/players/\(playerID)": true
-            ])
+            localPlayers[playerID]! -= 1 // apply damage
             
-//            if updatedLivesRemaining == 0 {
-//                killPlayer()
-//            }
+            guard let updatedLivesRemaining = updatedSnapshot.value as? Int else { return }
+            
+            if updatedLivesRemaining == 0 {
+                // Check for winner
+                if checkForWinner(localPlayers) {
+                    return
+                }
+            }
+            
+            // Get next player's turn
+            guard let currentPosition = getPosition(currentPlayerTurn) else { return }
+            let playerCount = positions.count
+            var nextPosition = (currentPosition + 1) % playerCount
+            let isLastTurn = currentPosition == positions.count - 1
+            
+            
+            // Get next alive user
+            while !isAlive(getUserID(position: nextPosition) ?? "") {
+                nextPosition = (nextPosition + 1) % playerCount
+            }
+            
+            guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
+            
+            var updates: [String: Any] = [
+                "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
+                "games/\(roomID)/playerWords/\(nextPlayerUID)": "",   // reset next player's input
+                "/shake/\(roomID)/players/\(playerID)": true
+            ]
+            
+            if isLastTurn {
+                updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
+            }
+            
+            try await ref.updateChildValues(updates)
         }
+    }
+    
+    func checkForWinner(_ players: [String: Int]) -> Bool {
+        guard room?.status == .inProgress else { return false }
+        let playersAlive = players.filter { isAlive($0.key) }.count
+        let gameEnded = playersAlive == 1
+        if gameEnded {
+            ref.updateChildValues([
+                "/rooms/\(roomID)/status": Room.Status.ended.rawValue
+            ])
+        }
+        
+        return gameEnded
     }
 }
 
@@ -293,31 +335,33 @@ extension GameManager: TurnTimerDelegate {
         guard currentPlayerTurn == service.currentUser?.uid else { return }
         Task {
             try await damagePlayer(playerID: currentPlayerTurn)
+            
+//            // Get next player's turn
+//            guard let currentPosition = getPosition(currentPlayerTurn) else { return }
+//            let playerCount = positions.count
+//            var nextPosition = (currentPosition + 1) % playerCount
+//            let isLastTurn = currentPosition == positions.count - 1
+//            
+//            
+//            // Get next alive user
+//            while !isAlive(getUserID(position: nextPosition) ?? "") {
+//                nextPosition = (nextPosition + 1) % playerCount
+//            }
+//            
+//            guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
+//            
+//            var updates: [String: Any] = [
+//                "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
+//                "games/\(roomID)/playerWords/\(nextPlayerUID)": ""   // reset next player's input
+//            ]
+//            
+//            if isLastTurn {
+//                updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
+//            }
+//            
+//            try await ref.updateChildValues(updates)
         }
         
-        // Get next player's turn
-        guard let currentPosition = getPosition(currentPlayerTurn) else { return }
-        let playerCount = positions.count
-        var nextPosition = (currentPosition + 1) % playerCount
-        let isLastTurn = currentPosition == positions.count - 1
-        
-        // Get next alive user
-        while !isAlive(getUserID(position: nextPosition) ?? "") {
-            nextPosition = (nextPosition + 1) % playerCount
-        }
-        
-        guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-        
-        var updates: [String: Any] = [
-            "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
-            "games/\(roomID)/playerWords/\(nextPlayerUID)": ""   // reset next player's input
-        ]
-        
-        if isLastTurn {
-            updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
-        }
-        
-        ref.updateChildValues(updates)
     }
     
 }

@@ -16,6 +16,6 @@ struct Room: Codable, Hashable { // hashable for collection item
     var status: Status
     
     enum Status: String, Codable {
-        case notStarted, inProgress
+        case notStarted, inProgress, ended
     }
 }

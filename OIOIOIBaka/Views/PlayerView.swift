@@ -116,8 +116,18 @@ class PlayerView: UIView {
         }
         
         skullView.isHidden = true
-        if livesRemaining == 0 {
+        let playerIsDead = livesRemaining == 0
+        if playerIsDead {
             skullView.isHidden = false
+            applyStrikethrough()
+        }
+    }
+    
+    private func applyStrikethrough() {
+        if let attributeString = wordTextField.attributedText {
+            let mutableAttributeString = NSMutableAttributedString(attributedString: attributeString)
+            mutableAttributeString.addAttribute(.strikethroughStyle, value: 2, range: NSRange(location: 0, length: mutableAttributeString.length))
+            wordTextField.attributedText = mutableAttributeString
         }
     }
     

@@ -219,7 +219,12 @@ extension GameViewController: GameManagerDelegate {
         Task {
             await updateUserViews(players: players.map { $0.key })
         }
+        
         updateHearts(players: players)
+        
+        // TODO: Check for winner
+        // If only 1 player alive, show winner, change room status to finish, make option to retry?
+//        manager.checkForWinner(players)
     }
     
     func updateHearts(players: [String: Int]) {
@@ -272,10 +277,6 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, roomStateUpdated room: Room) {
-        updateBoard(room: room)
-    }
-
-    func updateBoard(room: Room) {
         switch room.status {
         case .notStarted:
             startButton.isHidden = false
@@ -284,9 +285,12 @@ extension GameViewController: GameManagerDelegate {
             break
         case .inProgress:
             countDownView.startCountDown()
+        case .ended:
+            manager.turnTimer?.stopTimer()
+            print("Show winner")
         }
     }
-    
+
     func gameManager(_ manager: GameManager, willShakePlayer playerID: String, at position: Int) {
         if position == 0 {
             shakePlayer(p0View)
@@ -314,7 +318,6 @@ extension GameViewController: GameManagerDelegate {
                 
                 // Update player infos as they come in
                 for try await user in group {
-                    guard let position = gameManager.getPosition(user.uid) else { continue }
                     gameManager.playerInfos[user.uid] = user
                 }
             }
