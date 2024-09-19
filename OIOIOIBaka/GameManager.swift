@@ -187,7 +187,7 @@ class GameManager {
         return positions.first(where: { $0.value == position })?.key
     }
     
-    private func isAlive(_ playerID: String) -> Bool {
+    func isAlive(_ playerID: String) -> Bool {
         return players[playerID, default: 0] != 0
     }
     
@@ -259,6 +259,7 @@ class GameManager {
         }
     }
     
+    // Note: Checks for winner after each user "death"
     func damagePlayer(playerID: String) async throws {
         guard playerID == service.currentUser?.uid else { return }
         let playerRef = ref.child("games/\(roomID)/players/\(playerID)")
@@ -328,6 +329,7 @@ class GameManager {
         
         return gameEnded
     }
+    
 }
 
 extension GameManager: TurnTimerDelegate {
@@ -335,31 +337,6 @@ extension GameManager: TurnTimerDelegate {
         guard currentPlayerTurn == service.currentUser?.uid else { return }
         Task {
             try await damagePlayer(playerID: currentPlayerTurn)
-            
-//            // Get next player's turn
-//            guard let currentPosition = getPosition(currentPlayerTurn) else { return }
-//            let playerCount = positions.count
-//            var nextPosition = (currentPosition + 1) % playerCount
-//            let isLastTurn = currentPosition == positions.count - 1
-//            
-//            
-//            // Get next alive user
-//            while !isAlive(getUserID(position: nextPosition) ?? "") {
-//                nextPosition = (nextPosition + 1) % playerCount
-//            }
-//            
-//            guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-//            
-//            var updates: [String: Any] = [
-//                "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
-//                "games/\(roomID)/playerWords/\(nextPlayerUID)": ""   // reset next player's input
-//            ]
-//            
-//            if isLastTurn {
-//                updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
-//            }
-//            
-//            try await ref.updateChildValues(updates)
         }
         
     }

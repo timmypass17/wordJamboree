@@ -64,6 +64,16 @@ class PlayerView: UIView {
         return label
     }()
     
+    let crownView: UILabel = {
+        let label = UILabel()
+        label.isHidden = true
+        label.text = "👑"
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    // TODO: States to show hearts, crown, skull (alive, winner, dead)
+    
     var heartCount: Int {
         return heartsView.container.arrangedSubviews.count
     }
@@ -78,6 +88,7 @@ class PlayerView: UIView {
         addSubview(container)
         addSubview(heartsView)
         addSubview(skullView)
+        addSubview(crownView)
         
         NSLayoutConstraint.activate([
             container.topAnchor.constraint(equalTo: topAnchor),
@@ -89,7 +100,10 @@ class PlayerView: UIView {
             heartsView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
             
             skullView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            skullView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10)
+            skullView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
+            
+            crownView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            crownView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
         ])
     }
     

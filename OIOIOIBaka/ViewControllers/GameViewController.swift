@@ -287,7 +287,22 @@ extension GameViewController: GameManagerDelegate {
             countDownView.startCountDown()
         case .ended:
             manager.turnTimer?.stopTimer()
+            if let winnerID = manager.players.first(where: { manager.isAlive($0.key) })?.key {
+                showWinner(userID: winnerID)
+            }
             print("Show winner")
+        }
+    }
+    
+    func showWinner(userID: String) {
+        guard let position = gameManager.getPosition(userID) else { return }
+        
+        if position == 0 {
+            p0View.heartsView.isHidden = true
+            p0View.crownView.isHidden = false
+        } else if position == 1 {
+            p1View.heartsView.isHidden = true
+            p1View.crownView.isHidden = false
         }
     }
 
