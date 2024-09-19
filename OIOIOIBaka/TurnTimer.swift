@@ -31,7 +31,6 @@ class TurnTimer {
         var timeRemaining = duration
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
             if timeRemaining == 0 {
-                // User is exploded
                 soundManager.playBonkSound()
                 self.timer?.invalidate()
                 delegate?.turnTimer(self, timeRanOut: true)

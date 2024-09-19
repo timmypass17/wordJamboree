@@ -245,19 +245,40 @@ class GameManager {
         }
     }
     
-    func damagePlayer(playerID: String) {
+    func damagePlayer(playerID: String) async throws {
         guard playerID == service.currentUser?.uid else { return }
-        ref.updateChildValues([
-            "games/\(roomID)/players/\(playerID)": ServerValue.increment(-1),
-            "shake/\(roomID)/players/\(playerID)": true
-        ])
+        let playerRef = ref.child("games/\(roomID)/players/\(playerID)")
+
+        // Perform transaction to ensure atomic update
+        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await playerRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
+            guard var livesRemaining = currentData.value as? Int else { return .abort() }
+            
+            // Update value
+            livesRemaining -= 1
+
+            currentData.value = livesRemaining
+            return .success(withValue: currentData)
+        }
+        
+        if result {
+            guard let updatedLivesRemaining = updatedSnapshot.value as? Int else { return }
+            try await ref.updateChildValues([
+                "/shake/\(roomID)/players/\(playerID)": true
+            ])
+            
+//            if updatedLivesRemaining == 0 {
+//                killPlayer()
+//            }
+        }
     }
 }
 
 extension GameManager: TurnTimerDelegate {
     func turnTimer(_ sender: TurnTimer, timeRanOut: Bool) {
         guard currentPlayerTurn == service.currentUser?.uid else { return }
-        damagePlayer(playerID: currentPlayerTurn)
+        Task {
+            try await damagePlayer(playerID: currentPlayerTurn)
+        }
         
         // Get next player's turn
         guard let currentPosition = getPosition(currentPlayerTurn) else { return }

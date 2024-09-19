@@ -55,6 +55,18 @@ class PlayerView: UIView {
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
+    
+    let skullView: UILabel = {
+        let label = UILabel()
+        label.isHidden = true
+        label.text = "💀"
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    var heartCount: Int {
+        return heartsView.container.arrangedSubviews.count
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -65,6 +77,7 @@ class PlayerView: UIView {
         
         addSubview(container)
         addSubview(heartsView)
+        addSubview(skullView)
         
         NSLayoutConstraint.activate([
             container.topAnchor.constraint(equalTo: topAnchor),
@@ -73,7 +86,10 @@ class PlayerView: UIView {
             container.trailingAnchor.constraint(equalTo: trailingAnchor),
             
             heartsView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            heartsView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10)
+            heartsView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
+            
+            skullView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            skullView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10)
         ])
     }
     
@@ -95,10 +111,13 @@ class PlayerView: UIView {
     }
     
     func setHearts(to livesRemaining: Int) {
-        var currentHeartCount = heartsView.container.arrangedSubviews.count
-        while livesRemaining < currentHeartCount {
+        while livesRemaining < heartCount {
             removeHeart()
-            currentHeartCount -= 1
+        }
+        
+        skullView.isHidden = true
+        if livesRemaining == 0 {
+            skullView.isHidden = false
         }
     }
     
