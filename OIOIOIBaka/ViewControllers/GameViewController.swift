@@ -144,8 +144,7 @@ class GameViewController: UIViewController {
         return UIAction { [self] _ in
             Task {
                 do {
-                    guard let currentUser = gameManager.service.currentUser else { return}
-                    // Kill that user
+                    try await gameManager.exit()
                 } catch {
                     print("Error removing player: \(error)")
                 }
@@ -156,7 +155,7 @@ class GameViewController: UIViewController {
     
     func didTapStartButton() -> UIAction {
         return UIAction { [self] _ in
-            gameManager.startingGame()
+//            gameManager.startingGame()
         }
     }
     
@@ -225,10 +224,6 @@ extension GameViewController: GameManagerDelegate {
         }
         
         updateHearts(players: players)
-        
-        // TODO: Check for winner
-        // If only 1 player alive, show winner, change room status to finish, make option to retry?
-//        manager.checkForWinner(players)
     }
     
     func updateHearts(players: [String: Int]) {
@@ -333,6 +328,7 @@ extension GameViewController: GameManagerDelegate {
                         group.addTask {
                             let userSnapshot = try await self.ref.child("users/\(playerID)").getData()
                             guard let user = userSnapshot.toObject(MyUser.self) else { throw FirebaseServiceError.invalidObject }
+                            print("Fetched User: \(user.uid)")
                             return user
                         }
                     }

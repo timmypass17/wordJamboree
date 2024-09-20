@@ -48,19 +48,19 @@ class GameManager {
         turnTimer?.delegate = self
     }
     
-    func startingGame() {
-        // Only room master can start game
-        guard let creatorID = room?.creatorID,
-              let currentUserID = service.currentUser?.uid
-        else { return }
-        
-        if creatorID == currentUserID {
-            ref.updateChildValues([
-                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue
-//                "games/\(roomID)/currentPlayerTurn": currentUserID  // or random?
-            ])
-        }
-    }
+//    func startingGame() {
+//        // Only room master can start game
+//        guard let creatorID = room?.creatorID,
+//              let currentUserID = service.currentUser?.uid
+//        else { return }
+//        
+//        if creatorID == currentUserID {
+//            ref.updateChildValues([
+//                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue
+////                "games/\(roomID)/currentPlayerTurn": currentUserID  // or random?
+//            ])
+//        }
+//    }
     
     func startGame() {
         guard let creatorID = room?.creatorID else { return }
@@ -209,7 +209,8 @@ class GameManager {
     
     func observeShakes() {
         ref.child("shake/\(roomID)/players").observe(.value) { [self] snapshot in
-            guard let shakePlayers = snapshot.toObject([String: Bool].self) else {
+            guard let shakePlayers = snapshot.value as? [String: Bool] else {
+                // TODO: not sure why this fails initially
                 print("Failed to convert snapshot to shakePlayers")
                 return
             }
@@ -217,6 +218,7 @@ class GameManager {
                 // Don't shake current player using cloud functions (don't want current player to perceive lag, we shake them locally)
                 guard shouldShake,
                       let position = getPosition(playerID) else { continue }
+                print("shake player \(playerID)")
                 delegate?.gameManager(self, willShakePlayer: playerID, at: position)
             }
         }
@@ -244,6 +246,7 @@ class GameManager {
             do {
                 // Get most up to date seconds
                 let secondsSnapshot = try await ref.child("games/\(roomID)/secondsPerTurn").getData()
+                print("secondsPerTurn: \(secondsPerTurn)")
                 self.secondsPerTurn = secondsSnapshot.value as! Int
                 
                 ref.child("games/\(roomID)/rounds").observe(.value) { [self] snapshot in
@@ -350,6 +353,73 @@ class GameManager {
         ref.updateChildValues([
             "/rooms/\(roomID)/isReady/\(currentUser.uid)": false
         ])
+    }
+    
+    func exit() throws {
+        // getData() doesn't work for some reason
+        ref.child("rooms/\(roomID)/status").observeSingleEvent(of: .value) { [self] snapshot in
+            guard let statusString = snapshot.value as? String,
+                  let roomStatus = Room.Status(rawValue: statusString),
+                  let currentUser = service.currentUser
+            else {
+                return
+            }
+    
+            switch roomStatus {
+            case .notStarted:
+                Task {
+                    try await handleExitDuringNotStarted()
+                }
+            case .inProgress:
+                break
+            case .ended:
+                break
+            }
+        }
+    }
+    
+    // Transaction allows atomic read/writes. Fixes problem of multible users updating same value simulatenously
+    // E.g. read positions and update positions atomically
+    private func handleExitDuringNotStarted() async throws {
+        guard let uid = service.currentUser?.uid else { return }
+        let roomRef = Database.database().reference().child("games/\(roomID)")
+        
+        let (result, updatedSnapshot) = try await roomRef.runTransactionBlock { currentData in
+            if var roomData = currentData.value as? [String: AnyObject] {
+                var players = roomData["players"] as? [String: Int] ?? [:]
+                var playerWords = roomData["playerWords"] as? [String: String] ?? [:]
+                var positions = roomData["positions"] as? [String: Int] ?? [:]
+                
+                // Remove user
+                players[uid] = nil
+                playerWords[uid] = nil
+                positions[uid] = nil
+                
+                // Update positions
+                let sortedPlayersByPosition: [String] = positions.sorted { $0.1 < $1.1 }.map { $0.key }
+                var pos = 0
+                for userID in sortedPlayersByPosition {
+                    positions[userID] = pos
+                    pos += 1
+                }
+                
+                // Apply updates
+                roomData["players"] = players as AnyObject
+                roomData["playerWords"] = playerWords as AnyObject
+                roomData["positions"] = positions as AnyObject
+                currentData.value = roomData
+                return TransactionResult.success(withValue: currentData)
+            }
+            return TransactionResult.success(withValue: currentData)
+        }
+
+        if result {
+            // Perform other related updates
+            try await ref.updateChildValues([
+                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1),
+                "rooms/\(roomID)/isReady/\(uid)": nil
+            ])
+        }
     }
 }
 
