@@ -273,29 +273,31 @@ class GameManager {
     // Note: Checks for winner after each user "death"
     func damagePlayer(playerID: String) async throws {
         guard playerID == service.currentUser?.uid else { return }
-        let playerRef = ref.child("games/\(roomID)/players/\(playerID)")
-
-        var localPlayers = players // avoid race conditions (either make another fetch to get latest players or use cloud functions?)
+        let gameRef = ref.child("games/\(roomID)")
         
         // Perform transaction to ensure atomic update
-        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await playerRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
-            guard var livesRemaining = currentData.value as? Int else { return .abort() }
-            
-            // Update value
-            livesRemaining -= 1
-
-            currentData.value = livesRemaining
+        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await gameRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
+            if var gameData = currentData.value as? [String: AnyObject] {
+                var players = gameData["players"] as? [String: Int] ?? [:]
+                
+                players[playerID, default: 0] -= 1
+                
+                gameData["players"] = players as AnyObject
+                currentData.value = gameData
+                return .success(withValue: currentData)
+            }
             return .success(withValue: currentData)
         }
         
         if result {
-            localPlayers[playerID]! -= 1 // apply damage
+            guard let updatedGame = updatedSnapshot.toObject(Game.self),
+                  let updatedPlayers = updatedGame.players,
+                  let livesRemaining = updatedPlayers[playerID]
+            else { return }
             
-            guard let updatedLivesRemaining = updatedSnapshot.value as? Int else { return }
-            
-            if updatedLivesRemaining == 0 {
-                // Check for winner
-                if checkForWinner(localPlayers) {
+            let playerDied = livesRemaining == 0
+            if playerDied {
+                if checkForWinner(updatedPlayers) {
                     return
                 }
             }
@@ -332,6 +334,10 @@ class GameManager {
         guard room?.status == .inProgress else { return false }
         let playersAlive = players.filter { isAlive($0.key) }.count
         let gameEnded = playersAlive == 1
+        
+        // Clean up players who exited mid-game
+        
+        
         if gameEnded {
             ref.updateChildValues([
                 "/rooms/\(roomID)/status": Room.Status.ended.rawValue
@@ -371,6 +377,7 @@ class GameManager {
                     try await handleExitDuringNotStarted()
                 }
             case .inProgress:
+//                handleExitDuringGame()
                 break
             case .ended:
                 break
@@ -408,9 +415,9 @@ class GameManager {
                 roomData["playerWords"] = playerWords as AnyObject
                 roomData["positions"] = positions as AnyObject
                 currentData.value = roomData
-                return TransactionResult.success(withValue: currentData)
+                return .success(withValue: currentData)
             }
-            return TransactionResult.success(withValue: currentData)
+            return .success(withValue: currentData)
         }
 
         if result {
@@ -420,6 +427,16 @@ class GameManager {
                 "rooms/\(roomID)/isReady/\(uid)": nil
             ])
         }
+    }
+    
+    private func handleExitDuringGame() async throws {
+        guard let uid = service.currentUser?.uid else { return }
+
+        try await ref.updateChildValues([
+            "rooms/\(roomID)/players/\(uid)": 0,    // kill user
+            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1),
+            "rooms/\(roomID)/isReady/\(uid)": nil
+        ])
     }
 }
 
