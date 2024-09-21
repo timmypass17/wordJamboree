@@ -18,18 +18,21 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String)
     func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String: String])
     func gameManager(_ manager: GameManager, playersUpdated players: [String: Int])
+    func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String: [String: String]])
+    func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String: Int])
 }
 
 class GameManager {
     var currentLetters: String = ""
 //    var playerWords: [String: String] = [:]
-    var playerInfos: [String: MyUser] = [:]
+    var playerInfos: [String: [String: String]] = [:]
     var currentPlayerTurn: String = ""
     var positions: [String: Int] = [:]
     var players: [String: Int] = [:]
     var secondsPerTurn: Int = -1
     var rounds: Int = 1
     let minimumTime = 5
+    var roomStatus: Room.Status = .notStarted
 
     var room: Room?
     var roomID: String
@@ -48,6 +51,7 @@ class GameManager {
     }
     
     func setup() {
+        observePlayerInfo()
         observeRoomStatus()
         observeReady()
         observeShakes()
@@ -58,6 +62,14 @@ class GameManager {
         observeRounds()
         observeSecondsPerTurn()
         observePlayerTurn()
+    }
+    
+    func observePlayerInfo() {
+        ref.child("games/\(roomID)/playersInfo").observe(.value) { [self] snapshot in
+            guard let playersInfo = snapshot.value as? [String: [String: String]] else { return }
+            self.playerInfos = playersInfo
+            delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+        }
     }
     
     func observePlayerWords() {
@@ -94,6 +106,7 @@ class GameManager {
             guard let statusString = snapshot.value as? String,
                   let roomStatus = Room.Status(rawValue: statusString)
             else { return }
+            self.roomStatus = roomStatus
             self.delegate?.gameManager(self, roomStatusUpdated: roomStatus)
         }
     }
@@ -111,6 +124,7 @@ class GameManager {
         ref.child("games/\(roomID)/positions").observe(.value) { [self] snapshot in
             guard let positions = snapshot.value as? [String: Int] else { return }
             self.positions = positions
+            delegate?.gameManager(self, playersPositionUpdated: positions)
         }
     }
     
@@ -163,7 +177,7 @@ class GameManager {
         ]
         
         if isLastTurn {
-            updates["games/\(roomID)/rounds"] = ServerValue.increment(1)
+            updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)
         }
         
         try await ref.updateChildValues(updates)
@@ -226,12 +240,15 @@ class GameManager {
                 let secondsSnapshot = try await ref.child("games/\(roomID)/secondsPerTurn").getData()
                 self.secondsPerTurn = secondsSnapshot.value as! Int
                 
-                ref.child("games/\(roomID)/rounds").observe(.value) { [self] snapshot in
-                    guard let rounds = snapshot.value as? Int else { return }
-                    self.rounds = rounds
+                // .value gets called once initally, .childChange gets called only when updates happen
+                ref.child("games/\(roomID)/rounds").observe(.childChanged) { [self] snapshot in
+                    // print(snapshot) -> "Snap (currentRound) 2"
+                    guard let currentRound = snapshot.value as? Int else { return }
+                    
+                    self.rounds = currentRound
                     
                     ref.updateChildValues([
-                        "games/\(roomID)/secondsPerTurn": max(minimumTime, secondsPerTurn - 1)  // decrease turn time
+                        "games/\(roomID)/secondsPerTurn": max(minimumTime, secondsPerTurn - 1)
                     ])
                 }
             } catch {
@@ -298,7 +315,7 @@ class GameManager {
                 ]
                 
                 if isLastTurn {
-                    updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
+                    updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)    // increment rounds if necessary
                 }
                 
                 try await ref.updateChildValues(updates)
@@ -385,18 +402,20 @@ class GameManager {
     // E.g. read positions and update positions atomically
     private func handleExitDuringNotStarted() async throws {
         guard let uid = service.currentUser?.uid else { return }
-        let roomRef = Database.database().reference().child("games/\(roomID)")
+        let gameRef = Database.database().reference().child("games/\(roomID)")
         
-        let (result, updatedSnapshot) = try await roomRef.runTransactionBlock { currentData in
-            if var roomData = currentData.value as? [String: AnyObject] {
-                var players = roomData["players"] as? [String: Int] ?? [:]
-                var playerWords = roomData["playerWords"] as? [String: String] ?? [:]
-                var positions = roomData["positions"] as? [String: Int] ?? [:]
+        let (result, updatedSnapshot) = try await gameRef.runTransactionBlock { currentData in
+            if var gameData = currentData.value as? [String: AnyObject] {
+                var players = gameData["players"] as? [String: Int] ?? [:]
+                var playerWords = gameData["playerWords"] as? [String: String] ?? [:]
+                var positions = gameData["positions"] as? [String: Int] ?? [:]
+                var playersInfo = gameData["playersInfo"] as? [String: [String: String]] ?? [:]
                 
                 // Remove user
                 players[uid] = nil
                 playerWords[uid] = nil
                 positions[uid] = nil
+                playersInfo[uid] = nil
                 
                 // Update positions
                 let sortedPlayersByPosition: [String] = positions.sorted { $0.1 < $1.1 }.map { $0.key }
@@ -407,10 +426,12 @@ class GameManager {
                 }
                 
                 // Apply updates
-                roomData["players"] = players as AnyObject
-                roomData["playerWords"] = playerWords as AnyObject
-                roomData["positions"] = positions as AnyObject
-                currentData.value = roomData
+                gameData["players"] = players as AnyObject
+                gameData["playerWords"] = playerWords as AnyObject
+                gameData["positions"] = positions as AnyObject
+                gameData["playersInfo"] = playersInfo as AnyObject
+                
+                currentData.value = gameData
                 return .success(withValue: currentData)
             }
             return .success(withValue: currentData)
@@ -454,7 +475,7 @@ class GameManager {
         
         let isLastTurn = currentPosition == positions.count - 1
         if isLastTurn {
-            updates["games/\(roomID)/rounds"] = ServerValue.increment(1)
+            updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)
         }
         
         updates["games/\(roomID)/players/\(currentUser.uid)"] = 0   // kill player

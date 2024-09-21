@@ -84,8 +84,15 @@ class FirebaseService {
             playerWords: [
                 currentUser.uid: ""
             ],
-            rounds: 1,
-            secondsPerTurn: Int.random(in: 10...30)
+            rounds: [
+                "currentRound": 1
+            ],
+            secondsPerTurn: Int.random(in: 10...30),
+            playersInfo: [
+                currentUser.uid: [
+                    "name": currentUser.name
+                ]
+            ]
         )
         
         let shake = Shake(
@@ -162,7 +169,8 @@ class FirebaseService {
                 "/games/\(roomID)/players/\(user.uid)": 3,
                 "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
                 "/shake/\(roomID)/players/\(user.uid)": user.uid,
-                "/rooms/\(roomID)/isReady/\(user.uid)": false
+                "/rooms/\(roomID)/isReady/\(user.uid)": false,
+                "/games/\(roomID)/playersInfo/\(user.uid)/name": user.name
             ])
         }
         

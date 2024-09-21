@@ -222,13 +222,39 @@ extension GameViewController: UITextFieldDelegate {
 
 extension GameViewController: GameManagerDelegate {
     
+    func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String : Int]) {
+        p0View.isHidden = true
+        p1View.isHidden = true
+        
+        let playersInfo = manager.playerInfos
+        print(positions)
+        print(playersInfo)
+        for (uid, position) in positions {
+            guard let playerInfo = playersInfo[uid] else { continue }
+            
+            if position == 0 {
+                p0View.nameLabel.text = playerInfo["name"]
+                p0View.isHidden = false
+                
+            } else if position == 1 {
+                p1View.nameLabel.text = playerInfo["name"]
+                p1View.isHidden = false
+            }
+        }
+    }
+    
+    func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : [String : String]]) {
+
+    }
+    
     func gameManager(_ manager: GameManager, playersUpdated players: [String : Int]) {
         
         updateHearts(players: players)
         
-        Task {
-            await updateUserViews(players: players.map { $0.key })
-        }
+        // updateUserViews whener userInfos changes
+//        Task {
+//            await updateUserViews(players: players.map { $0.key })
+//        }
         
     }
     
@@ -309,51 +335,53 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    private func updateUserViews(players: [String]) async {
-        do {
-            try await withThrowingTaskGroup(of: MyUser.self) { group in
-                for playerID in players {
-                    if let cachedUser = self.gameManager.playerInfos[playerID] {
-                        group.addTask {
-                            return cachedUser
-                        }
-                    } else {
-                        group.addTask {
-                            let userSnapshot = try await self.ref.child("users/\(playerID)").getData()
-                            guard let user = userSnapshot.toObject(MyUser.self) else { throw FirebaseServiceError.invalidObject }
-                            print("Fetched User: \(user.uid)")
-                            return user
-                        }
-                    }
-                }
-                
-                // Update player infos as they come in
-                for try await user in group {
-                    gameManager.playerInfos[user.uid] = user
-                }
-            }
-            
-            // Reset views
-            p0View.isHidden = true
-            p1View.isHidden = true
-            
-            // Update view now that we have an updated playerInfos
-            for (uid, user) in gameManager.playerInfos {
-                guard let position = gameManager.getPosition(uid) else { continue }
-
-                if position == 0 {
-                    p0View.nameLabel.text = user.name
-                    p0View.isHidden = false
-                    
-                } else if position == 1 {
-                    p1View.nameLabel.text = user.name
-                    p1View.isHidden = false
-                }
-            }
-        } catch {
-            print("Error fetching users: \(error)")
-        }
-    }
+//    private func updateUserViews(players: [String]) async {
+//        print("players: \(players)")
+//        do {
+//            try await withThrowingTaskGroup(of: MyUser.self) { group in
+//                for playerID in players {
+//                    if let cachedUser = self.gameManager.playerInfos[playerID] {
+//                        group.addTask {
+//                            return cachedUser
+//                        }
+//                    } else {
+//                        group.addTask {
+//                            let userSnapshot = try await self.ref.child("users/\(playerID)").getData()
+//                            guard let user = userSnapshot.toObject(MyUser.self) else { throw FirebaseServiceError.invalidObject }
+//                            print("Fetched User: \(user.uid)")
+//                            return user
+//                        }
+//                    }
+//                }
+//                
+//                // Update player infos as they come in
+//                for try await user in group {
+//                    gameManager.playerInfos[user.uid] = user
+//                }
+//            }
+//            
+//            // Reset views
+//            p0View.isHidden = true
+//            p1View.isHidden = true
+//            
+//            // Update view now that we have an updated playerInfos
+//            for (uid, user) in gameManager.playerInfos {
+//                guard let position = gameManager.getPosition(uid) else { continue }
+//                print(uid, position)
+//                
+//                if position == 0 {
+//                    p0View.nameLabel.text = user.name
+//                    p0View.isHidden = false
+//                    
+//                } else if position == 1 {
+//                    p1View.nameLabel.text = user.name
+//                    p1View.isHidden = false
+//                }
+//            }
+//        } catch {
+//            print("Error fetching users: \(error)")
+//        }
+//    }
     
     private func updateUserTextInputs(game: Game) {
         guard let positions = game.positions,
