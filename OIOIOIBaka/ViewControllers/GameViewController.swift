@@ -70,7 +70,6 @@ class GameViewController: UIViewController {
         readyView.delegate = self
         navigationItem.setHidesBackButton(true, animated: true)
         
-//        startButton.addAction(didTapStartButton(), for: .touchUpInside)
         exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
         navigationItem.rightBarButtonItem = exitBarButton
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillDisappear), name: UIResponder.keyboardWillHideNotification, object: nil)
@@ -79,7 +78,6 @@ class GameViewController: UIViewController {
         view.addSubview(p0View)
         view.addSubview(p1View)
         view.addSubview(currentWordView)
-//        view.addSubview(startButton)
         view.addSubview(countDownView)
         view.addSubview(readyView)
         
@@ -93,9 +91,6 @@ class GameViewController: UIViewController {
             
             p0View.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
             p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-
-//            startButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-//            startButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
 
             countDownView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             countDownView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -115,6 +110,21 @@ class GameViewController: UIViewController {
         NotificationCenter.default.removeObserver(self)
     }
     
+    func updateUI(roomStatus: Room.Status) {
+        switch roomStatus {
+        case .notStarted:
+            readyView.isHidden = false
+            countDownView.isHidden = true
+            currentWordView.isHidden = true
+        case .inProgress:
+            countDownView.startCountDown()
+        case .ended:
+            gameManager.turnTimer?.stopTimer()
+            if let winnerID = gameManager.players.first(where: { gameManager.isAlive($0.key) })?.key {
+                showWinner(userID: winnerID)
+            }
+        }
+    }
 
     @objc func textFieldDidChange(_ textField: UITextField) {
         guard let partialWord = textField.text,
@@ -150,12 +160,6 @@ class GameViewController: UIViewController {
                 }
             }
             navigationController?.popViewController(animated: true)
-        }
-    }
-    
-    func didTapStartButton() -> UIAction {
-        return UIAction { [self] _ in
-//            gameManager.startingGame()
         }
     }
     
@@ -219,12 +223,13 @@ extension GameViewController: UITextFieldDelegate {
 extension GameViewController: GameManagerDelegate {
     
     func gameManager(_ manager: GameManager, playersUpdated players: [String : Int]) {
-        print("player lives updated")
+        
+        updateHearts(players: players)
+        
         Task {
             await updateUserViews(players: players.map { $0.key })
         }
         
-        updateHearts(players: players)
     }
     
     func updateHearts(players: [String: Int]) {
@@ -239,7 +244,7 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String : String]) {
-        for (playerID, updatedWord) in manager.playerWords {
+        for (playerID, updatedWord) in playerWords {
             guard let position = manager.positions[playerID] else { continue }
             
             if position == 0 {
@@ -263,7 +268,6 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String) {
-        print("player turn changed: \(playerID)")
         updateControls()
         pointArrow(to: playerID)
     }
@@ -278,21 +282,7 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, roomStatusUpdated roomStatus: Room.Status) {
-        print("room status changed: \(roomStatus.rawValue)")
-        switch roomStatus {
-        case .notStarted:
-            readyView.isHidden = false
-            countDownView.isHidden = true
-            currentWordView.isHidden = true
-        case .inProgress:
-            countDownView.startCountDown()
-        case .ended:
-            manager.turnTimer?.stopTimer()
-            if let winnerID = manager.players.first(where: { manager.isAlive($0.key) })?.key {
-                showWinner(userID: winnerID)
-            }
-            print("Show winner")
-        }
+        updateUI(roomStatus: roomStatus)
     }
     
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String : Bool]) {
@@ -447,13 +437,13 @@ extension GameViewController: GameManagerDelegate {
 
 extension GameViewController: CountDownViewDelegate {
     func countDownView(_ sender: CountDownView, didStartCountDown: Bool) {
+        countDownView.isHidden = false
         readyView.isHidden = true
-        currentWordView.isHidden = true
     }
     
     func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
         currentWordView.isHidden = false
-//        gameManager.startGame()
+        countDownView.isHidden = true
     }
 }
 

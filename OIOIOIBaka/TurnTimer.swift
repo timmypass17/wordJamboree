@@ -24,15 +24,13 @@ class TurnTimer {
     func startTimer(duration: Int) {
         stopTimer()
         
-        // Start turn timer for everyone so we can play ticking sound for everyone, but do something extra if it's the current player turn
-        print("Timer started: \(duration)")
         var timeRemaining = duration
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
             if timeRemaining == 0 {
                 soundManager.playBonkSound()
                 self.timer?.invalidate()
                 delegate?.turnTimer(self, timeRanOut: true)
-            } else if timeRemaining == 10 {
+            } else if !soundManager.isPlayingTickingSound() && timeRemaining <= 10 {
                 soundManager.playTickingSound()
             }
             

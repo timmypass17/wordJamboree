@@ -21,9 +21,9 @@ protocol GameManagerDelegate: AnyObject {
 }
 
 class GameManager {
-//    var game: Game?
     var currentLetters: String = ""
-    var playerWords: [String: String] = [:]
+//    var playerWords: [String: String] = [:]
+    var playerInfos: [String: MyUser] = [:]
     var currentPlayerTurn: String = ""
     var positions: [String: Int] = [:]
     var players: [String: Int] = [:]
@@ -38,7 +38,6 @@ class GameManager {
     let soundManager = SoundManager()
     var ref = Database.database().reference()
     weak var delegate: GameManagerDelegate?
-    var playerInfos: [String: MyUser] = [:]
     var turnTimer: TurnTimer?
         
     init(roomID: String, service: FirebaseService) {
@@ -47,27 +46,6 @@ class GameManager {
         turnTimer = TurnTimer(soundManager: soundManager)
         turnTimer?.delegate = self
     }
-    
-//    func startingGame() {
-//        // Only room master can start game
-//        guard let creatorID = room?.creatorID,
-//              let currentUserID = service.currentUser?.uid
-//        else { return }
-//        
-//        if creatorID == currentUserID {
-//            ref.updateChildValues([
-//                "rooms/\(roomID)/status": Room.Status.inProgress.rawValue
-////                "games/\(roomID)/currentPlayerTurn": currentUserID  // or random?
-//            ])
-//        }
-//    }
-    
-//    func startGame() {
-//        
-//        ref.updateChildValues([
-//            "games/\(roomID)/currentPlayerTurn": creatorID
-//        ])
-//    }
     
     func setup() {
         observeRoomStatus()
@@ -85,7 +63,7 @@ class GameManager {
     func observePlayerWords() {
         ref.child("games/\(roomID)/playerWords").observe(.value) { [self] snapshot in
             guard let playerWords = snapshot.value as? [String: String] else { return }
-            self.playerWords = playerWords
+//            self.playerWords = playerWords
             delegate?.gameManager(self, playerWordsUpdated: playerWords)
         }
     }
@@ -104,8 +82,8 @@ class GameManager {
             guard let currentPlayerTurn = snapshot.value as? String,
                   currentPlayerTurn != ""   // note: .value gets called for initial data and then listens
             else { return }
-            self.currentPlayerTurn = currentPlayerTurn
             
+            self.currentPlayerTurn = currentPlayerTurn
             turnTimer?.startTimer(duration: secondsPerTurn)
             delegate?.gameManager(self, playerTurnChanged: currentPlayerTurn)
         }
@@ -271,10 +249,11 @@ class GameManager {
     
     // Note: Checks for winner after each user "death"
     func damagePlayer(playerID: String) async throws {
+        // Only user can damage self
         guard playerID == service.currentUser?.uid else { return }
         let gameRef = ref.child("games/\(roomID)")
         
-        // Perform transaction to ensure atomic update
+        // Damage player
         let (result, updatedSnapshot): (Bool, DataSnapshot) = try await gameRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
             if var gameData = currentData.value as? [String: AnyObject] {
                 var players = gameData["players"] as? [String: Int] ?? [:]
@@ -288,191 +267,76 @@ class GameManager {
             return .success(withValue: currentData)
         }
         
+        // If player damaged success, check for winner
         if result {
             guard let updatedGame = updatedSnapshot.toObject(Game.self),
-                  let updatedPlayers = updatedGame.players,
-                  let livesRemaining = updatedPlayers[playerID]
+                  let updatedPlayers = updatedGame.players
             else { return }
             
-            // TODO: Works but messy asf (playing normal works -> death by time run out. Exiting mid game works
-            checkForWinner(players) { [self] gameEnded in
-                if gameEnded {
-                    print("Game ended")
-                    return
-                    
-                } else {
-                    // Get next player's turn
-                    print("currentPlayerTurn: \(updatedGame.currentPlayerTurn)")
-                    guard let currentPosition = getPosition(updatedGame.currentPlayerTurn) else { return }
-                    print("a")
-                    let playerCount = positions.count
-                    var nextPosition = (currentPosition + 1) % playerCount
-                    let isLastTurn = currentPosition == positions.count - 1
-                    
-                    // Get next alive user
-                    while !isAlive(getUserID(position: nextPosition) ?? "") {
-                        nextPosition = (nextPosition + 1) % playerCount
-                    }
-                    
-                    guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-                    print("nextPlayerUID: \(nextPlayerUID)")
-                    
-                    var updates: [String: Any] = [
-                        "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
-                        "games/\(roomID)/playerWords/\(nextPlayerUID)": "",   // reset next player's input
-                        "/shake/\(roomID)/players/\(playerID)": true
-                    ]
-                    
-                    if isLastTurn {
-                        updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
-                    }
-                    
-                    ref.updateChildValues(updates)
+            let winnerExists = try await checkForWinner(updatedPlayers)
+            
+            if winnerExists {
+                print("Game ended")
+            } else {
+                // Get next player's turn
+                guard let currentPosition = getPosition(updatedGame.currentPlayerTurn) else { return }
+                let playerCount = positions.count
+                var nextPosition = (currentPosition + 1) % playerCount
+                let isLastTurn = currentPosition == positions.count - 1
+                
+                // Get next alive user
+                while !isAlive(getUserID(position: nextPosition) ?? "") {
+                    nextPosition = (nextPosition + 1) % playerCount
                 }
+                
+                guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
+                
+                var updates: [String: Any] = [
+                    "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
+                    "games/\(roomID)/playerWords/\(nextPlayerUID)": "",   // reset next player's input
+                    "/shake/\(roomID)/players/\(playerID)": true
+                ]
+                
+                if isLastTurn {
+                    updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
+                }
+                
+                try await ref.updateChildValues(updates)
             }
-            
-            
-//            // Get next player's turn
-//            guard let currentPosition = getPosition(currentPlayerTurn) else { return }
-//            let playerCount = positions.count
-//            var nextPosition = (currentPosition + 1) % playerCount
-//            let isLastTurn = currentPosition == positions.count - 1
-//            
-//            
-//            // Get next alive user
-//            while !isAlive(getUserID(position: nextPosition) ?? "") {
-//                nextPosition = (nextPosition + 1) % playerCount
-//            }
-//            
-//            guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-//            
-//            var updates: [String: Any] = [
-//                "games/\(roomID)/currentPlayerTurn": nextPlayerUID,  // update next players turn
-//                "games/\(roomID)/playerWords/\(nextPlayerUID)": "",   // reset next player's input
-//                "/shake/\(roomID)/players/\(playerID)": true
-//            ]
-//            
-//            if isLastTurn {
-//                updates["games/\(roomID)/rounds"] = ServerValue.increment(1)    // increment rounds if necessary
-//            }
-//            
-//            try await ref.updateChildValues(updates)
         }
     }
     
-    func checkForWinner(_ players: [String: Int], completion: @escaping (Bool) -> ()) {
+    func checkForWinner(_ players: [String: Int]) async throws -> Bool {
         let playersAlive = players.filter { isAlive($0.key) }.count
-        guard playersAlive == 1 else {
-            completion(false)
-            return
-        }
-        // Returns a list of rooms?
-        //        let roomSnapshot = try await ref.child("rooms/\(roomID)").getData()   <-- This shit doesn't work for some reason but other cases do
-        ref.child("rooms/\(roomID)").observeSingleEvent(of: .value) { [self] snapshot in
-            guard let room = snapshot.toObject(Room.self),
-                  let isReady = room.isReady,
-                  room.status == .inProgress
-            else {
-                print("Fail to convert snapshot to room")
-                completion(false)
-                return
-            }
-
-            let playersAlive = players.filter { isAlive($0.key) }.count
-            let gameEnded = playersAlive == 1
-            if gameEnded {
-                var updates: [String: AnyObject] = [:]
-    
-                updates["/rooms/\(roomID)/status"] = Room.Status.ended.rawValue as AnyObject
-    
-                for (userID, _) in players {
-                    let userInRoom = isReady[userID] != nil
-                    if !userInRoom {
-                        // Clean up users
-                        updates["games/\(roomID)/players/\(userID)"] = nil
-                        updates["games/\(roomID)/playerWords/\(userID)"] = nil
-                        updates["games/\(roomID)/positions/\(userID)"] = nil
-                    }
-                }
-    
-                ref.updateChildValues(updates)
-            }
-    
-            completion(gameEnded)
+        let winnerExists = playersAlive == 1
+        guard winnerExists else { return false }
+        
+        let (snapshot, _) = await ref.child("rooms/\(roomID)").observeSingleEventAndPreviousSiblingKey(of: .value)
+        guard let room = snapshot.toObject(Room.self),
+              let isReady = room.isReady,   // TODO: Remove status?
+              room.status == .inProgress
+        else {
+            print("Fail to convert snapshot to room")
+            return false
         }
         
-//        guard let room = roomSnapshot.value as? [String: Any],
-//              let isReady = room["isReady"] as? [String: Bool],
-//              let roomStatus = room["status"] as? String,
-//              roomStatus == "inProgress"
-//        else {
-//            print("Fail to get room")
-//            return false
-//        } // TODO: Throw error?
+        var updates: [String: AnyObject] = [:]
         
-//        return false
-//        let playersAlive = players.filter { isAlive($0.key) }.count
-//        let gameEnded = playersAlive == 1
-//        if gameEnded {
-//            var updates: [String: AnyObject] = [:]
-//            
-//            updates["/rooms/\(roomID)/status"] = Room.Status.ended.rawValue as AnyObject
-//            
-//            for (userID, _) in players {
-//                let userInRoom = isReady[userID] != nil
-//                if !userInRoom {
-//                    // Clean up users
-//                    updates["games/\(roomID)/players/\(userID)"] = nil
-//                    updates["games/\(roomID)/playerWords/\(userID)"] = nil
-//                    updates["games/\(roomID)/positions/\(userID)"] = nil
-//                }
-//            }
-//            
-//            try await ref.updateChildValues(updates)
-//        }
-//        
-//        return gameEnded
+        updates["/rooms/\(roomID)/status"] = Room.Status.ended.rawValue as AnyObject
         
+        for (userID, _) in players {
+            let userInRoom = isReady[userID] != nil
+            if !userInRoom {
+                // Clean up users
+                updates["games/\(roomID)/players/\(userID)"] = NSNull()
+                updates["games/\(roomID)/playerWords/\(userID)"] = NSNull()
+                updates["games/\(roomID)/positions/\(userID)"] = NSNull()
+            }
+        }
         
-        // IGNORE
-//        let roomRef = ref.child("rooms/\(roomID)")
-//        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await roomRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
-//            if var roomData = currentData.value as? [String: AnyObject] {
-//                roomData["status"] = Room.Status.ended.rawValue as AnyObject
-//                currentData.value = roomData
-//                return .success(withValue: currentData)
-//            }
-//            return .success(withValue: currentData)
-//        }
+        try await ref.updateChildValues(updates)
         
-//        // Clean up players who exited mid-game
-//        if result {
-//            guard let updatedRoom = updatedSnapshot.toObject(Room.self),
-//                  let isReady = updatedRoom.isReady
-//            else { return gameEnded }   // TODO: Throw error?
-//            
-//            let gameSnapshot = try await ref.child("games/\(roomID)").getData()
-//            guard let game = gameSnapshot.toObject(Game.self),
-//                  let players = game.players
-//            else { return gameEnded }
-//            
-//            // isReady contains wheter user is still playing
-//            for (userID, _) in players {
-//                let userInRoom = isReady[userID] != nil
-//                if !userInRoom {
-//                    // Remove user
-//                    Task {
-//                        try await ref.updateChildValues([
-//                            "games/\(roomID)/players/\(userID)": nil,
-//                            "games/\(roomID)/playerWords/\(userID)": nil,
-//                            "games/\(roomID)/positions/\(userID)": nil
-//                        ])
-//                    }
-//                }
-//            }
-//        }
-        
-//        return gameEnded
+        return true
     }
     
     func ready() {
@@ -490,11 +354,12 @@ class GameManager {
     }
     
     func exit() throws {
+        turnTimer?.stopTimer()
+        
         // getData() doesn't work for some reason
         ref.child("rooms/\(roomID)/status").observeSingleEvent(of: .value) { [self] snapshot in
             guard let statusString = snapshot.value as? String,
-                  let roomStatus = Room.Status(rawValue: statusString),
-                  let currentUser = service.currentUser
+                  let roomStatus = Room.Status(rawValue: statusString)
             else {
                 return
             }
@@ -555,7 +420,7 @@ class GameManager {
             // Perform other related updates
             try await ref.updateChildValues([
                 "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1),
-                "rooms/\(roomID)/isReady/\(uid)": nil
+                "rooms/\(roomID)/isReady/\(uid)": NSNull()
             ])
         }
     }
@@ -594,7 +459,7 @@ class GameManager {
         
         updates["games/\(roomID)/players/\(currentUser.uid)"] = 0   // kill player
         updates["rooms/\(roomID)/currentPlayerCount"] = ServerValue.increment(-1)
-        updates["rooms/\(roomID)/isReady/\(currentUser.uid)"] = nil
+        updates["rooms/\(roomID)/isReady/\(currentUser.uid)"] = NSNull()
 
         try await ref.updateChildValues(updates)
 
@@ -603,7 +468,7 @@ class GameManager {
             let isAlive = livesRemaining > 0
             if isAlive {
                 players[currentUser.uid] = 0  // kill player locally
-                checkForWinner(players, completion: {_ in})
+                try await checkForWinner(players)
             }
         }
     }

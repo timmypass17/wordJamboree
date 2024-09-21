@@ -44,8 +44,6 @@ class CountDownView: UIView {
     }
     
     func startCountDown() {
-        isHidden = false
-        
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
             countDownLabel.text = "\(countdownValue)"
             if countdownValue == 0 {
@@ -61,7 +59,6 @@ class CountDownView: UIView {
     }
     
     private func stopCountDown() {
-        isHidden = true
         countdownTimer?.invalidate()
         soundManager.playBonkSound()
         delegate?.countDownView(self, didEndCountDown: true)

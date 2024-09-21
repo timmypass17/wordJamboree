@@ -33,6 +33,10 @@ class SoundManager {
         stopSound(players["ticking"])
     }
     
+    func isPlayingTickingSound() -> Bool {
+        return players["ticking"]?.isPlaying ?? false
+    }
+    
     private func playSound(_ player: AVAudioPlayer?) {
         player?.stop()          // Stop the current playback
         player?.currentTime = 0 // Reset to the beginning of the sound
