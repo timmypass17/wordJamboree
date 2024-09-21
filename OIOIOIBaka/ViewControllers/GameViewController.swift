@@ -219,6 +219,7 @@ extension GameViewController: UITextFieldDelegate {
 extension GameViewController: GameManagerDelegate {
     
     func gameManager(_ manager: GameManager, playersUpdated players: [String : Int]) {
+        print("player lives updated")
         Task {
             await updateUserViews(players: players.map { $0.key })
         }
@@ -262,6 +263,7 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String) {
+        print("player turn changed: \(playerID)")
         updateControls()
         pointArrow(to: playerID)
     }
@@ -275,8 +277,9 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    func gameManager(_ manager: GameManager, roomStateUpdated room: Room) {
-        switch room.status {
+    func gameManager(_ manager: GameManager, roomStatusUpdated roomStatus: Room.Status) {
+        print("room status changed: \(roomStatus.rawValue)")
+        switch roomStatus {
         case .notStarted:
             readyView.isHidden = false
             countDownView.isHidden = true
@@ -450,7 +453,7 @@ extension GameViewController: CountDownViewDelegate {
     
     func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
         currentWordView.isHidden = false
-        gameManager.startGame()
+//        gameManager.startGame()
     }
 }
 
