@@ -105,6 +105,12 @@ class GameViewController: UIViewController {
         gameManager.setup()
     }
     
+    // Strong references not allowing gameviewcontroller to be deallocated
+//    deinit {
+//        print("deinit")
+//        gameManager.removeListeners()
+//    }
+    
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         NotificationCenter.default.removeObserver(self)
@@ -120,7 +126,7 @@ class GameViewController: UIViewController {
             countDownView.startCountDown()
         case .ended:
             gameManager.turnTimer?.stopTimer()
-            if let winnerID = gameManager.players.first(where: { gameManager.isAlive($0.key) })?.key {
+            if let winnerID = gameManager.hearts.first(where: { gameManager.isAlive($0.key) })?.key {
                 showWinner(userID: winnerID)
             }
         }
@@ -227,8 +233,6 @@ extension GameViewController: GameManagerDelegate {
         p1View.isHidden = true
         
         let playersInfo = manager.playerInfos
-        print(positions)
-        print(playersInfo)
         for (uid, position) in positions {
             guard let playerInfo = playersInfo[uid] else { continue }
             
@@ -243,28 +247,17 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : [String : String]]) {
-
+    func gameManager(_ manager: GameManager, heartsUpdated hearts: [String : Int]) {
+        updateHearts(hearts: hearts)
     }
     
-    func gameManager(_ manager: GameManager, playersUpdated players: [String : Int]) {
-        
-        updateHearts(players: players)
-        
-        // updateUserViews whener userInfos changes
-//        Task {
-//            await updateUserViews(players: players.map { $0.key })
-//        }
-        
-    }
-    
-    func updateHearts(players: [String: Int]) {
-        for (playerID, livesRemaining) in players {
+    func updateHearts(hearts: [String: Int]) {
+        for (playerID, heartCount) in hearts {
             guard let position = gameManager.positions[playerID] else { continue }
             if position == 0 {
-                p0View.setHearts(to: livesRemaining)
+                p0View.setHearts(to: heartCount)
             } else if position == 1 {
-                p1View.setHearts(to: livesRemaining)
+                p1View.setHearts(to: heartCount)
             }
         }
     }
@@ -334,54 +327,7 @@ extension GameViewController: GameManagerDelegate {
             shakePlayer(p1View)
         }
     }
-    
-//    private func updateUserViews(players: [String]) async {
-//        print("players: \(players)")
-//        do {
-//            try await withThrowingTaskGroup(of: MyUser.self) { group in
-//                for playerID in players {
-//                    if let cachedUser = self.gameManager.playerInfos[playerID] {
-//                        group.addTask {
-//                            return cachedUser
-//                        }
-//                    } else {
-//                        group.addTask {
-//                            let userSnapshot = try await self.ref.child("users/\(playerID)").getData()
-//                            guard let user = userSnapshot.toObject(MyUser.self) else { throw FirebaseServiceError.invalidObject }
-//                            print("Fetched User: \(user.uid)")
-//                            return user
-//                        }
-//                    }
-//                }
-//                
-//                // Update player infos as they come in
-//                for try await user in group {
-//                    gameManager.playerInfos[user.uid] = user
-//                }
-//            }
-//            
-//            // Reset views
-//            p0View.isHidden = true
-//            p1View.isHidden = true
-//            
-//            // Update view now that we have an updated playerInfos
-//            for (uid, user) in gameManager.playerInfos {
-//                guard let position = gameManager.getPosition(uid) else { continue }
-//                print(uid, position)
-//                
-//                if position == 0 {
-//                    p0View.nameLabel.text = user.name
-//                    p0View.isHidden = false
-//                    
-//                } else if position == 1 {
-//                    p1View.nameLabel.text = user.name
-//                    p1View.isHidden = false
-//                }
-//            }
-//        } catch {
-//            print("Error fetching users: \(error)")
-//        }
-//    }
+
     
     private func updateUserTextInputs(game: Game) {
         guard let positions = game.positions,

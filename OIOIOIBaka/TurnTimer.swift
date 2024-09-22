@@ -22,6 +22,7 @@ class TurnTimer {
     }
     
     func startTimer(duration: Int) {
+        print("start timer")
         stopTimer()
         
         var timeRemaining = duration
@@ -40,7 +41,6 @@ class TurnTimer {
     }
     
     func stopTimer() {
-        print("Stop turn timer")
         timer?.invalidate()
         soundManager.stopTickingSound()
     }

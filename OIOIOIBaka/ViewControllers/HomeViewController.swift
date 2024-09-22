@@ -272,6 +272,7 @@ extension HomeViewController: UICollectionViewDelegate {
             return
         }
         
+        // TODO: Tapping background of top header crashes
         Task {
             await addUserToRoom(user: user, room: item.room!, roomID: item.roomID!)
         }
