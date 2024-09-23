@@ -125,6 +125,10 @@ class PlayerView: UIView {
     }
     
     func setHearts(to livesRemaining: Int) {
+        while livesRemaining > heartCount {
+            heartsView.addHeart()
+        }
+        
         while livesRemaining < heartCount {
             removeHeart()
         }

@@ -124,8 +124,24 @@ class GameViewController: UIViewController {
             countDownView.isHidden = true
             currentWordView.isHidden = true
         case .inProgress:
+            // Show hearts
+            showHearts()
             countDownView.startCountDown()
         }
+    }
+    
+    func showHearts() {
+        // Hide crown
+        p0View.crownView.isHidden = true
+        p1View.crownView.isHidden = true
+        
+        // Hide skull
+        p0View.skullView.isHidden = true
+        p1View.skullView.isHidden = true
+
+        // Show hearts
+        p0View.heartsView.isHidden = false
+        p1View.heartsView.isHidden = false
     }
     
 
