@@ -80,17 +80,28 @@ class PlayerView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        
+        let topSpacer = UIView()
+        topSpacer.translatesAutoresizingMaskIntoConstraints = false
+
+        let bottomSpacer = UIView()
+        bottomSpacer.translatesAutoresizingMaskIntoConstraints = false
+
             
+        container.addArrangedSubview(topSpacer)
         container.addArrangedSubview(nameLabel)
         container.addArrangedSubview(profileImageView)
         container.addArrangedSubview(wordTextField)
-        
+        container.addArrangedSubview(bottomSpacer)
+
         addSubview(container)
         addSubview(heartsView)
         addSubview(skullView)
         addSubview(crownView)
         
         NSLayoutConstraint.activate([
+            topSpacer.heightAnchor.constraint(equalTo: bottomSpacer.heightAnchor), // Equal height for centering
+
             container.topAnchor.constraint(equalTo: topAnchor),
             container.bottomAnchor.constraint(equalTo: bottomAnchor),
             container.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -103,7 +114,7 @@ class PlayerView: UIView {
             skullView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
             
             crownView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            crownView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
+            crownView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10)
         ])
     }
     

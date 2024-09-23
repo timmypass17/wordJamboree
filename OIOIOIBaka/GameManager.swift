@@ -77,8 +77,8 @@ class GameManager {
     
     func observeWinner() {
         ref.child("games/\(roomID)/winner").observe(.childAdded) { [self] snapshot in
-            print(#function)
             guard let winnerID = snapshot.value as? String else { return }
+            print("Winner: \(winnerID)")
             delegate?.gameManager(self, winnerUpdated: winnerID)
         }
     }
@@ -87,6 +87,7 @@ class GameManager {
         playersInfoHandle = ref.child("games/\(roomID)/playersInfo").observe(.value) { [self] snapshot in
             guard let playersInfo = snapshot.value as? [String: [String: String]] else { return }
             self.playerInfos = playersInfo
+            print("PlayerInfos: \(playersInfo)")
         }
     }
     
@@ -114,7 +115,7 @@ class GameManager {
                   playerID != ""
             else { return }
             
-            print("player turn: \(playerID)")
+            print("Player turn: \(playerID)")
             
             self.currentPlayerTurn = playerID
             turnTimer?.startTimer(duration: secondsPerTurn)
@@ -139,12 +140,11 @@ class GameManager {
         }
     }
     
-//    Players and Positions: In observePlayers() and observePositions(), you are observing the entire node. If the positions and players change frequently, this can become expensive in terms of bandwidth and Firebase read costs.
-//    Optimization: Use .childChanged to observe specific changes rather than downloading the entire set of positions or players every time.
     func observePositions() {
         positionsHandle = ref.child("games/\(roomID)/positions").observe(.value) { [self] snapshot in
             guard let positions = snapshot.value as? [String: Int] else { return }
             self.positions = positions
+            print("Positions: \(positions)")
             delegate?.gameManager(self, playersPositionUpdated: positions)
         }
     }
@@ -153,6 +153,7 @@ class GameManager {
         heartsHandle = ref.child("games/\(roomID)/hearts").observe(.value) { [self] snapshot in
             guard let hearts = snapshot.value as? [String: Int] else { return }
             self.hearts = hearts
+            print("Hearts: \(hearts)")
             delegate?.gameManager(self, heartsUpdated: hearts)
         }
     }
@@ -165,7 +166,7 @@ class GameManager {
     }
     
     func submit(_ word: String) async throws {
-        print("submit: \(word)")
+        print("Submit word: \(word)")
         let wordIsValid = word.isWord && word.contains(currentLetters)
         if wordIsValid {
             try await handleSubmitSuccess()
@@ -209,6 +210,7 @@ class GameManager {
         return positions.first(where: { $0.value == position })?.key
     }
     
+    // TODO: Remove this, shouldn't rely on client's version?
     func isAlive(_ playerID: String) -> Bool {
         return hearts[playerID, default: 0] != 0
     }
@@ -347,6 +349,7 @@ class GameManager {
         }
     }
     
+    // Called when user gets kill or when user leaves mid game
     func checkForWinner(_ hearts: [String: Int]) async throws -> Bool {
         print(#function)
         let playersAliveCount = hearts.filter { isAlive($0.key) }.count
@@ -355,31 +358,31 @@ class GameManager {
               let winnerID = hearts.first(where: { isAlive ($0.key) } )?.key
         else { return false }
         
-        let (snapshot, _) = await ref.child("rooms/\(roomID)").observeSingleEventAndPreviousSiblingKey(of: .value)
-        guard let room = snapshot.toObject(Room.self),
-              let isReady = room.isReady,   // TODO: Remove status?
-              room.status == .inProgress
-        else {
-            print("Fail to convert snapshot to room")
-            return false
-        }
+//        let (roomSnapshot, _) = await ref.child("rooms/\(roomID)").observeSingleEventAndPreviousSiblingKey(of: .value)
+//        guard let room = roomSnapshot.toObject(Room.self),
+//              let isReady = room.isReady,   //
+//              room.status == .inProgress
+//        else {
+//            print("Fail to convert snapshot to room")
+//            return false
+//        }
         
         var updates: [String: AnyObject] = [:]
-        
-        updates["games/\(roomID)/currentPlayerTurn/playerID"] = "" as AnyObject
+//        
+        updates["games/\(roomID)/currentPlayerTurn/playerID"] = "" as AnyObject // incase current player == new game's current player
         updates["games/\(roomID)/secondsPerTurn"] = Int.random(in: 10...30) + 3 as AnyObject
-        updates["rooms/\(roomID)/status"] = Room.Status.notStarted.rawValue as AnyObject
-        updates["games/\(roomID)/winner/playerID"] = winnerID as AnyObject
-        
-        for (userID, _) in hearts {
-            let userInRoom = isReady[userID] != nil
-            if !userInRoom {
-                // Clean up users
-                updates["games/\(roomID)/hearts/\(userID)"] = NSNull()
-                updates["games/\(roomID)/playerWords/\(userID)"] = NSNull()
-//                updates["games/\(roomID)/positions/\(userID)"] = NSNull()
-            }
-        }
+        updates["rooms/\(roomID)/status"] = Room.Status.notStarted.rawValue as AnyObject // stops game
+        updates["games/\(roomID)/winner/playerID"] = winnerID as AnyObject  // shows winners
+//
+//        for (userID, _) in hearts {
+//            let userInRoom = isReady[userID] != nil
+//            if !userInRoom {
+//                // Clean up users
+//                updates["games/\(roomID)/hearts/\(userID)"] = NSNull()
+//                updates["games/\(roomID)/playerWords/\(userID)"] = NSNull()
+////                updates["games/\(roomID)/positions/\(userID)"] = NSNull()
+//            }
+//        }
         
         try await ref.updateChildValues(updates)
         
@@ -421,11 +424,6 @@ class GameManager {
                 Task {
                     try await handleExitDuringGame()
                 }
-//            case .ended:
-//                Task {
-//                    try await handleExitDuringNotStarted()
-//                }
-//                break
             }
         }
     }
@@ -437,9 +435,6 @@ class GameManager {
         
         let gameRef = Database.database().reference().child("games/\(roomID)")
         
-        // Transaction block triggers children node's observer even if it did not modifiy that child
-        // e.g. games/\(roomID)/currentPlayerTurn gets triggered even tho it wasn't modified
-        // Solution: Make games/\(roomID)/currentPlayerTurn to .childChange and change path to games/\(roomID)/currentPlayerTurn/playerID
         let (result, updatedSnapshot) = try await gameRef.runTransactionBlock { currentData in
             if var gameData = currentData.value as? [String: AnyObject] {
                 var hearts = gameData["hearts"] as? [String: Int] ?? [:]
@@ -455,10 +450,8 @@ class GameManager {
                 
                 // Update positions
                 let sortedPlayersByPosition: [String] = positions.sorted { $0.1 < $1.1 }.map { $0.key }
-                var pos = 0
-                for userID in sortedPlayersByPosition {
-                    positions[userID] = pos
-                    pos += 1
+                for (newPosition, userID) in sortedPlayersByPosition.enumerated() {
+                    positions[userID] = newPosition
                 }
                 
                 // Apply updates
@@ -478,14 +471,13 @@ class GameManager {
             try await ref.updateChildValues([
                 "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1),
                 "rooms/\(roomID)/isReady/\(uid)": NSNull(),
-                "shake/\(roomID)/players": NSNull()
+//                "shake/\(roomID)/players/\(uid)": NSNull()
             ])
         }
     }
     
     private func handleExitDuringGame() async throws {
         guard let currentUser = service.currentUser else { return }
-        print(#function)
         var updates: [String: Any] = [:]
 
         let gameSnapshot = try await ref.child("games/\(roomID)").getData()
@@ -602,3 +594,7 @@ extension String {
 //  - Ensure that all thrown errors are caught and handled appropriately, providing feedback to the user (especially for invalid word submissions).
 //Use Transactions for Critical Data:
 //  - For game-critical data like currentPlayerTurn or the number of rounds, transactions would ensure that updates happen atomically and without conflict.
+
+// Transaction block triggers children node's observer even if it did not modifiy that child
+// e.g. games/\(roomID)/currentPlayerTurn gets triggered even tho it wasn't modified
+// Solution: Make games/\(roomID)/currentPlayerTurn to .childChange and change path to games/\(roomID)/currentPlayerTurn/playerID

@@ -10,23 +10,40 @@ import FirebaseDatabaseInternal
 import SwiftUI
 import AVFAudio
 
-// TODO: Adjust bottom padding whenever keyboard is shown instead of adjust frame size. I want to have a bottom gap even if keyboard is not shown.
+// TODO: Make custom keyboard
+// - fix bug where if user leaves and rejoins, there will be duplicate observres causing double damage. make sure observers are detached when use exists
 class GameViewController: UIViewController {
 
     let p0View: PlayerView = {
+        let p0View = PlayerView()
+        p0View.nameLabel.text = "P0"
+        p0View.translatesAutoresizingMaskIntoConstraints = false
+        p0View.isHidden = true
+        return p0View
+    }()
+    
+    let p1View: PlayerView = {
         let p1View = PlayerView()
-        p1View.nameLabel.text = "P0"
+        p1View.nameLabel.text = "P1"
         p1View.translatesAutoresizingMaskIntoConstraints = false
         p1View.isHidden = true
         return p1View
     }()
     
-    let p1View: PlayerView = {
+    let p2View: PlayerView = {
         let p2View = PlayerView()
-        p2View.nameLabel.text = "P1"
+        p2View.nameLabel.text = "P2"
         p2View.translatesAutoresizingMaskIntoConstraints = false
         p2View.isHidden = true
         return p2View
+    }()
+    
+    let p3View: PlayerView = {
+        let p3View = PlayerView()
+        p3View.nameLabel.text = "P3"
+        p3View.translatesAutoresizingMaskIntoConstraints = false
+        p3View.isHidden = true
+        return p3View
     }()
     
     let currentWordView: CurrentWordView = {
@@ -77,6 +94,8 @@ class GameViewController: UIViewController {
         
         view.addSubview(p0View)
         view.addSubview(p1View)
+        view.addSubview(p2View)
+        view.addSubview(p3View)
         view.addSubview(currentWordView)
         view.addSubview(countDownView)
         view.addSubview(readyView)
@@ -86,11 +105,21 @@ class GameViewController: UIViewController {
             currentWordView.topAnchor.constraint(equalTo: p0View.bottomAnchor),
             currentWordView.bottomAnchor.constraint(equalTo: p1View.topAnchor),
 
-            p1View.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -50),
+            p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            p0View.topAnchor.constraint(equalTo: view.topAnchor),
+            p0View.bottomAnchor.constraint(equalTo: view.centerYAnchor),
+            
+            p1View.topAnchor.constraint(equalTo: view.centerYAnchor),
+            p1View.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             p1View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             
-            p0View.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
-            p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            p2View.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            p2View.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            p2View.trailingAnchor.constraint(equalTo: view.centerXAnchor, constant: -25),
+            
+            p3View.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            p3View.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            p3View.leadingAnchor.constraint(equalTo: view.centerXAnchor, constant: 25),
 
             countDownView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             countDownView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -101,10 +130,14 @@ class GameViewController: UIViewController {
 
         p0View.wordTextField.isUserInteractionEnabled = false
         p1View.wordTextField.isUserInteractionEnabled = false
+        p2View.wordTextField.isUserInteractionEnabled = false
+        p3View.wordTextField.isUserInteractionEnabled = false
+
         
         gameManager.setup()
     }
     
+
     // Strong references not allowing gameviewcontroller to be deallocated
 //    deinit {
 //        print("deinit")
@@ -134,14 +167,22 @@ class GameViewController: UIViewController {
         // Hide crown
         p0View.crownView.isHidden = true
         p1View.crownView.isHidden = true
+        p2View.crownView.isHidden = true
+        p3View.crownView.isHidden = true
         
         // Hide skull
         p0View.skullView.isHidden = true
         p1View.skullView.isHidden = true
+        p2View.skullView.isHidden = true
+        p3View.skullView.isHidden = true
+
 
         // Show hearts
         p0View.heartsView.isHidden = false
         p1View.heartsView.isHidden = false
+        p2View.heartsView.isHidden = false
+        p3View.heartsView.isHidden = false
+
     }
     
 
@@ -157,6 +198,10 @@ class GameViewController: UIViewController {
             p0View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
         } else if position == 1 {
             p1View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+        } else if position == 2 {
+            p2View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+        } else if position == 3 {
+            p3View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
         }
                 
         Task {
@@ -251,6 +296,8 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String : Int]) {
         p0View.isHidden = true
         p1View.isHidden = true
+        p2View.isHidden = true
+        p3View.isHidden = true
         
         let playersInfo = manager.playerInfos
         for (uid, position) in positions {
@@ -259,10 +306,15 @@ extension GameViewController: GameManagerDelegate {
             if position == 0 {
                 p0View.nameLabel.text = playerInfo["name"]
                 p0View.isHidden = false
-                
             } else if position == 1 {
                 p1View.nameLabel.text = playerInfo["name"]
                 p1View.isHidden = false
+            } else if position == 2 {
+                p2View.nameLabel.text = playerInfo["name"]
+                p2View.isHidden = false
+            } else if position == 3 {
+                p3View.nameLabel.text = playerInfo["name"]
+                p3View.isHidden = false
             }
         }
     }
@@ -278,6 +330,10 @@ extension GameViewController: GameManagerDelegate {
                 p0View.setHearts(to: heartCount)
             } else if position == 1 {
                 p1View.setHearts(to: heartCount)
+            } else if position == 2 {
+                p2View.setHearts(to: heartCount)
+            } else if position == 3 {
+                p3View.setHearts(to: heartCount)
             }
         }
     }
@@ -298,6 +354,18 @@ extension GameViewController: GameManagerDelegate {
                     continue
                 }
                 p1View.updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
+            } else if position == 2 {
+                guard let originalWord = p2View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                p2View.updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
+            } else if position == 3 {
+                guard let originalWord = p3View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                p3View.updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
             }
         }
     }
@@ -317,6 +385,10 @@ extension GameViewController: GameManagerDelegate {
             currentWordView.pointArrow(at: p0View, self)
         } else if position == 1 {
             currentWordView.pointArrow(at: p1View, self)
+        } else if position == 2 {
+            currentWordView.pointArrow(at: p2View, self)
+        } else if position == 3 {
+            currentWordView.pointArrow(at: p3View, self)
         }
     }
     
@@ -337,6 +409,12 @@ extension GameViewController: GameManagerDelegate {
         } else if position == 1 {
             p1View.heartsView.isHidden = true
             p1View.crownView.isHidden = false
+        } else if position == 2 {
+            p2View.heartsView.isHidden = true
+            p2View.crownView.isHidden = false
+        } else if position == 3 {
+            p3View.heartsView.isHidden = true
+            p3View.crownView.isHidden = false
         }
     }
 
@@ -345,6 +423,10 @@ extension GameViewController: GameManagerDelegate {
             shakePlayer(p0View)
         } else if position == 1 {
             shakePlayer(p1View)
+        } else if position == 2 {
+            shakePlayer(p2View)
+        } else if position == 3 {
+            shakePlayer(p3View)
         }
     }
 
@@ -369,6 +451,18 @@ extension GameViewController: GameManagerDelegate {
                     continue
                 }
                 p1View.updateUserWordTextColor(word: updatedWord, matching: game.currentLetters)
+            } else if position == 2 {
+                guard let originalWord = p2View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                p2View.updateUserWordTextColor(word: updatedWord, matching: game.currentLetters)
+            } else if position == 3 {
+                guard let originalWord = p3View.wordTextField.text,
+                      originalWord != updatedWord else {
+                    continue
+                }
+                p3View.updateUserWordTextColor(word: updatedWord, matching: game.currentLetters)
             }
         }
     }
@@ -392,8 +486,14 @@ extension GameViewController: GameManagerDelegate {
         // Reset listeners
         p0View.wordTextField.removeTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
         p1View.wordTextField.removeTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+        p2View.wordTextField.removeTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+        p3View.wordTextField.removeTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+
         p0View.wordTextField.delegate = nil
         p1View.wordTextField.delegate = nil
+        p2View.wordTextField.delegate = nil
+        p3View.wordTextField.delegate = nil
+
 
         // Apply updated listeners
         guard let currentUserID = gameManager.service.currentUser?.uid,
@@ -424,6 +524,28 @@ extension GameViewController: GameManagerDelegate {
             } else {
                 p1View.wordTextField.isUserInteractionEnabled = false
                 p1View.wordTextField.tintColor = UIColor.clear
+            }
+        } else if position == 2 {
+            p2View.wordTextField.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+            p2View.wordTextField.delegate = self
+            
+            if gameManager.currentPlayerTurn == currentUserID {
+                p2View.wordTextField.isUserInteractionEnabled = true
+                p2View.wordTextField.tintColor = UIColor(Color.accentColor)
+            } else {
+                p2View.wordTextField.isUserInteractionEnabled = false
+                p2View.wordTextField.tintColor = UIColor.clear
+            }
+        } else if position == 3 {
+            p3View.wordTextField.addTarget(self, action: #selector(textFieldDidChange(_:)), for: .editingChanged)
+            p3View.wordTextField.delegate = self
+            
+            if gameManager.currentPlayerTurn == currentUserID {
+                p3View.wordTextField.isUserInteractionEnabled = true
+                p3View.wordTextField.tintColor = UIColor(Color.accentColor)
+            } else {
+                p3View.wordTextField.isUserInteractionEnabled = false
+                p3View.wordTextField.tintColor = UIColor.clear
             }
         }
     }
