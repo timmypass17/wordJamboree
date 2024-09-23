@@ -22,7 +22,7 @@ class CountDownView: UIView {
     }()
     
     var countdownTimer: Timer?
-    var countdownValue = 3
+    let startingCoundownValue = 3
     let soundManager = SoundManager()
     weak var delegate: CountDownViewDelegate?
     
@@ -44,15 +44,16 @@ class CountDownView: UIView {
     }
     
     func startCountDown() {
+        var currentCountdownValue = startingCoundownValue
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
-            countDownLabel.text = "\(countdownValue)"
-            if countdownValue == 0 {
+            countDownLabel.text = "\(currentCountdownValue)"
+            if currentCountdownValue == 0 {
                 stopCountDown()
             } else {
                 soundManager.playCountdownSound()
             }
             
-            countdownValue -= 1
+            currentCountdownValue -= 1
         }
         
         delegate?.countDownView(self, didStartCountDown: true)

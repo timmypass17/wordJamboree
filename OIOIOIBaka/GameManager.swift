@@ -19,6 +19,7 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String: String])
     func gameManager(_ manager: GameManager, heartsUpdated hearts: [String: Int])
     func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String: Int])
+    func gameManager(_ manager: GameManager, winnerUpdated playerID: String)
 }
 
 class GameManager {
@@ -71,6 +72,15 @@ class GameManager {
         observeRounds()
         observeSecondsPerTurn()
         observePlayerTurn()
+        observeWinner()
+    }
+    
+    func observeWinner() {
+        ref.child("games/\(roomID)/winner").observe(.childAdded) { [self] snapshot in
+            print(#function)
+            guard let winnerID = snapshot.value as? String else { return }
+            delegate?.gameManager(self, winnerUpdated: winnerID)
+        }
     }
     
     func observePlayerInfo() {
@@ -91,7 +101,6 @@ class GameManager {
     func observeCurrentLetters() {
         currentLettersHandle = ref.child("games/\(roomID)/currentLetters").observe(.value) { [self] snapshot in
             guard let letters = snapshot.value as? String else { return }
-            print("Current letters: \(letters)")
             self.currentLetters = letters
             delegate?.gameManager(self, currentLettersUpdated: letters)
         }
@@ -99,8 +108,11 @@ class GameManager {
     
     func observePlayerTurn() {
         // TODO: .value runs even if new value == old value, .childChange does not run if new value == old value
+        // note: Does not get triggered on create (e.g. nil -> string, so do "" -> non-empty string)
         playerTurnHandle = ref.child("games/\(roomID)/currentPlayerTurn").observe(.childChanged) { [self] snapshot in
-            guard let playerID = snapshot.value as? String else { return }
+            guard let playerID = snapshot.value as? String,
+                  playerID != ""
+            else { return }
             
             print("player turn: \(playerID)")
             
@@ -187,6 +199,7 @@ class GameManager {
         
         if isLastTurn {
             updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)
+            updates["games/\(roomID)/secondsPerTurn"] = ServerValue.increment(-1)
         }
         
         try await ref.updateChildValues(updates)
@@ -246,8 +259,8 @@ class GameManager {
         Task {
             do {
                 // Get most up to date seconds
-                let secondsSnapshot = try await ref.child("games/\(roomID)/secondsPerTurn").getData()
-                self.secondsPerTurn = secondsSnapshot.value as! Int
+//                let secondsSnapshot = try await ref.child("games/\(roomID)/secondsPerTurn").getData()
+//                self.secondsPerTurn = secondsSnapshot.value as! Int
                 
                 // .value gets called once initally, .childChange gets called only when updates happen
                 // fix bug where seconds get reduced wheneber user joins/leaves because using .value calleds function once initially
@@ -334,11 +347,13 @@ class GameManager {
         }
     }
     
-    func checkForWinner(_ players: [String: Int]) async throws -> Bool {
+    func checkForWinner(_ hearts: [String: Int]) async throws -> Bool {
         print(#function)
-        let playersAlive = players.filter { isAlive($0.key) }.count
-        let winnerExists = playersAlive == 1
-        guard winnerExists else { return false }
+        let playersAliveCount = hearts.filter { isAlive($0.key) }.count
+        let winnerExists = playersAliveCount == 1
+        guard winnerExists,
+              let winnerID = hearts.first(where: { isAlive ($0.key) } )?.key
+        else { return false }
         
         let (snapshot, _) = await ref.child("rooms/\(roomID)").observeSingleEventAndPreviousSiblingKey(of: .value)
         guard let room = snapshot.toObject(Room.self),
@@ -351,9 +366,12 @@ class GameManager {
         
         var updates: [String: AnyObject] = [:]
         
-        updates["/rooms/\(roomID)/status"] = Room.Status.ended.rawValue as AnyObject
+        updates["games/\(roomID)/currentPlayerTurn/playerID"] = "" as AnyObject
+        updates["games/\(roomID)/secondsPerTurn"] = Int.random(in: 10...30) + 3 as AnyObject
+        updates["rooms/\(roomID)/status"] = Room.Status.notStarted.rawValue as AnyObject
+        updates["games/\(roomID)/winner/playerID"] = winnerID as AnyObject
         
-        for (userID, _) in players {
+        for (userID, _) in hearts {
             let userInRoom = isReady[userID] != nil
             if !userInRoom {
                 // Clean up users
@@ -403,11 +421,11 @@ class GameManager {
                 Task {
                     try await handleExitDuringGame()
                 }
-            case .ended:
-                Task {
-                    try await handleExitDuringNotStarted()
-                }
-                break
+//            case .ended:
+//                Task {
+//                    try await handleExitDuringNotStarted()
+//                }
+//                break
             }
         }
     }
@@ -474,7 +492,7 @@ class GameManager {
         guard let game = gameSnapshot.toObject(Game.self),
               let positions = game.positions,
               let currentPosition = positions[currentUser.uid],
-              var players = game.hearts
+              var hearts = game.hearts
         else { return }
         
         let isCurrentPlayersTurn = currentUser.uid == game.currentPlayerTurn?["playerID"]
@@ -495,6 +513,7 @@ class GameManager {
         let isLastTurn = currentPosition == positions.count - 1
         if isLastTurn {
             updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)
+            updates["games/\(roomID)/secondsPerTurn"] = ServerValue.increment(-1)
         }
         
         updates["games/\(roomID)/hearts/\(currentUser.uid)"] = 0   // kill player
@@ -504,11 +523,11 @@ class GameManager {
         try await ref.updateChildValues(updates)
 
         // Whenever a player dies, check for winner
-        if let livesRemaining = players[currentUser.uid] {
+        if let livesRemaining = hearts[currentUser.uid] {
             let isAlive = livesRemaining > 0
             if isAlive {
-                players[currentUser.uid] = 0  // kill player locally
-                try await checkForWinner(players)
+                hearts[currentUser.uid] = 0  // kill player locally
+                try await checkForWinner(hearts)
             }
         }
     }

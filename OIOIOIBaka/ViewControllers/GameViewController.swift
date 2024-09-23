@@ -115,22 +115,19 @@ class GameViewController: UIViewController {
         super.viewWillDisappear(animated)
         NotificationCenter.default.removeObserver(self)
     }
-    
+       
     func updateUI(roomStatus: Room.Status) {
         switch roomStatus {
         case .notStarted:
+            gameManager.turnTimer?.stopTimer()
             readyView.isHidden = false
             countDownView.isHidden = true
             currentWordView.isHidden = true
         case .inProgress:
             countDownView.startCountDown()
-        case .ended:
-            gameManager.turnTimer?.stopTimer()
-            if let winnerID = gameManager.hearts.first(where: { gameManager.isAlive($0.key) })?.key {
-                showWinner(userID: winnerID)
-            }
         }
     }
+    
 
     @objc func textFieldDidChange(_ textField: UITextField) {
         guard let partialWord = textField.text,
@@ -227,6 +224,13 @@ extension GameViewController: UITextFieldDelegate {
 }
 
 extension GameViewController: GameManagerDelegate {
+    
+    // TODO: After game ends and new game begins.
+    //  - Winner is still being shown, should hide
+    //  - Hearts are invisblem should be visible
+    func gameManager(_ manager: GameManager, winnerUpdated playerID: String) {
+        showWinner(userID: playerID)
+    }
     
     func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String : Int]) {
         p0View.isHidden = true

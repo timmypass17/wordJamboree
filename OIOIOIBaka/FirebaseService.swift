@@ -89,7 +89,7 @@ class FirebaseService {
             rounds: [
                 "currentRound": 1
             ],
-            secondsPerTurn: Int.random(in: 10...30),
+            secondsPerTurn: Int.random(in: 10...30) + 3,
             playersInfo: [
                 currentUser.uid: [
                     "name": currentUser.name
@@ -147,7 +147,7 @@ class FirebaseService {
             }
 
             guard currentPlayerCount < 4,
-                  roomStatus == .notStarted
+                  roomStatus != .inProgress
                   // check if player not in list of players
                   // TODO: Add players field to Room
             else {
