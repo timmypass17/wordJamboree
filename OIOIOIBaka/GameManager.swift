@@ -403,27 +403,25 @@ class GameManager {
         ])
     }
     
-    func exit() throws {
+    func exit() async throws {
         turnTimer?.stopTimer()
         
-        // getData() doesn't work for some reason
-        ref.child("rooms/\(roomID)/status").observeSingleEvent(of: .value) { [self] snapshot in
-            print(#function)
-            guard let statusString = snapshot.value as? String,
-                  let roomStatus = Room.Status(rawValue: statusString)
-            else {
-                return
+        // getData() doesn't work for some reason for rooms but games is fine? returns a list
+        let (statusSnapshot, _) = await service.ref.child("rooms/\(roomID)/status").observeSingleEventAndPreviousSiblingKey(of: .value)
+        guard let statusString = statusSnapshot.value as? String,
+              let roomStatus = Room.Status(rawValue: statusString)
+        else {
+            return
+        }
+
+        switch roomStatus {
+        case .notStarted:
+            Task {
+                try await handleExitDuringNotStarted()
             }
-    
-            switch roomStatus {
-            case .notStarted:
-                Task {
-                    try await handleExitDuringNotStarted()
-                }
-            case .inProgress:
-                Task {
-                    try await handleExitDuringGame()
-                }
+        case .inProgress:
+            Task {
+                try await handleExitDuringGame()
             }
         }
     }

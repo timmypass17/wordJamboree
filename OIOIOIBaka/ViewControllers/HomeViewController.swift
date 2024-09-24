@@ -62,15 +62,10 @@ class HomeViewController: UIViewController {
         
         loadRooms()
         
-        // Why does this work? (returns 1 room)
+//        // Why does this work? (returns 1 room)
 //        Task {
-//            let snapshot = try? await Database.database().reference().child("rooms/-O7Hv0E7QngUqCEWDwvQ").getData()
-//            if let snapshot,
-//               let room = snapshot.toObject(Room.self)
-//            {
-//                print(snapshot)
-//                print("room status: \(room.status.rawValue)")
-//            }
+//            
+//            try? await service.getRoom()
 //        }
     }
     

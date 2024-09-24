@@ -37,6 +37,7 @@ class FirebaseService {
         }
         do {
             let snapshot = try await ref.child("users").child(user.uid).getData()
+            print(snapshot)
             self.currentUser = snapshot.toObject(MyUser.self)
             print("Got user successfully")
         } catch {
@@ -44,6 +45,7 @@ class FirebaseService {
         }
     }
     
+
     func createUser(user: User) async {
         do {
             let userToAdd = MyUser(name: generateRandomUsername(), uid: user.uid)
@@ -58,7 +60,7 @@ class FirebaseService {
     func createRoom(title: String) async throws -> (String, Room) {
         guard let currentUser else { throw FirebaseServiceError.userNotLoggedIn }
 
-        let roomRef = ref.child("rooms").childByAutoId()
+        let roomRef = ref.childByAutoId()
         let roomID = roomRef.key!
         
         let room = Room(

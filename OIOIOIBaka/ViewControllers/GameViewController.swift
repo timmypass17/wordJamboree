@@ -70,6 +70,8 @@ class GameViewController: UIViewController {
 
     var exitBarButton: UIBarButtonItem!
     private var originalSize: CGSize?
+    
+    var exitTask: Task<Void, Error>? = nil
 
     init(gameManager: GameManager) {
         self.gameManager = gameManager
@@ -82,6 +84,8 @@ class GameViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        // Don't use didEnterBackground. Doesn't get called if user swipes up and removes app.
+        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
         gameManager.delegate = self
         countDownView.delegate = self
         readyView.delegate = self
@@ -137,7 +141,21 @@ class GameViewController: UIViewController {
         gameManager.setup()
     }
     
+    // Gets called multiple times for some reason
+    @objc func appMovedToBackground() {
+        exitTask?.cancel()
+        exitTask = Task {
+            do {
+                try await gameManager.exit()
+                navigationController?.popViewController(animated: true)
+                
+            } catch {
+                print("Error removing player: \(error)")
+            }
+        }
 
+    }
+    
     // Strong references not allowing gameviewcontroller to be deallocated
 //    deinit {
 //        print("deinit")
@@ -216,14 +234,16 @@ class GameViewController: UIViewController {
 
     func didTapExitButton() -> UIAction {
         return UIAction { [self] _ in
-            Task {
+            exitTask?.cancel()
+            exitTask = Task {
                 do {
                     try await gameManager.exit()
+                    navigationController?.popViewController(animated: true)
                 } catch {
                     print("Error removing player: \(error)")
                 }
+                
             }
-            navigationController?.popViewController(animated: true)
         }
     }
     
