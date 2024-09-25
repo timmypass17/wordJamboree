@@ -18,7 +18,7 @@ class GameViewController: UIViewController {
         let p0View = PlayerView()
         p0View.nameLabel.text = "P0"
         p0View.translatesAutoresizingMaskIntoConstraints = false
-        p0View.isHidden = true
+//        p0View.isHidden = true
         return p0View
     }()
     
@@ -26,7 +26,7 @@ class GameViewController: UIViewController {
         let p1View = PlayerView()
         p1View.nameLabel.text = "P1"
         p1View.translatesAutoresizingMaskIntoConstraints = false
-        p1View.isHidden = true
+//        p1View.isHidden = true
         return p1View
     }()
     
@@ -34,7 +34,7 @@ class GameViewController: UIViewController {
         let p2View = PlayerView()
         p2View.nameLabel.text = "P2"
         p2View.translatesAutoresizingMaskIntoConstraints = false
-        p2View.isHidden = true
+//        p2View.isHidden = true
         return p2View
     }()
     
@@ -42,7 +42,7 @@ class GameViewController: UIViewController {
         let p3View = PlayerView()
         p3View.nameLabel.text = "P3"
         p3View.translatesAutoresizingMaskIntoConstraints = false
-        p3View.isHidden = true
+//        p3View.isHidden = true
         return p3View
     }()
     
@@ -62,6 +62,12 @@ class GameViewController: UIViewController {
         let readyView = ReadyView()
         readyView.translatesAutoresizingMaskIntoConstraints = false
         return readyView
+    }()
+    
+    let keyboardView: KeyboardView = {
+        let customKeyboard = KeyboardView()
+        customKeyboard.translatesAutoresizingMaskIntoConstraints = false
+        return customKeyboard
     }()
     
     var gameManager: GameManager
@@ -84,61 +90,84 @@ class GameViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Don't use didEnterBackground. Doesn't get called if user swipes up and removes app.
-        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
+        setupView()
+        gameManager.setup()
+    }
+    
+    func setupView() {
+        navigationItem.largeTitleDisplayMode = .never
+        navigationItem.setHidesBackButton(true, animated: true)
+        exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
+        navigationItem.rightBarButtonItem = exitBarButton
         gameManager.delegate = self
         countDownView.delegate = self
         readyView.delegate = self
-        navigationItem.setHidesBackButton(true, animated: true)
+        keyboardView.delegate = self
+
+        // Don't use didEnterBackground. Doesn't get called if user swipes up and removes app.
+        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
         
-        exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
-        navigationItem.rightBarButtonItem = exitBarButton
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillDisappear), name: UIResponder.keyboardWillHideNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillAppear), name: UIResponder.keyboardWillShowNotification, object: nil)
+        view.addSubview(keyboardView)
+
+        NSLayoutConstraint.activate([
+            keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            keyboardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -100)
+        ])
+                
+        let container = UIView()
+//        container.backgroundColor = .blue
+        container.translatesAutoresizingMaskIntoConstraints = false
         
-        view.addSubview(p0View)
-        view.addSubview(p1View)
-        view.addSubview(p2View)
-        view.addSubview(p3View)
-        view.addSubview(currentWordView)
-        view.addSubview(countDownView)
-        view.addSubview(readyView)
+        view.addSubview(container)
+
+        NSLayoutConstraint.activate([
+            container.topAnchor.constraint(equalTo: view.topAnchor),
+            container.bottomAnchor.constraint(equalTo: keyboardView.topAnchor),
+            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+
+        ])
+        
+        container.addSubview(p0View)
+        container.addSubview(p1View)
+        container.addSubview(p2View)
+        container.addSubview(p3View)
+        container.addSubview(currentWordView)
+        container.addSubview(countDownView)
+        container.addSubview(readyView)
         
         NSLayoutConstraint.activate([
-            currentWordView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            currentWordView.topAnchor.constraint(equalTo: p0View.bottomAnchor),
-            currentWordView.bottomAnchor.constraint(equalTo: p1View.topAnchor),
+            currentWordView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            currentWordView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
-            p0View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            p0View.topAnchor.constraint(equalTo: view.topAnchor),
-            p0View.bottomAnchor.constraint(equalTo: view.centerYAnchor),
+            p0View.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            p0View.topAnchor.constraint(equalTo: container.topAnchor),
+            p0View.bottomAnchor.constraint(equalTo: container.centerYAnchor),
             
-            p1View.topAnchor.constraint(equalTo: view.centerYAnchor),
-            p1View.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            p1View.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            p1View.topAnchor.constraint(equalTo: container.centerYAnchor),
+            p1View.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            p1View.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             
-            p2View.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            p2View.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            p2View.trailingAnchor.constraint(equalTo: view.centerXAnchor, constant: -25),
+            p2View.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            p2View.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            p2View.trailingAnchor.constraint(equalTo: container.centerXAnchor, constant: -25),
             
-            p3View.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            p3View.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            p3View.leadingAnchor.constraint(equalTo: view.centerXAnchor, constant: 25),
+            p3View.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            p3View.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            p3View.leadingAnchor.constraint(equalTo: container.centerXAnchor, constant: 25),
 
-            countDownView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            countDownView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            countDownView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            countDownView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             
-            readyView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            readyView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            readyView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            readyView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
         ])
 
         p0View.wordTextField.isUserInteractionEnabled = false
         p1View.wordTextField.isUserInteractionEnabled = false
         p2View.wordTextField.isUserInteractionEnabled = false
         p3View.wordTextField.isUserInteractionEnabled = false
-
-        
-        gameManager.setup()
     }
     
     // Gets called multiple times for some reason
@@ -175,61 +204,65 @@ class GameViewController: UIViewController {
             countDownView.isHidden = true
             currentWordView.isHidden = true
         case .inProgress:
-            // Show hearts
-            showHearts()
+            updatePlayerStatus()
             countDownView.startCountDown()
         }
     }
     
-    func showHearts() {
-        // Hide crown
-        p0View.crownView.isHidden = true
-        p1View.crownView.isHidden = true
-        p2View.crownView.isHidden = true
-        p3View.crownView.isHidden = true
-        
-        // Hide skull
-        p0View.skullView.isHidden = true
-        p1View.skullView.isHidden = true
-        p2View.skullView.isHidden = true
-        p3View.skullView.isHidden = true
-
-
-        // Show hearts
+    func updatePlayerStatus() {
+        showHearts()
+        hideCrowns()
+        hideSkulls()
+    }
+    
+    private func showHearts() {
         p0View.heartsView.isHidden = false
         p1View.heartsView.isHidden = false
         p2View.heartsView.isHidden = false
         p3View.heartsView.isHidden = false
-
     }
     
+    private func hideCrowns() {
+        p0View.crownView.isHidden = true
+        p1View.crownView.isHidden = true
+        p2View.crownView.isHidden = true
+        p3View.crownView.isHidden = true
+    }
+    
+    private func hideSkulls() {
+        p0View.skullView.isHidden = true
+        p1View.skullView.isHidden = true
+        p2View.skullView.isHidden = true
+        p3View.skullView.isHidden = true
+    }
 
     @objc func textFieldDidChange(_ textField: UITextField) {
-        guard let partialWord = textField.text,
-              let currentUser = gameManager.service.currentUser,
-              let position = gameManager.getPosition(currentUser.uid)
-        else { return }
-        let currentLetters = gameManager.currentLetters
-        
-        // Update current user locally for faster results
-        if position == 0 {
-            p0View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
-        } else if position == 1 {
-            p1View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
-        } else if position == 2 {
-            p2View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
-        } else if position == 3 {
-            p3View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
-        }
-                
-        Task {
-            do {
-                try await gameManager.typing(partialWord)
-            } catch {
-                print("Error sending typing: \(error)")
-            }
-        }
-        
+        print(#function)
+//        guard let partialWord = textField.text,
+//              let currentUser = gameManager.service.currentUser,
+//              let position = gameManager.getPosition(currentUser.uid)
+//        else { return }
+//        let currentLetters = gameManager.currentLetters
+//        
+//        // Update current user locally for faster results
+//        if position == 0 {
+//            p0View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+//        } else if position == 1 {
+//            p1View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+//        } else if position == 2 {
+//            p2View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+//        } else if position == 3 {
+//            p3View.updateUserWordTextColor(word: partialWord, matching: currentLetters)
+//        }
+//                
+//        Task {
+//            do {
+//                try await gameManager.typing(partialWord)
+//            } catch {
+//                print("Error sending typing: \(error)")
+//            }
+//        }
+//        
     }
 
     func didTapExitButton() -> UIAction {
@@ -247,25 +280,25 @@ class GameViewController: UIViewController {
         }
     }
     
-    @objc func keyboardWillAppear(notification: NSNotification) {
-        if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
-            if self.originalSize == nil {
-                let originalSize = self.view.frame.size
-                self.originalSize = originalSize
-                self.view.frame.size = CGSize(
-                    width: originalSize.width,
-                    height: originalSize.height - keyboardSize.height
-                )
-            }
-        }
-    }
+//    @objc func keyboardWillAppear(notification: NSNotification) {
+//        if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
+//            if self.originalSize == nil {
+//                let originalSize = self.view.frame.size
+//                self.originalSize = originalSize
+//                self.view.frame.size = CGSize(
+//                    width: originalSize.width,
+//                    height: originalSize.height - keyboardSize.height
+//                )
+//            }
+//        }
+//    }
     
-    @objc func keyboardWillDisappear(notification: NSNotification) {
-        if let originalSize = self.originalSize {
-            self.view.frame.size = originalSize
-            self.originalSize = nil
-        }
-    }
+//    @objc func keyboardWillDisappear(notification: NSNotification) {
+//        if let originalSize = self.originalSize {
+//            self.view.frame.size = originalSize
+//            self.originalSize = nil
+//        }
+//    }
 
 }
 
@@ -592,7 +625,78 @@ extension GameViewController: ReadyViewDelegate {
         gameManager.unready()
     }
     
+}
+
+extension GameViewController: KeyboardViewDelegate {
+    func keyboardView(_ sender: KeyboardView, didTapKey letter: String) {
+        guard let currentUser = gameManager.service.currentUser,
+              currentUser.uid == gameManager.currentPlayerTurn,
+              let position = gameManager.getPosition(currentUser.uid)
+        else { return }
+        let currentLetters = gameManager.currentLetters
+        
+        // Update current user locally for faster results
+        if position == 0 {
+            guard let partialWord = p0View.wordTextField.text else { return }
+            let updatedWord = partialWord + letter
+            p0View.updateUserWordTextColor(word: updatedWord, matching: currentLetters)
+            Task {
+                do {
+                    try await gameManager.typing(updatedWord)
+                } catch {
+                    print("Error sending typing: \(error)")
+                }
+            }
+        } else if position == 1 {
+            guard let partialWord = p1View.wordTextField.text else { return }
+            let updatedWord = partialWord + letter
+            p1View.updateUserWordTextColor(word: updatedWord, matching: currentLetters)
+            Task {
+                do {
+                    try await gameManager.typing(updatedWord)
+                } catch {
+                    print("Error sending typing: \(error)")
+                }
+            }
+        } else if position == 2 {
+            guard let partialWord = p2View.wordTextField.text else { return }
+            let updatedWord = partialWord + letter
+            p2View.updateUserWordTextColor(word: updatedWord, matching: currentLetters)
+            Task {
+                do {
+                    try await gameManager.typing(updatedWord)
+                } catch {
+                    print("Error sending typing: \(error)")
+                }
+            }
+        } else if position == 3 {
+            guard let partialWord = p3View.wordTextField.text else { return }
+            let updatedWord = partialWord + letter
+            p3View.updateUserWordTextColor(word: updatedWord, matching: currentLetters)
+            Task {
+                do {
+                    try await gameManager.typing(updatedWord)
+                } catch {
+                    print("Error sending typing: \(error)")
+                }
+            }
+        }
+    }
     
+    func keyboardView(_ sender: KeyboardView, didTapBackspace: Bool) {
+//        gameManager.letters.popLast()
+//        Task {
+//            do {
+//                try await gameManager.typing(gameManager.letters)
+//            } catch {
+//                print("Error submitting letters after backspace")
+//            }
+//        }
+    }
+    
+    func keyboardView(_ sender: KeyboardView, didTapSubmit: Bool) {
+        return
+    }
 }
 
 #Preview("GameViewController") {

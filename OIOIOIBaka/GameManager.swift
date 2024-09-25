@@ -159,6 +159,7 @@ class GameManager {
     }
 
     func typing(_ partialWord: String) async throws {
+        print(partialWord)
         guard let currentUser = service.currentUser else { return }
         try await ref.updateChildValues([
             "games/\(roomID)/playerWords/\(currentUser.uid)": partialWord
