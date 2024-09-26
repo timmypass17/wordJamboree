@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import AudioToolbox
 
 let paddingBetweenKeys: CGFloat = 5
 let keyWidth = (UIScreen.main.bounds.size.width - (paddingBetweenKeys * 11)) / 10
@@ -38,17 +39,19 @@ class KeyboardView: UIView {
     
     let enterButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "checkmark"), for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 20)
-        button.backgroundColor = .systemFill
+        let image = UIImage(systemName: "checkmark")?.withRenderingMode(.alwaysTemplate)
+        button.setImage(image, for: .normal)
+//        button.tintColor = .white // Set image tint color to white
+//        button.backgroundColor = .systemBlue // Set button background to blue
+        button.tintColor = .white // Set image tint color to white
+        button.backgroundColor = .systemFill // Set button background to blue
         button.layer.cornerRadius = 8
-        button.setTitleColor(.label, for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: keyWidth),
+            button.widthAnchor.constraint(equalToConstant: keyWidth *  1.5),
             button.heightAnchor.constraint(equalToConstant: keyHeight),
         ])
-        button.isHidden = true
+//        button.isHidden = true
         return button
     }()
     
@@ -91,6 +94,7 @@ class KeyboardView: UIView {
     
     private func setupView() {        
         backspaceButton.addAction(didTapBackspace(), for: .touchUpInside)
+        enterButton.addAction(didTapSubmit(), for: .touchUpInside)
         feedback = UIImpactFeedbackGenerator(style: .light, view: self)
 
         addSubview(container)
@@ -139,22 +143,26 @@ class KeyboardView: UIView {
     
     func didTapKey(_ letter: String) -> UIAction {
         return UIAction { _ in
-            self.feedback?.impactOccurred()
+            playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapKey: letter)
         }
     }
     
     func didTapBackspace() -> UIAction {
         return UIAction { _ in
-            self.feedback?.impactOccurred()
+            playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapBackspace: true)
         }
     }
     
     func didTapSubmit() -> UIAction {
         return UIAction { _ in
-            self.feedback?.impactOccurred()
+            playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapSubmit: true)
         }
     }
+}
+
+func playKeyboardClickSound() {
+    AudioServicesPlaySystemSound(1104) // Play the system keyboard tap sound
 }

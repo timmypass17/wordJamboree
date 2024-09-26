@@ -25,20 +25,14 @@ class PlayerView: UIView {
         return view
     }()
     
-    let wordTextField: UITextField = {
-        let textField = UITextField()
-        textField.borderStyle = .roundedRect
-        textField.autocorrectionType = .no
-        textField.spellCheckingType = .no
-        textField.returnKeyType = .done
-        textField.backgroundColor = .secondarySystemBackground
-        textField.autocapitalizationType = .allCharacters
-        textField.textAlignment = .center
-        
-        NSLayoutConstraint.activate([
-            textField.widthAnchor.constraint(equalToConstant: 100)
-        ])
-        return textField
+    // TODO: Make word label pop out more
+    let wordLabel: UILabel = {
+        let label = UILabel()
+        label.text = ""
+        label.textAlignment = .center
+        label.textColor = .label
+        label.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        return label
     }()
     
     let heartsView: HeartsView = {
@@ -91,7 +85,7 @@ class PlayerView: UIView {
         container.addArrangedSubview(topSpacer)
         container.addArrangedSubview(nameLabel)
         container.addArrangedSubview(profileImageView)
-        container.addArrangedSubview(wordTextField)
+        container.addArrangedSubview(wordLabel)
         container.addArrangedSubview(bottomSpacer)
 
         addSubview(container)
@@ -132,7 +126,7 @@ class PlayerView: UIView {
         // Set the color of the matching letters to green
         let lettersRange = (word as NSString).range(of: letters)
         attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
-        wordTextField.attributedText = attributedString
+        wordLabel.attributedText = attributedString
     }
     
     func setHearts(to livesRemaining: Int) {
@@ -153,10 +147,10 @@ class PlayerView: UIView {
     }
     
     private func applyStrikethrough() {
-        if let attributeString = wordTextField.attributedText {
+        if let attributeString = wordLabel.attributedText {
             let mutableAttributeString = NSMutableAttributedString(attributedString: attributeString)
             mutableAttributeString.addAttribute(.strikethroughStyle, value: 2, range: NSRange(location: 0, length: mutableAttributeString.length))
-            wordTextField.attributedText = mutableAttributeString
+            wordLabel.attributedText = mutableAttributeString
         }
     }
     
@@ -164,6 +158,20 @@ class PlayerView: UIView {
         guard let lastHeart = heartsView.container.arrangedSubviews.last else { return }
         heartsView.container.removeArrangedSubview(lastHeart)  // remove from stack view
         lastHeart.removeFromSuperview()             // remove from view hierarchy
+    }
+    
+    func shake() {
+        DispatchQueue.main.async {
+            UIView.animate(
+                withDuration: 0.07, delay: 0, options: [.autoreverse, .repeat], animations: {
+                    UIView.modifyAnimations(withRepeatCount: 4, autoreverses: true) {
+                        self.center = CGPoint(x: self.center.x + 5, y: self.center.y)
+                    }
+                }) { _ in
+                    // Reset the position after the animation finishes
+                    self.center = CGPoint(x: self.center.x - 5, y: self.center.y)
+                }
+        }
     }
 }
 
