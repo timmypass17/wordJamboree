@@ -31,6 +31,7 @@ class PlayerView: UIView {
         label.text = ""
         label.textAlignment = .center
         label.textColor = .label
+        label.font = .preferredFont(forTextStyle: .title2)
         label.heightAnchor.constraint(equalToConstant: 30).isActive = true
         return label
     }()
@@ -45,7 +46,7 @@ class PlayerView: UIView {
         let stackView = UIStackView()
         stackView.axis = .vertical
         stackView.alignment = .center
-        stackView.spacing = 10
+//        stackView.spacing = 10
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -87,6 +88,9 @@ class PlayerView: UIView {
         container.addArrangedSubview(profileImageView)
         container.addArrangedSubview(wordLabel)
         container.addArrangedSubview(bottomSpacer)
+        
+        container.setCustomSpacing(10, after: nameLabel)
+        container.setCustomSpacing(8, after: profileImageView)
 
         addSubview(container)
         addSubview(heartsView)

@@ -33,6 +33,10 @@ class SoundManager {
         stopSound(players["ticking"])
     }
     
+    func playKeyboardClickSound() {
+        AudioServicesPlaySystemSound(1104)
+    }
+    
     func isPlayingTickingSound() -> Bool {
         return players["ticking"]?.isPlaying ?? false
     }

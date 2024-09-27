@@ -20,12 +20,14 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, heartsUpdated hearts: [String: Int])
     func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String: Int])
     func gameManager(_ manager: GameManager, winnerUpdated playerID: String)
+    func gameManager(_ manager: GameManager, timeRanOut: Bool)
 }
 
 class GameManager {
     var roomID: String
     var currentLetters: String = ""
     var playerInfos: [String: [String: String]] = [:]
+    var lettersUsed: Set<Character> = Set("XZ")
     var currentPlayerTurn: String = ""
     var positions: [String: Int] = [:]
     var hearts: [String: Int] = [:]
@@ -70,7 +72,17 @@ class GameManager {
         observeSecondsPerTurn()
         observePlayerTurn()
         observeWinner()
+//        observeLettersUsed()
     }
+    
+//    func observeLettersUsed() {
+//        guard let uid = service.currentUser?.uid else { return }
+//        ref.child("games/\(roomID)/lettersUsed/\(uid)").observe(.childChanged) { [self] snapshot in
+//            guard let lettersUsed = snapshot.value as? [String: Bool] else { return }
+//            self.lettersUsed = lettersUsed
+//            delegate?.gameManager(self, winnerUpdated: winnerID)
+//        }
+//    }
     
     func observeWinner() {
         ref.child("games/\(roomID)/winner").observe(.childAdded) { [self] snapshot in
@@ -158,6 +170,10 @@ class GameManager {
         let wordIsValid = word.isWord && word.contains(currentLetters)
         if wordIsValid {
             try await handleSubmitSuccess()
+            
+            for letter in word {
+                lettersUsed.insert(letter)
+            }
         } else {
             try await handleSubmitFail()
         }
@@ -524,10 +540,10 @@ class GameManager {
 extension GameManager: TurnTimerDelegate {
     func turnTimer(_ sender: TurnTimer, timeRanOut: Bool) {
         guard currentPlayerTurn == service.currentUser?.uid else { return }
+        delegate?.gameManager(self, timeRanOut: true)
         Task {
             try await damagePlayer(playerID: currentPlayerTurn)
         }
-        
     }
     
 }

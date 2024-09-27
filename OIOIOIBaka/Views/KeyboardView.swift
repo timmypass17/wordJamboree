@@ -25,8 +25,7 @@ class KeyboardView: UIView {
         let button = UIButton(type: .system)
         button.setTitle("\(letter)", for: .normal)
         button.titleLabel?.font = UIFont.systemFont(ofSize: 20)
-//        button.backgroundColor = .tertiarySystemBackground
-        button.backgroundColor = .systemFill
+        button.backgroundColor = .systemGray
         button.setTitleColor(.label, for: .normal)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -44,7 +43,7 @@ class KeyboardView: UIView {
 //        button.tintColor = .white // Set image tint color to white
 //        button.backgroundColor = .systemBlue // Set button background to blue
         button.tintColor = .white // Set image tint color to white
-        button.backgroundColor = .systemFill // Set button background to blue
+        button.backgroundColor = .systemFill
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -81,6 +80,7 @@ class KeyboardView: UIView {
     }()
     
     var feedback: UIImpactFeedbackGenerator?
+    var soundManager: SoundManager?
     weak var delegate: KeyboardViewDelegate?
     
     override init(frame: CGRect) {
@@ -141,28 +141,40 @@ class KeyboardView: UIView {
         return stackView
     }
     
+    func update(letters: String, lettersUsed: Set<Character>) {
+        for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+            let letter = "\(char)"
+            guard let keyButton = alphabetButtons.first(where: { $0.title(for: .normal) == letter }) else { continue }
+            if lettersUsed.contains(letter) {
+                keyButton.backgroundColor = .systemFill
+            } else {
+                if letters.contains(letter) {
+                    keyButton.backgroundColor = .systemBlue
+                } else {
+                    keyButton.backgroundColor = .systemGray
+                }
+            }
+        }
+    }
+    
     func didTapKey(_ letter: String) -> UIAction {
         return UIAction { _ in
-            playKeyboardClickSound()
+            self.soundManager?.playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapKey: letter)
         }
     }
     
     func didTapBackspace() -> UIAction {
         return UIAction { _ in
-            playKeyboardClickSound()
+            self.soundManager?.playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapBackspace: true)
         }
     }
     
     func didTapSubmit() -> UIAction {
         return UIAction { _ in
-            playKeyboardClickSound()
+            self.soundManager?.playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapSubmit: true)
         }
     }
-}
-
-func playKeyboardClickSound() {
-    AudioServicesPlaySystemSound(1104) // Play the system keyboard tap sound
 }

@@ -84,6 +84,8 @@ class GameViewController: UIViewController {
         countDownView.delegate = self
         readyView.delegate = self
         keyboardView.delegate = self
+        keyboardView.soundManager = soundManager
+        keyboardView.update(letters: "XZ", lettersUsed: gameManager.lettersUsed)
 
         // Don't use didEnterBackground. Doesn't get called if user swipes up and removes app.
         NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
@@ -227,7 +229,7 @@ class GameViewController: UIViewController {
     
     func didTapSubmit() -> UIAction {
         return UIAction { _ in
-            playKeyboardClickSound()
+            self.soundManager.playKeyboardClickSound()
             self.handleSubmit()
         }
     }
@@ -270,6 +272,9 @@ extension GameViewController: UITextFieldDelegate {
 }
 
 extension GameViewController: GameManagerDelegate {
+    func gameManager(_ manager: GameManager, timeRanOut: Bool) {
+        keyboardView.update(letters: "", lettersUsed: manager.lettersUsed)
+    }
     
     // TODO: After game ends and new game begins.
     //  - Winner is still being shown, should hide
@@ -306,6 +311,10 @@ extension GameViewController: GameManagerDelegate {
                   let originalWord = playerViews[position].wordLabel.text,
                   originalWord != updatedWord
             else { continue }
+            
+            if manager.currentPlayerTurn != manager.service.currentUser?.uid {
+                soundManager.playKeyboardClickSound()
+            }
             
             playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
         }
@@ -376,6 +385,7 @@ extension GameViewController: KeyboardViewDelegate {
         
         let updatedWord = partialWord + letter
         playerViews[position].updateUserWordTextColor(word: updatedWord, matching: gameManager.currentLetters)
+        keyboardView.update(letters: updatedWord, lettersUsed: gameManager.lettersUsed)
         
         Task {
             do {
@@ -398,7 +408,8 @@ extension GameViewController: KeyboardViewDelegate {
         }
         
         playerViews[position].updateUserWordTextColor(word: word, matching: gameManager.currentLetters)
-        
+        keyboardView.update(letters: word, lettersUsed: gameManager.lettersUsed)
+
         Task {
             do {
                 try await gameManager.typing(word)
@@ -422,6 +433,7 @@ extension GameViewController: KeyboardViewDelegate {
         Task {
             do {
                 try await gameManager.submit(word)
+                keyboardView.update(letters: word, lettersUsed: gameManager.lettersUsed)
             } catch {
                 print("Error sending typing: \(error)")
             }
