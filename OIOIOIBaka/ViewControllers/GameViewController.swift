@@ -10,7 +10,8 @@ import FirebaseDatabaseInternal
 import SwiftUI
 import AVFAudio
 
-// TODO: Make custom keyboard
+
+// TODO: Add mechanic where u can't submit previously submitted words
 // - fix bug where if user leaves and rejoins, there will be duplicate observres causing double damage. make sure observers are detached when use exists
 class GameViewController: UIViewController {
     
@@ -188,6 +189,8 @@ class GameViewController: UIViewController {
             countDownView.isHidden = true
             currentWordView.isHidden = true
         case .inProgress:
+            gameManager.lettersUsed = Set("XZ")
+            keyboardView.update(letters: "", lettersUsed: gameManager.lettersUsed)
             updatePlayerStatus()
             countDownView.startCountDown()
         }
@@ -272,8 +275,9 @@ extension GameViewController: UITextFieldDelegate {
 }
 
 extension GameViewController: GameManagerDelegate {
-    func gameManager(_ manager: GameManager, didSubmitWord word: String, result: Bool) {
-        keyboardView.update(letters: word, lettersUsed: manager.lettersUsed)
+    
+    func gameManager(_ manager: GameManager, lettersUsedUpdated: Bool) {
+        keyboardView.update(letters: "", lettersUsed: manager.lettersUsed)
     }
     
     func gameManager(_ manager: GameManager, timeRanOut: Bool) {
@@ -295,6 +299,16 @@ extension GameViewController: GameManagerDelegate {
             guard let playerInfo = playersInfo[uid] else { continue }
             playerViews[position].nameLabel.text = playerInfo["name"]
             playerViews[position].isHidden = false
+            
+            if uid == manager.winnerID {
+                playerViews[position].crownView.isHidden = false
+                playerViews[position].heartsView.isHidden = true
+                playerViews[position].skullView.isHidden = true
+            } else {
+                playerViews[position].crownView.isHidden = true
+                playerViews[position].heartsView.isHidden = false
+                playerViews[position].skullView.isHidden = true
+            }
         }
     }
     
@@ -347,8 +361,9 @@ extension GameViewController: GameManagerDelegate {
     
     func showWinner(userID: String) {
         guard let position = gameManager.getPosition(userID) else { return }
-        playerViews[position].heartsView.isHidden = true
         playerViews[position].crownView.isHidden = false
+        playerViews[position].heartsView.isHidden = true
+        playerViews[position].skullView.isHidden = true
     }
 
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int) {

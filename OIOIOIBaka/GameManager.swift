@@ -21,7 +21,7 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String: Int])
     func gameManager(_ manager: GameManager, winnerUpdated playerID: String)
     func gameManager(_ manager: GameManager, timeRanOut: Bool)
-    func gameManager(_ manager: GameManager, didSubmitWord word: String, result: Bool)
+    func gameManager(_ manager: GameManager, lettersUsedUpdated: Bool)
 }
 
 class GameManager {
@@ -35,6 +35,7 @@ class GameManager {
     var secondsPerTurn: Int = -1
     var currentRound: Int = 1
     let minimumTime = 5
+    var winnerID = ""
     
     var service: FirebaseService
     let soundManager = SoundManager()
@@ -73,21 +74,12 @@ class GameManager {
         observeSecondsPerTurn()
         observePlayerTurn()
         observeWinner()
-//        observeLettersUsed()
     }
-    
-//    func observeLettersUsed() {
-//        guard let uid = service.currentUser?.uid else { return }
-//        ref.child("games/\(roomID)/lettersUsed/\(uid)").observe(.childChanged) { [self] snapshot in
-//            guard let lettersUsed = snapshot.value as? [String: Bool] else { return }
-//            self.lettersUsed = lettersUsed
-//            delegate?.gameManager(self, winnerUpdated: winnerID)
-//        }
-//    }
     
     func observeWinner() {
         ref.child("games/\(roomID)/winner").observe(.childAdded) { [self] snapshot in
             guard let winnerID = snapshot.value as? String else { return }
+            self.winnerID = winnerID
             delegate?.gameManager(self, winnerUpdated: winnerID)
         }
     }
@@ -169,6 +161,7 @@ class GameManager {
     
     func submit(_ word: String) async throws  {
         let wordIsValid = word.isWord && word.contains(currentLetters)
+        
         if wordIsValid {
             try await handleSubmitSuccess(word: word)
         } else {
@@ -180,7 +173,15 @@ class GameManager {
         guard let currentUser = service.currentUser,
               let currentPosition = getPosition(currentUser.uid)
         else { return }
-
+        
+        let (wordSnapshot, _) = await ref.child("games/\(roomID)/wordsUsed/\(word)").observeSingleEventAndPreviousSiblingKey(of: .value)
+        guard !wordSnapshot.exists() else {
+            try await ref.updateChildValues([
+                "shake/\(roomID)/players/\(currentUser.uid)": true
+            ])
+            throw WordError.wordUsedAlready
+        }
+        
         let playerCount = positions.count
         let nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
 
@@ -189,7 +190,8 @@ class GameManager {
         var updates: [String: Any] = [
             "games/\(roomID)/currentLetters": GameManager.generateRandomLetters(),
             "games/\(roomID)/currentPlayerTurn/playerID": nextPlayerUID,
-            "games/\(roomID)/playerWords/\(nextPlayerUID)": "" // reset next player's input
+            "games/\(roomID)/playerWords/\(nextPlayerUID)": "", // reset next player's input,
+            "games/\(roomID)/wordsUsed/\(word)": true
         ]
 
         if currentPosition == playerCount - 1 {
@@ -198,18 +200,15 @@ class GameManager {
         }
 
         for letter in word {
-            print("insert: \(letter)")
             lettersUsed.insert(letter)
         }
 
         if lettersUsed.count == 26 {
             updates["games/\(roomID)/hearts/\(currentUser.uid)"] = ServerValue.increment(1)
             lettersUsed = Set("XZ")
-            delegate?.gameManager(self, didSubmitWord: "", result: true)    // clear keyboard colors
-        } else {
-            delegate?.gameManager(self, didSubmitWord: word, result: true)
         }
         
+        delegate?.gameManager(self, lettersUsedUpdated: true)
         try await ref.updateChildValues(updates)
     }
 
@@ -322,14 +321,9 @@ class GameManager {
                 // Get next player's turn
                 guard let currentPosition = getPosition(updatedGame.currentPlayerTurn?["playerID"]) else { return }
                 let playerCount = positions.count
-                var nextPosition = (currentPosition + 1) % playerCount
+                var nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
                 let isLastTurn = currentPosition == positions.count - 1
-                
-                // Get next alive user
-                while !isAlive(getUserID(position: nextPosition) ?? "") {
-                    nextPosition = (nextPosition + 1) % playerCount
-                }
-                
+
                 guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
                 
                 var updates: [String: Any] = [
@@ -349,38 +343,18 @@ class GameManager {
     
     // Called when user gets kill or when user leaves mid game
     func checkForWinner(_ hearts: [String: Int]) async throws -> Bool {
-        print(#function)
         let playersAliveCount = hearts.filter { isAlive($0.key) }.count
         let winnerExists = playersAliveCount == 1
         guard winnerExists,
               let winnerID = hearts.first(where: { isAlive ($0.key) } )?.key
         else { return false }
         
-//        let (roomSnapshot, _) = await ref.child("rooms/\(roomID)").observeSingleEventAndPreviousSiblingKey(of: .value)
-//        guard let room = roomSnapshot.toObject(Room.self),
-//              let isReady = room.isReady,   //
-//              room.status == .inProgress
-//        else {
-//            print("Fail to convert snapshot to room")
-//            return false
-//        }
-        
         var updates: [String: AnyObject] = [:]
-//        
+
         updates["games/\(roomID)/currentPlayerTurn/playerID"] = "" as AnyObject // incase current player == new game's current player
         updates["games/\(roomID)/secondsPerTurn"] = Int.random(in: 10...30) + 3 as AnyObject
         updates["rooms/\(roomID)/status"] = Room.Status.notStarted.rawValue as AnyObject // stops game
         updates["games/\(roomID)/winner/playerID"] = winnerID as AnyObject  // shows winners
-//
-//        for (userID, _) in hearts {
-//            let userInRoom = isReady[userID] != nil
-//            if !userInRoom {
-//                // Clean up users
-//                updates["games/\(roomID)/hearts/\(userID)"] = NSNull()
-//                updates["games/\(roomID)/playerWords/\(userID)"] = NSNull()
-////                updates["games/\(roomID)/positions/\(userID)"] = NSNull()
-//            }
-//        }
         
         try await ref.updateChildValues(updates)
         
@@ -460,8 +434,7 @@ class GameManager {
         if result {
             try await ref.updateChildValues([
                 "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1),
-                "rooms/\(roomID)/isReady/\(uid)": NSNull(),
-//                "shake/\(roomID)/players/\(uid)": NSNull()
+                "rooms/\(roomID)/isReady/\(uid)": NSNull()
             ])
         }
     }
@@ -480,22 +453,10 @@ class GameManager {
         let isCurrentPlayersTurn = currentUser.uid == game.currentPlayerTurn?["playerID"]
         if isCurrentPlayersTurn {
             let playerCount = positions.count
-            var nextPosition = (currentPosition + 1) % playerCount
-            
-            // Get next alive user
-            while !isAlive(getUserID(position: nextPosition) ?? "") {
-                nextPosition = (nextPosition + 1) % playerCount
-            }
-            
+            var nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
             guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
 
             updates["games/\(roomID)/currentPlayerTurn/playerID"] = nextPlayerUID
-        }
-        
-        let isLastTurn = currentPosition == positions.count - 1
-        if isLastTurn {
-            updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)
-            updates["games/\(roomID)/secondsPerTurn"] = ServerValue.increment(-1)
         }
         
         updates["games/\(roomID)/hearts/\(currentUser.uid)"] = 0   // kill player
@@ -562,6 +523,7 @@ extension GameManager: TurnTimerDelegate {
 extension GameManager {
     enum WordError: Error {
         case invalidWord
+        case wordUsedAlready
     }
 }
 
