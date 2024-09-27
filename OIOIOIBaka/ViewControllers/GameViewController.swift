@@ -272,6 +272,10 @@ extension GameViewController: UITextFieldDelegate {
 }
 
 extension GameViewController: GameManagerDelegate {
+    func gameManager(_ manager: GameManager, didSubmitWord word: String, result: Bool) {
+        keyboardView.update(letters: word, lettersUsed: manager.lettersUsed)
+    }
+    
     func gameManager(_ manager: GameManager, timeRanOut: Bool) {
         keyboardView.update(letters: "", lettersUsed: manager.lettersUsed)
     }
@@ -433,7 +437,6 @@ extension GameViewController: KeyboardViewDelegate {
         Task {
             do {
                 try await gameManager.submit(word)
-                keyboardView.update(letters: word, lettersUsed: gameManager.lettersUsed)
             } catch {
                 print("Error sending typing: \(error)")
             }

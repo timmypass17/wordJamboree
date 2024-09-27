@@ -21,6 +21,7 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String: Int])
     func gameManager(_ manager: GameManager, winnerUpdated playerID: String)
     func gameManager(_ manager: GameManager, timeRanOut: Bool)
+    func gameManager(_ manager: GameManager, didSubmitWord word: String, result: Bool)
 }
 
 class GameManager {
@@ -166,48 +167,58 @@ class GameManager {
         ])
     }
     
-    func submit(_ word: String) async throws {
+    func submit(_ word: String) async throws  {
         let wordIsValid = word.isWord && word.contains(currentLetters)
         if wordIsValid {
-            try await handleSubmitSuccess()
-            
-            for letter in word {
-                lettersUsed.insert(letter)
-            }
+            try await handleSubmitSuccess(word: word)
         } else {
             try await handleSubmitFail()
         }
     }
     
-    private func handleSubmitSuccess() async throws {
+    private func handleSubmitSuccess(word: String) async throws {
         guard let currentUser = service.currentUser,
               let currentPosition = getPosition(currentUser.uid)
         else { return }
-        
+
         let playerCount = positions.count
-        let newLetters = GameManager.generateRandomLetters()
-        var nextPosition = (currentPosition + 1) % playerCount
-        
-        // Get next alive user
-        while !isAlive(getUserID(position: nextPosition) ?? "") {
-            nextPosition = (nextPosition + 1) % playerCount
-        }
-        
+        let nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
+
         guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-                
+
         var updates: [String: Any] = [
-            "games/\(roomID)/currentLetters": newLetters,        // create new letters
-            "games/\(roomID)/currentPlayerTurn/playerID": nextPlayerUID,  // update next players turn
-            "games/\(roomID)/playerWords/\(nextPlayerUID)": ""   // reset next player's input
+            "games/\(roomID)/currentLetters": GameManager.generateRandomLetters(),
+            "games/\(roomID)/currentPlayerTurn/playerID": nextPlayerUID,
+            "games/\(roomID)/playerWords/\(nextPlayerUID)": "" // reset next player's input
         ]
-        
-        let isLastTurn = currentPosition == positions.count - 1
-        if isLastTurn {
+
+        if currentPosition == playerCount - 1 {
             updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)
             updates["games/\(roomID)/secondsPerTurn"] = ServerValue.increment(-1)
         }
+
+        for letter in word {
+            print("insert: \(letter)")
+            lettersUsed.insert(letter)
+        }
+
+        if lettersUsed.count == 26 {
+            updates["games/\(roomID)/hearts/\(currentUser.uid)"] = ServerValue.increment(1)
+            lettersUsed = Set("XZ")
+            delegate?.gameManager(self, didSubmitWord: "", result: true)    // clear keyboard colors
+        } else {
+            delegate?.gameManager(self, didSubmitWord: word, result: true)
+        }
         
         try await ref.updateChildValues(updates)
+    }
+
+    private func getNextAlivePosition(from currentPosition: Int, playerCount: Int) -> Int {
+        var nextPosition = (currentPosition + 1) % playerCount
+        while !isAlive(getUserID(position: nextPosition) ?? "") {
+            nextPosition = (nextPosition + 1) % playerCount
+        }
+        return nextPosition
     }
     
     private func getUserID(position: Int) -> String? {

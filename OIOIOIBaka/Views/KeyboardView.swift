@@ -142,13 +142,14 @@ class KeyboardView: UIView {
     }
     
     func update(letters: String, lettersUsed: Set<Character>) {
-        for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
-            let letter = "\(char)"
-            guard let keyButton = alphabetButtons.first(where: { $0.title(for: .normal) == letter }) else { continue }
-            if lettersUsed.contains(letter) {
-                keyButton.backgroundColor = .systemFill
-            } else {
-                if letters.contains(letter) {
+        DispatchQueue.main.async {  // ensure ui updates are on main thread
+            for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+                let letter = "\(char)"
+                guard let keyButton = self.alphabetButtons.first(where: { $0.title(for: .normal) == letter }) else { continue }
+                
+                if lettersUsed.contains(Character(letter)) {
+                    keyButton.backgroundColor = .systemFill
+                } else if letters.contains(letter) {
                     keyButton.backgroundColor = .systemBlue
                 } else {
                     keyButton.backgroundColor = .systemGray
