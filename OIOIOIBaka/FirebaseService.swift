@@ -66,11 +66,7 @@ class FirebaseService {
         let room = Room(
             creatorID: currentUser.uid,
             title: title,
-            currentPlayerCount: 1,
-            status: .notStarted,
-            isReady: [
-                currentUser.uid: false
-            ]
+            currentPlayerCount: 1
         )
         
         let lettersUsed: [String: Bool] = [
@@ -85,43 +81,36 @@ class FirebaseService {
         let game = Game(
             roomID: roomID,
             currentLetters: GameManager.generateRandomLetters(),
-            hearts: [
-                currentUser.uid: 3
-            ],
-            positions: [
-                currentUser.uid: 0
+            secondsPerTurn: Int.random(in: 10...30) + 3,
+            rounds: [
+                "currentRound": 1
             ],
             currentPlayerTurn: [
                 "playerID": ""
             ],
-            playerWords: [
-                currentUser.uid: ""
-            ],
-            rounds: [
-                "currentRound": 1
-            ],
-            secondsPerTurn: Int.random(in: 10...30) + 3,
             playersInfo: [
-                currentUser.uid: [
-                    "name": currentUser.name
-                ]
-            ]
-        )
-        
-        let shake = Shake(
-            players: [
+                currentUser.uid:
+                    PlayerInfo(
+                        hearts: 3,
+                        position: 0,
+                        words: "",
+                        additionalInfo: [
+                            "name": currentUser.name
+                        ]
+                    )
+            ],
+            shake: [
                 currentUser.uid: false
             ]
         )
-        
+
         // TODO: 1. Maybe just create room and add cloud function to detect new room created and create other realted objects from cloud function
         // TODO: 2. Or let client create "Incoming Room" object and detect new Incoming Room and create full Room object and other objects
         //          - see doc on incomingMove reference
         // simultaneous updates (u can observe nodes only, but can update specific fields using path)
         let updates: [String: Any] = [
             "/rooms/\(roomID)": room.toDictionary()!,
-            "/games/\(roomID)": game.toDictionary()!,
-            "/shake/\(roomID)": shake.toDictionary()!
+            "/games/\(roomID)": game.toDictionary()!
         ]
         
         // atomic - either all updates succeed or all updates fail
@@ -144,53 +133,52 @@ class FirebaseService {
         }
     }
     
-    func addUserToRoom(user: MyUser, roomID: String) async throws -> Bool {
-        let roomRef = ref.child("rooms").child(roomID)
-
-        // Perform transaction to ensure atomic update
-        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await roomRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
-            guard var room = currentData.value as? [String: AnyObject],
-                  var currentPlayerCount = room["currentPlayerCount"] as? Int,
-                  let statusString = room["status"] as? String,
-                  let roomStatus = Room.Status(rawValue: statusString)
-            else {
-                return .abort()
-            }
-
-            guard currentPlayerCount < 4,
-                  roomStatus != .inProgress
-                  // check if player not in list of players
-                  // TODO: Add players field to Room
-            else {
-                return .abort()
-            }
-            
-            // Update value
-            currentPlayerCount += 1
-            
-            // Apply changes
-            room["currentPlayerCount"] = currentPlayerCount as AnyObject
-            
-            currentData.value = room
-            return .success(withValue: currentData)
-        }
-        
-        // User join sucessfully, update other values
-        if result {
-            guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return false }
-            try await ref.updateChildValues([
-                "/games/\(roomID)/hearts/\(user.uid)": 3,
-                "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
-                "/shake/\(roomID)/players/\(user.uid)": user.uid,
-                "/rooms/\(roomID)/isReady/\(user.uid)": false,
-                "/games/\(roomID)/playersInfo/\(user.uid)/name": user.name
-            ])
-        }
-        
-        return result
-    }
-    
-    func addIncomingMove(incomingMove: IncomingMove) {
+    func joinRoom(_ roomID: String) async throws -> Bool {
+//        let roomRef = ref.child("rooms").child(roomID)
+//
+//        // Perform transaction to ensure atomic update
+//        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await roomRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
+//            guard var room = currentData.value as? [String: AnyObject],
+//                  var currentPlayerCount = room["currentPlayerCount"] as? Int,
+//                  let statusString = room["status"] as? String,
+//                  let roomStatus = Room.Status(rawValue: statusString)
+//            else {
+//                return .abort()
+//            }
+//
+//            guard currentPlayerCount < 4,
+//                  roomStatus != .inProgress
+//                  // check if player not in list of players
+//                  // TODO: Add players field to Room
+//            else {
+//                return .abort()
+//            }
+//            
+//            // Update value
+//            currentPlayerCount += 1
+//            
+//            // Apply changes
+//            room["currentPlayerCount"] = currentPlayerCount as AnyObject
+//            
+//            currentData.value = room
+//            return .success(withValue: currentData)
+//        }
+//        
+//         User join sucessfully, update other values
+//        if result {
+//            guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return false }
+//            try await ref.updateChildValues([
+//                "/games/\(roomID)/hearts/\(user.uid)": 3,
+//                "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
+//                "/shake/\(roomID)/players/\(user.uid)": user.uid,
+//                "/rooms/\(roomID)/isReady/\(user.uid)": false,
+//                "/games/\(roomID)/playersInfo/\(user.uid)/name": user.name
+//            ])
+//        
+//        }
+//        
+//        return result
+        return true
     }
     
 //    func getGame(roomID: String, completion: @escaping (Game) -> ()) {

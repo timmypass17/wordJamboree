@@ -268,23 +268,9 @@ extension HomeViewController: UICollectionViewDelegate {
         }
         
         // TODO: Tapping background of top header crashes
-        Task {
-            await addUserToRoom(user: user, room: item.room!, roomID: item.roomID!)
-        }
-    }
-    
-    func addUserToRoom(user: MyUser, room: Room, roomID: String) async {
-        do {
-            let result = try await service.addUserToRoom(user: user, roomID: roomID)
-            if result {
-                let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
-                navigationController?.pushViewController(gameViewController, animated: true)
-            } else {
-                print("Could not join room. room full? room in progress")
-            }
-        } catch {
-            print("Error joining room: \(error)")
-        }
+        let gameViewController = GameViewController(gameManager: GameManager(roomID: item.roomID!, service: service))
+        gameViewController.joinButton.isHidden = false
+        navigationController?.pushViewController(gameViewController, animated: true)
     }
 }
 
@@ -309,7 +295,7 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
 extension HomeViewController: CreateRoomViewControllerDelegate {
     func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String) {
         let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
-        
+        gameViewController.leaveButton.isHidden = false
         navigationController?.pushViewController(gameViewController, animated: true)
     }
 }

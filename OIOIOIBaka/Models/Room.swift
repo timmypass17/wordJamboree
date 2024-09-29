@@ -13,11 +13,4 @@ struct Room: Codable, Hashable { // hashable for collection item
     var title: String
     var createdAt = FirebaseFirestore.Timestamp()
     var currentPlayerCount: Int
-    var status: Status
-
-    var isReady: [String: Bool]?
-    
-    enum Status: String, Codable {
-        case notStarted, inProgress
-    }
 }

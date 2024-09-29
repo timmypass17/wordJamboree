@@ -34,12 +34,30 @@ class GameViewController: UIViewController {
         return countDownView
     }()
     
-    let readyView: ReadyView = {
-        let readyView = ReadyView()
-        readyView.translatesAutoresizingMaskIntoConstraints = false
-        return readyView
+    let joinButton: UIButton = {
+        var config = UIButton.Configuration.filled()
+        config.title = "Join Game"
+        config.baseBackgroundColor = .systemGreen
+        config.cornerStyle = .medium
+        
+        let button = UIButton(configuration: config)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isHidden = true
+        return button
     }()
     
+    let leaveButton: UIButton = {
+        var config = UIButton.Configuration.filled()
+        config.title = "Leave"
+        config.baseBackgroundColor = .systemRed
+        config.cornerStyle = .medium
+        
+        let button = UIButton(configuration: config)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isHidden = true
+        return button
+    }()
+
     let keyboardView: KeyboardView = {
         let customKeyboard = KeyboardView()
         customKeyboard.translatesAutoresizingMaskIntoConstraints = false
@@ -83,7 +101,9 @@ class GameViewController: UIViewController {
         navigationItem.rightBarButtonItem = exitBarButton
         gameManager.delegate = self
         countDownView.delegate = self
-        readyView.delegate = self
+        joinButton.addAction(didTapJoinButton(), for: .touchUpInside)
+        leaveButton.addAction(didTapLeaveButton(), for: .touchUpInside)
+
         keyboardView.delegate = self
         keyboardView.soundManager = soundManager
         keyboardView.update(letters: "XZ", lettersUsed: gameManager.lettersUsed)
@@ -122,7 +142,8 @@ class GameViewController: UIViewController {
         playerViews.forEach { container.addSubview($0) }
         container.addSubview(currentWordView)
         container.addSubview(countDownView)
-        container.addSubview(readyView)
+        container.addSubview(joinButton)
+        container.addSubview(leaveButton)
         
         NSLayoutConstraint.activate([
             currentWordView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
@@ -130,12 +151,9 @@ class GameViewController: UIViewController {
 
             playerViews[0].centerXAnchor.constraint(equalTo: container.centerXAnchor),
             playerViews[0].topAnchor.constraint(equalTo: container.topAnchor),
-//            playerViews[0].bottomAnchor.constraint(equalTo: container.centerYAnchor),
-            playerViews[0].bottomAnchor.constraint(equalTo: readyView.topAnchor),
+            playerViews[0].bottomAnchor.constraint(equalTo: joinButton.topAnchor),
             
-//            playerViews[1].topAnchor.constraint(equalTo: container.centerYAnchor),
-            playerViews[1].topAnchor.constraint(equalTo: readyView.bottomAnchor),
-
+            playerViews[1].topAnchor.constraint(equalTo: joinButton.bottomAnchor),
             playerViews[1].bottomAnchor.constraint(equalTo: container.bottomAnchor),
             playerViews[1].centerXAnchor.constraint(equalTo: container.centerXAnchor),
             
@@ -150,9 +168,42 @@ class GameViewController: UIViewController {
             countDownView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             countDownView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             
-            readyView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            readyView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            joinButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            
+            leaveButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            leaveButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
         ])
+    }
+    
+    func didTapJoinButton() -> UIAction {
+        return UIAction { [self] _ in
+            joinButton.isHidden = true
+            leaveButton.isHidden = false
+            
+            Task {
+                do {
+                    try await gameManager.joinGame()
+                } catch {
+                    print("Error joining game: \(error)")
+                }
+            }
+        }
+    }
+    
+    func didTapLeaveButton() -> UIAction {
+        return UIAction { [self] _ in
+            exitTask?.cancel()
+            exitTask = Task {
+                do {
+                    try await gameManager.exit()
+                    navigationController?.popViewController(animated: true)
+                    
+                } catch {
+                    print("Error removing player: \(error)")
+                }
+            }
+        }
     }
     
     // Gets called multiple times for some reason
@@ -181,11 +232,11 @@ class GameViewController: UIViewController {
         NotificationCenter.default.removeObserver(self)
     }
        
-    func updateUI(roomStatus: Room.Status) {
+    func updateUI(roomStatus: Game.Status) {
         switch roomStatus {
         case .notStarted:
             gameManager.turnTimer?.stopTimer()
-            readyView.isHidden = false
+//            joinButton.isHidden = false
             countDownView.isHidden = true
             currentWordView.isHidden = true
         case .inProgress:
@@ -276,6 +327,34 @@ extension GameViewController: UITextFieldDelegate {
 
 extension GameViewController: GameManagerDelegate {
     
+    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String : [String : AnyObject]]) {
+        print(manager.playersInfo)
+        playerViews.forEach { $0.isHidden = true }
+        
+        for (uid, playerInfo) in manager.playersInfo {
+            guard let additionalInfo = playerInfo["additionalInfo"] as? [String: AnyObject],
+                  let name = additionalInfo["name"] as? String,
+                  let position = playerInfo["position"] as? Int
+            else { continue }
+            playerViews[position].nameLabel.text = name
+            playerViews[position].isHidden = false
+        }
+    }
+    
+    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String : [String : AnyObject]]) {
+        playerViews.forEach { $0.isHidden = true }
+        
+        for (uid, playerInfo) in manager.playersInfo {
+            guard let additionalInfo = playerInfo["additionalInfo"] as? [String: AnyObject],
+                  let name = additionalInfo["name"] as? String,
+                  let position = playerInfo["position"] as? Int
+            else { continue }
+            playerViews[position].nameLabel.text = name
+            playerViews[position].isHidden = false
+        }
+    }
+    
+    
     func gameManager(_ manager: GameManager, lettersUsedUpdated: Bool) {
         keyboardView.update(letters: "", lettersUsed: manager.lettersUsed)
     }
@@ -294,10 +373,10 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String : Int]) {
         playerViews.forEach { $0.isHidden = true }
         
-        let playersInfo = manager.playerInfos
+        let playersInfo = manager.playersInfo
         for (uid, position) in positions {
             guard let playerInfo = playersInfo[uid] else { continue }
-            playerViews[position].nameLabel.text = playerInfo["name"]
+            playerViews[position].nameLabel.text = playerInfo["name"] as? String
             playerViews[position].isHidden = false
             
             if uid == manager.winnerID {
@@ -351,12 +430,11 @@ extension GameViewController: GameManagerDelegate {
         currentWordView.pointArrow(at: playerViews[position], self)
     }
     
-    func gameManager(_ manager: GameManager, roomStatusUpdated roomStatus: Room.Status) {
+    func gameManager(_ manager: GameManager, roomStatusUpdated roomStatus: Game.Status) {
         updateUI(roomStatus: roomStatus)
     }
     
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String : Bool]) {
-        readyView.update(currentUserID: manager.service.currentUser?.uid, isReady: isReady)
     }
     
     func showWinner(userID: String) {
@@ -374,24 +452,13 @@ extension GameViewController: GameManagerDelegate {
 extension GameViewController: CountDownViewDelegate {
     func countDownView(_ sender: CountDownView, didStartCountDown: Bool) {
         countDownView.isHidden = false
-        readyView.isHidden = true
+//        joinButton.isHidden = true
     }
     
     func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
         currentWordView.isHidden = false
         countDownView.isHidden = true
     }
-}
-
-extension GameViewController: ReadyViewDelegate {
-    func readyView(_ sender: ReadyView, didTapReadyButton: Bool) {
-        gameManager.ready()
-    }
-    
-    func readyView(_ sender: ReadyView, didTapUnReadyButton: Bool) {
-        gameManager.unready()
-    }
-    
 }
 
 extension GameViewController: KeyboardViewDelegate {

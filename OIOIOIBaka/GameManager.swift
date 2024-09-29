@@ -11,7 +11,7 @@ import FirebaseDatabaseInternal
 import FirebaseAuth
 
 protocol GameManagerDelegate: AnyObject {
-    func gameManager(_ manager: GameManager, roomStatusUpdated roomStatus: Room.Status)
+    func gameManager(_ manager: GameManager, roomStatusUpdated roomStatus: Game.Status)
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String: Bool])
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int)
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String)
@@ -22,12 +22,14 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, winnerUpdated playerID: String)
     func gameManager(_ manager: GameManager, timeRanOut: Bool)
     func gameManager(_ manager: GameManager, lettersUsedUpdated: Bool)
+    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String: [String: AnyObject]])
+    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String: [String: AnyObject]])
 }
 
 class GameManager {
     var roomID: String
     var currentLetters: String = ""
-    var playerInfos: [String: [String: String]] = [:]
+    var playersInfo: [String: [String: Any]] = [:]
     var lettersUsed: Set<Character> = Set("XZ")
     var currentPlayerTurn: String = ""
     var positions: [String: Int] = [:]
@@ -62,7 +64,8 @@ class GameManager {
     }
     
     func setup() {
-        observePlayerInfo()
+        observePlayerJoined()
+        observePlayerLeft()
         observeRoomStatus()
         observeReady()
         observeShakes()
@@ -76,6 +79,88 @@ class GameManager {
         observeWinner()
     }
     
+    func joinGame() async throws {
+        guard let user = service.currentUser else { return }
+        let gameRef = ref.child("games").child(roomID)
+
+        // Perform transaction to ensure atomic update
+        let (_, updatedSnapshot) = try await gameRef.runTransactionBlock { currentData in
+            if var game = currentData.value as? [String: AnyObject],
+               var playersInfo = game["playersInfo"] as? [String: AnyObject],
+               var shake = game["shake"] as? [String: Bool],
+               let roomStatusString = game["status"] as? String,
+               let roomStatus = Game.Status(rawValue: roomStatusString) {
+                
+                let currentPlayerCount = playersInfo.count
+                guard currentPlayerCount < 4,
+                      roomStatus == .notStarted
+                else {
+                    return .success(withValue: currentData)
+                }
+                
+                // Update value
+                playersInfo[user.uid] = [
+                    "hearts": 3,
+                    "position": currentPlayerCount,
+                    "words": "",
+                    "additionalInfo": [
+                        "name": user.name
+                    ]
+                ] as AnyObject
+                shake[user.uid] = false
+                
+                // Apply changes
+                game["playersInfo"] = playersInfo as AnyObject
+                game["shake"] = shake as AnyObject
+                currentData.value = game
+                return .success(withValue: currentData)
+            }
+            return .success(withValue: currentData)
+        }
+                
+        try await ref.updateChildValues([
+            "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1),
+        ])
+    }
+    
+//    func joinGame() async throws {
+//        guard let user = service.currentUser else { return }
+//        let roomRef = ref.child("rooms").child(roomID)
+//
+//        // Perform transaction to ensure atomic update
+//        let (_, updatedSnapshot) = try await roomRef.runTransactionBlock { currentData in
+//            if var room = currentData.value as? [String: AnyObject],
+//               var currentPlayerCount = room["currentPlayerCount"] as? Int,
+//               let statusString = room["status"] as? String,
+//               let roomStatus = Room.Status(rawValue: statusString),
+//               currentPlayerCount < 4,
+//               roomStatus != .inProgress {
+//                
+//                // Update value
+//                currentPlayerCount += 1
+//                
+//                // Apply changes
+//                room["currentPlayerCount"] = currentPlayerCount as AnyObject
+//                
+//                
+//                currentData.value = room
+//                return .success(withValue: currentData)
+//            }
+//            
+//            return .success(withValue: currentData)
+//        }
+//        
+//
+//        guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return }
+//        try await ref.updateChildValues([
+//            "/games/\(roomID)/hearts/\(user.uid)": 3,
+//            "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
+//            "/shake/\(roomID)/players/\(user.uid)": user.uid,
+//            "/rooms/\(roomID)/isReady/\(user.uid)": false,
+//            "/games/\(roomID)/playersInfo/\(user.uid)/name": user.name
+//        ])
+//    }
+    
     func observeWinner() {
         ref.child("games/\(roomID)/winner").observe(.childAdded) { [self] snapshot in
             guard let winnerID = snapshot.value as? String else { return }
@@ -84,12 +169,44 @@ class GameManager {
         }
     }
     
-    func observePlayerInfo() {
-        playersInfoHandle = ref.child("games/\(roomID)/playersInfo").observe(.value) { [self] snapshot in
-            guard let playersInfo = snapshot.value as? [String: [String: String]] else { return }
-            self.playerInfos = playersInfo
+    func observePlayerJoined() {
+        playersInfoHandle = ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [self] snapshot in
+            guard let playerInfo = snapshot.value as? [String: AnyObject] else {
+                print(snapshot)
+                print("Fail to convert snapshot to playersInfo, joined")
+                return
+            }
+            let newUserID = snapshot.key
+            self.playersInfo[newUserID] = playerInfo
+            self.delegate?.gameManager(self, playerJoined: [newUserID: playerInfo])
         }
     }
+    
+    func observePlayerLeft() {
+        ref.child("games/\(roomID)/playersInfo").observe(.childRemoved) { [self] snapshot in
+            guard let playerInfo = snapshot.value as? [String: AnyObject] else {
+                print(snapshot)
+                print("Fail to convert snapshot to playersInfo, leave")
+                return
+            }
+                        
+            let leftUserID = snapshot.key
+            playersInfo[leftUserID] = nil
+            let sortedPlayersByPosition = playersInfo.sorted { playerInfo1, playerInfo2 in
+                let position1 = playerInfo1.value["position"] as? Int ?? .max
+                let position2 = playerInfo2.value["position"] as? Int ?? .max
+                return position1 < position2
+            }
+            
+            sortedPlayersByPosition.enumerated().forEach { newPosition, playerInfo in
+                let userID = playerInfo.key
+                playersInfo[userID]?["position"] = newPosition as AnyObject
+            }
+            
+            self.delegate?.gameManager(self, playerLeft: [leftUserID: playerInfo])
+        }
+    }
+
     
     func observePlayerWords() {
         playerWordsHandle = ref.child("games/\(roomID)/playerWords").observe(.value) { [self] snapshot in
@@ -123,7 +240,7 @@ class GameManager {
     func observeRoomStatus() {
         roomStatusHandle = ref.child("rooms/\(roomID)/status").observe(.value) { [self] snapshot in
             guard let statusString = snapshot.value as? String,
-                  let roomStatus = Room.Status(rawValue: statusString)
+                  let roomStatus = Game.Status(rawValue: statusString)
             else { return }
             self.delegate?.gameManager(self, roomStatusUpdated: roomStatus)
         }
@@ -241,7 +358,6 @@ class GameManager {
         ref.child("shake/\(roomID)/players").observe(.value) { [self] snapshot in
             guard let shakePlayers = snapshot.value as? [String: Bool] else {
                 // TODO: not sure why this fails initially
-                print("Failed to convert snapshot to shakePlayers")
                 return
             }
             for (playerID, shouldShake) in shakePlayers {
@@ -287,58 +403,58 @@ class GameManager {
     }
     
     func damagePlayer(playerID: String) async throws {
-        // Only user can damage self
-        guard playerID == service.currentUser?.uid else { return }
-        
-        // Damage player
-        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await ref.child("games/\(roomID)").runTransactionBlock { currentData in
-            if var gameData = currentData.value as? [String: AnyObject] {
-                var hearts = gameData["hearts"] as? [String: Int] ?? [:]
-                
-                hearts[playerID, default: 0] -= 1
-                
-                gameData["hearts"] = hearts as AnyObject
-                
-                // TODO: We can check for winner here and update games atomically in 1 operation instead of 2.
-                
-                currentData.value = gameData
-                return .success(withValue: currentData)
-            }
-            return .success(withValue: currentData)
-        }
-        
-        // If player damaged success, check for winner
-        if result {
-            guard let updatedGame = updatedSnapshot.toObject(Game.self),
-                  let updatedPlayers = updatedGame.hearts
-            else { return }
-            
-            let winnerExists = try await checkForWinner(updatedPlayers)
-            
-            if winnerExists {
-                print("Game ended")
-            } else {
-                // Get next player's turn
-                guard let currentPosition = getPosition(updatedGame.currentPlayerTurn?["playerID"]) else { return }
-                let playerCount = positions.count
-                var nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
-                let isLastTurn = currentPosition == positions.count - 1
-
-                guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-                
-                var updates: [String: Any] = [
-                    "games/\(roomID)/currentPlayerTurn/playerID": nextPlayerUID,  // update next players turn
-                    "games/\(roomID)/playerWords/\(nextPlayerUID)": "",   // reset next player's input
-                    "shake/\(roomID)/players/\(playerID)": true
-                ]
-                
-                if isLastTurn {
-                    updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)    // increment rounds if necessary
-                }
-                
-                try await ref.updateChildValues(updates)
-            }
-        }
+//        // Only user can damage self
+//        guard playerID == service.currentUser?.uid else { return }
+//        
+//        // Damage player
+//        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await ref.child("games/\(roomID)").runTransactionBlock { currentData in
+//            if var gameData = currentData.value as? [String: AnyObject] {
+//                var hearts = gameData["hearts"] as? [String: Int] ?? [:]
+//                
+//                hearts[playerID, default: 0] -= 1
+//                
+//                gameData["hearts"] = hearts as AnyObject
+//                
+//                // TODO: We can check for winner here and update games atomically in 1 operation instead of 2.
+//                
+//                currentData.value = gameData
+//                return .success(withValue: currentData)
+//            }
+//            return .success(withValue: currentData)
+//        }
+//        
+//        // If player damaged success, check for winner
+//        if result {
+//            guard let updatedGame = updatedSnapshot.toObject(Game.self),
+//                  let updatedPlayers = updatedGame.hearts
+//            else { return }
+//            
+//            let winnerExists = try await checkForWinner(updatedPlayers)
+//            
+//            if winnerExists {
+//                print("Game ended")
+//            } else {
+//                // Get next player's turn
+//                guard let currentPosition = getPosition(updatedGame.currentPlayerTurn?["playerID"]) else { return }
+//                let playerCount = positions.count
+//                var nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
+//                let isLastTurn = currentPosition == positions.count - 1
+//
+//                guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
+//                
+//                var updates: [String: Any] = [
+//                    "games/\(roomID)/currentPlayerTurn/playerID": nextPlayerUID,  // update next players turn
+//                    "games/\(roomID)/playerWords/\(nextPlayerUID)": "",   // reset next player's input
+//                    "shake/\(roomID)/players/\(playerID)": true
+//                ]
+//                
+//                if isLastTurn {
+//                    updates["games/\(roomID)/rounds/currentRound"] = ServerValue.increment(1)    // increment rounds if necessary
+//                }
+//                
+//                try await ref.updateChildValues(updates)
+//            }
+//        }
     }
     
     // Called when user gets kill or when user leaves mid game
@@ -353,7 +469,7 @@ class GameManager {
 
         updates["games/\(roomID)/currentPlayerTurn/playerID"] = "" as AnyObject // incase current player == new game's current player
         updates["games/\(roomID)/secondsPerTurn"] = Int.random(in: 10...30) + 3 as AnyObject
-        updates["rooms/\(roomID)/status"] = Room.Status.notStarted.rawValue as AnyObject // stops game
+        updates["rooms/\(roomID)/status"] = Game.Status.notStarted.rawValue as AnyObject // stops game
         updates["games/\(roomID)/winner/playerID"] = winnerID as AnyObject  // shows winners
         
         try await ref.updateChildValues(updates)
@@ -378,101 +494,173 @@ class GameManager {
     func exit() async throws {
         turnTimer?.stopTimer()
         
-        let (statusSnapshot, _) = await service.ref.child("rooms/\(roomID)/status").observeSingleEventAndPreviousSiblingKey(of: .value)
-        guard let statusString = statusSnapshot.value as? String,
-              let roomStatus = Room.Status(rawValue: statusString)
-        else {
-            return
-        }
-
-        Task {
-            switch roomStatus {
-            case .notStarted:
-                try await handleExitDuringNotStarted()
-            case .inProgress:
-                try await handleExitDuringGame()
-            }
-        }
-    }
-    
-    // Transaction allows atomic read/writes. Fixes problem of multible users updating same value simulatenously
-    // E.g. read and update positions atomically
-    private func handleExitDuringNotStarted() async throws {
-        guard let uid = service.currentUser?.uid else { return }
+        let (result, gameSnapshot) = try await service.ref.child("games/\(roomID)").runTransactionBlock { [self] currentData in
+            if var gameData = currentData.value as? [String: AnyObject],
+               let statusString = gameData["status"] as? String,
+               let status = Game.Status(rawValue: statusString),
+               let uid = service.currentUser?.uid {
+                var playersInfo = gameData["playersInfo"] as? [String: [String: AnyObject]] ?? [:]
                 
-        let (result, _) = try await ref.child("games/\(roomID)").runTransactionBlock { currentData in
-            if var gameData = currentData.value as? [String: AnyObject] {
-                var hearts = gameData["hearts"] as? [String: Int] ?? [:]
-                var playerWords = gameData["playerWords"] as? [String: String] ?? [:]
-                var positions = gameData["positions"] as? [String: Int] ?? [:]
-                var playersInfo = gameData["playersInfo"] as? [String: [String: String]] ?? [:]
-                
-                // Remove user
-                hearts[uid] = nil
-                playerWords[uid] = nil
-                positions[uid] = nil
-                playersInfo[uid] = nil
-                
-                // Update positions
-                let sortedPlayersByPosition: [String] = positions.sorted { $0.1 < $1.1 }.map { $0.key }
-                for (newPosition, userID) in sortedPlayersByPosition.enumerated() {
-                    positions[userID] = newPosition
+                switch status {
+                case .notStarted:
+                    // Remove player
+                    playersInfo[uid] = nil
+                    // Update positions
+                    let sortedPlayersByPosition = playersInfo.sorted { playerInfo1, playerInfo2 in
+                        let position1 = playerInfo1.value["position"] as? Int ?? .max
+                        let position2 = playerInfo2.value["position"] as? Int ?? .max
+                        return position1 < position2
+                    }
+                    
+                    sortedPlayersByPosition.enumerated().forEach { newPosition, playerInfo in
+                        let userID = playerInfo.key
+                        playersInfo[userID]?["position"] = newPosition as AnyObject
+                    }
+                    
+                case .inProgress:
+                    // Kill player
+                    playersInfo[uid]?["hearts"] = 0 as AnyObject
                 }
                 
                 // Apply updates
-                gameData["hearts"] = hearts as AnyObject
-                gameData["playerWords"] = playerWords as AnyObject
-                gameData["positions"] = positions as AnyObject
                 gameData["playersInfo"] = playersInfo as AnyObject
-                
+
                 currentData.value = gameData
                 return .success(withValue: currentData)
             }
             return .success(withValue: currentData)
         }
-
-        if result {
-            try await ref.updateChildValues([
-                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1),
-                "rooms/\(roomID)/isReady/\(uid)": NSNull()
-            ])
-        }
+        
+        try await ref.updateChildValues([
+            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+        ])
     }
     
+//    func exit() async throws {
+//        turnTimer?.stopTimer()
+//        guard let uid = service.currentUser?.uid else { return }
+//        
+//        let (statusSnapshot, _) = await service.ref.child("rooms/\(roomID)/status").observeSingleEventAndPreviousSiblingKey(of: .value)
+//        guard let statusString = statusSnapshot.value as? String,
+//              let roomStatus = Room.Status(rawValue: statusString)
+//        else {
+//            return
+//        }
+//
+//        Task {
+//            switch roomStatus {
+//            case .notStarted:
+//                // Remove player
+//                try await ref.updateChildValues([
+//                    "games/\(roomID)/playersInfo/\(uid)": NSNull(),
+//                    "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+//                ])
+//            case .inProgress:
+//                // Kill player
+//                try await ref.updateChildValues([
+//                    "games/\(roomID)/playersInfo/\(uid)/hearts": 0,
+//                    "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+//                ])
+//            }
+//        }
+//    }
+    
+    private func handleExitDuringNotStarted() async throws {
+        guard let uid = service.currentUser?.uid else { return }
+        
+        try await ref.updateChildValues([
+            "games/\(roomID)/playersInfo/\(uid)/hearts": 0,
+            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+        ])
+    }
+    
+    // Transaction allows atomic read/writes. Fixes problem of multible users updating same value simulatenously
+    // E.g. read and update positions atomically
+//    private func handleExitDuringNotStarted() async throws {
+//        guard let uid = service.currentUser?.uid else { return }
+//        
+//        // Check if user was in game
+//        let (roomSnapshot, _) = await ref.child("rooms/\(roomID)/isReady/\(uid)").observeSingleEventAndPreviousSiblingKey(of: .value)
+//        if roomSnapshot.exists() {
+//            print("user was in room")
+//        } else {
+//            print("user not in room")
+//            return
+//        }
+//        
+//        let (result, _) = try await ref.child("games/\(roomID)").runTransactionBlock { currentData in
+//            if var gameData = currentData.value as? [String: AnyObject] {
+//                var hearts = gameData["hearts"] as? [String: Int] ?? [:]
+//                var playerWords = gameData["playerWords"] as? [String: String] ?? [:]
+//                var positions = gameData["positions"] as? [String: Int] ?? [:]
+//                var playersInfo = gameData["playersInfo"] as? [String: [String: String]] ?? [:]
+//                
+//                // Remove user
+//                hearts[uid] = nil
+//                playerWords[uid] = nil
+//                positions[uid] = nil
+//                playersInfo[uid] = nil
+//                
+//                // Update positions
+//                let sortedPlayersByPosition: [String] = positions.sorted { $0.1 < $1.1 }.map { $0.key }
+//                for (newPosition, userID) in sortedPlayersByPosition.enumerated() {
+//                    positions[userID] = newPosition
+//                }
+//                
+//                // Apply updates
+//                gameData["hearts"] = hearts as AnyObject
+//                gameData["playerWords"] = playerWords as AnyObject
+//                gameData["positions"] = positions as AnyObject
+//                gameData["playersInfo"] = playersInfo as AnyObject
+//                
+//                currentData.value = gameData
+//                return .success(withValue: currentData)
+//            }
+//            return .success(withValue: currentData)
+//        }
+//
+//        if result {
+//            try await ref.updateChildValues([
+//                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1),
+//                "rooms/\(roomID)/isReady/\(uid)": NSNull()
+//            ])
+//        }
+//    }
+    
     private func handleExitDuringGame() async throws {
-        guard let currentUser = service.currentUser else { return }
-        var updates: [String: Any] = [:]
-
-        let gameSnapshot = try await ref.child("games/\(roomID)").getData()
-        guard let game = gameSnapshot.toObject(Game.self),
-              let positions = game.positions,
-              let currentPosition = positions[currentUser.uid],
-              var hearts = game.hearts
-        else { return }
-        
-        let isCurrentPlayersTurn = currentUser.uid == game.currentPlayerTurn?["playerID"]
-        if isCurrentPlayersTurn {
-            let playerCount = positions.count
-            var nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
-            guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-
-            updates["games/\(roomID)/currentPlayerTurn/playerID"] = nextPlayerUID
-        }
-        
-        updates["games/\(roomID)/hearts/\(currentUser.uid)"] = 0   // kill player
-        updates["rooms/\(roomID)/currentPlayerCount"] = ServerValue.increment(-1)
-        updates["rooms/\(roomID)/isReady/\(currentUser.uid)"] = NSNull()
-
-        try await ref.updateChildValues(updates)
-
-        // Whenever a player dies, check for winner
-        if let livesRemaining = hearts[currentUser.uid] {
-            let isAlive = livesRemaining > 0
-            if isAlive {
-                hearts[currentUser.uid] = 0  // kill player locally
-                try await checkForWinner(hearts)
-            }
-        }
+//        guard let currentUser = service.currentUser else { return }
+//        var updates: [String: Any] = [:]
+//
+//        let gameSnapshot = try await ref.child("games/\(roomID)").getData()
+//        guard let game = gameSnapshot.toObject(Game.self),
+//              let positions = game.positions,
+//              let currentPosition = positions[currentUser.uid],
+//              var hearts = game.hearts
+//        else { return }
+//        
+//        let isCurrentPlayersTurn = currentUser.uid == game.currentPlayerTurn?["playerID"]
+//        if isCurrentPlayersTurn {
+//            let playerCount = positions.count
+//            var nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
+//            guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
+//
+//            updates["games/\(roomID)/currentPlayerTurn/playerID"] = nextPlayerUID
+//        }
+//        
+//        updates["games/\(roomID)/hearts/\(currentUser.uid)"] = 0   // kill player
+//        updates["rooms/\(roomID)/currentPlayerCount"] = ServerValue.increment(-1)
+//        updates["rooms/\(roomID)/isReady/\(currentUser.uid)"] = NSNull()
+//
+//        try await ref.updateChildValues(updates)
+//
+//        // Whenever a player dies, check for winner
+//        if let livesRemaining = hearts[currentUser.uid] {
+//            let isAlive = livesRemaining > 0
+//            if isAlive {
+//                hearts[currentUser.uid] = 0  // kill player locally
+//                try await checkForWinner(hearts)
+//            }
+//        }
     }
     
     func removeListeners() {
@@ -507,6 +695,7 @@ class GameManager {
             ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: secondsPerTurnHandle)
         }
     }
+    
 }
 
 extension GameManager: TurnTimerDelegate {

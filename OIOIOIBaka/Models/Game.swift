@@ -10,15 +10,26 @@ import Foundation
 struct Game: Codable {
     var roomID: String
     var currentLetters: String
-    var hearts: [String: Int]? // does support arrays but using dicitonary is recommended
-    var positions: [String: Int]?
-    var currentPlayerTurn: [String: String]?
-    var playerWords: [String: String]?
-    var rounds: [String: Int]?
     var secondsPerTurn: Int
-    var playersInfo: [String: [String: String]]
+    var rounds: [String: Int]?
+    var currentPlayerTurn: [String: String]?
+    var playersInfo: [String: PlayerInfo] // Updated to use a PlayerInfo struct
     var winner: String?
+    var shake: [String: Bool]?
+    var status: Status = .notStarted
+    
+    enum Status: String, Codable {
+        case notStarted, inProgress
+    }
 }
 
+struct PlayerInfo: Codable {
+    var hearts: Int
+    var position: Int
+    var words: String
+    var additionalInfo: [String: String]
+}
+
+// does support arrays but using dicitonary is recommended
 // players is optional because there could be an empty room and fields that are empty (e.g. empty dictionaries) are deleted in firebase rtdb
 // note: if empty room, players and positions are nil
