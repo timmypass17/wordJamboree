@@ -354,10 +354,16 @@ extension GameViewController: GameManagerDelegate {
             playerViews[position].isHidden = false
             playerViews[position].setHearts(to: hearts)
             
+            // TODO: Maybe move word's to seperate node, kinda messy listening here
             // Update text for current player turn
             if uid == manager.currentPlayerTurn {
-                // Careful not to update
+                let originalWord = playerViews[position].wordLabel.text
+                // Only update current player's turn text (Don't want to ruin other user's text
                 playerViews[position].updateUserWordTextColor(word: word, matching: manager.currentLetters)
+                // Player typed new letter
+                if originalWord != word && uid != manager.service.currentUser?.uid {
+                    soundManager.playKeyboardClickSound()
+                }
             }
         }
     }
