@@ -37,7 +37,6 @@ class FirebaseService {
         }
         do {
             let snapshot = try await ref.child("users").child(user.uid).getData()
-            print(snapshot)
             self.currentUser = snapshot.toObject(MyUser.self)
             print("Got user successfully")
         } catch {

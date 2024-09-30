@@ -22,25 +22,29 @@ class TurnTimer {
     }
     
     func startTimer(duration: Int) {
-        print("start timer")
         stopTimer()
-        
-        var timeRemaining = duration
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
-            if timeRemaining == 0 {
-                soundManager.playBonkSound()
-                self.timer?.invalidate()
-                delegate?.turnTimer(self, timeRanOut: true)
-            } else if !soundManager.isPlayingTickingSound() && timeRemaining <= 10 {
-                soundManager.playTickingSound()
-            }
+
+        // Timer need to be schedules on main thread (being scheduled in await startGame() for "host")
+//        DispatchQueue.main.async {
+            var timeRemaining = duration
             
-            print(timeRemaining)
-            timeRemaining -= 1
-        }
+            self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+                if timeRemaining == 0 {
+                    soundManager.playBonkSound()
+                    self.timer?.invalidate()
+                    delegate?.turnTimer(self, timeRanOut: true)
+                } else if !soundManager.isPlayingTickingSound() && timeRemaining <= 10 {
+                    soundManager.playTickingSound()
+                }
+                
+                print(timeRemaining)
+                timeRemaining -= 1
+            }
+//        }
     }
     
     func stopTimer() {
+        print("stop timer")
         timer?.invalidate()
         soundManager.stopTickingSound()
     }

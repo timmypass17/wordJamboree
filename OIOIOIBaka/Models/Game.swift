@@ -13,10 +13,11 @@ struct Game: Codable {
     var secondsPerTurn: Int
     var rounds: [String: Int]?
     var currentPlayerTurn: [String: String]?
-    var playersInfo: [String: PlayerInfo] // Updated to use a PlayerInfo struct
+    var playersInfo: [String: PlayerInfo]? // Updated to use a PlayerInfo struct
     var winner: String?
     var shake: [String: Bool]?
     var status: Status = .notStarted
+    var countdownStartTime: [String: TimeInterval]?
     
     enum Status: String, Codable {
         case notStarted, inProgress
