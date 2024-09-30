@@ -28,12 +28,6 @@ class GameViewController: UIViewController {
         return currentWordView
     }()
     
-//    let countDownView: CountDownView = {
-//        let countDownView = CountDownView()
-//        countDownView.translatesAutoresizingMaskIntoConstraints = false
-//        return countDownView
-//    }()
-    
     let joinButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Join Game"
@@ -353,29 +347,18 @@ extension GameViewController: GameManagerDelegate {
             guard let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
                   let name = additionalInfo["name"],
                   let position = playerInfo["position"] as? Int,
-                  let hearts = playerInfo["hearts"] as? Int
+                  let hearts = playerInfo["hearts"] as? Int,
+                  let word = playerInfo["words"] as? String
             else { continue }
             playerViews[position].nameLabel.text = name
             playerViews[position].isHidden = false
             playerViews[position].setHearts(to: hearts)
-        }
-    }
-    
-    private func handlePlayerCountChanged(_ manager: GameManager) {
-        if 2 - manager.playersInfo.count > 0 {
-            navigationItem.title = "Waiting for \(2 - manager.playersInfo.count) more players..."
-        } else {
-            navigationItem.title = ""
-        }
-        
-        playerViews.forEach { $0.isHidden = true }
-        
-        for (uid, playerInfo) in manager.playersInfo {
-            guard let name = playerInfo["name"] as? String,
-                  let position = manager.positions[uid]
-            else { continue }
-            playerViews[position].nameLabel.text = name
-            playerViews[position].isHidden = false
+            
+            // Update text for current player turn
+            if uid == manager.currentPlayerTurn {
+                // Careful not to update
+                playerViews[position].updateUserWordTextColor(word: word, matching: manager.currentLetters)
+            }
         }
     }
     
@@ -415,30 +398,19 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    func gameManager(_ manager: GameManager, heartsUpdated hearts: [String : Int]) {
-        updateHearts(hearts: hearts)
-    }
-    
-    func updateHearts(hearts: [String: Int]) {
-        for (playerID, heartCount) in hearts {
-            guard let position = gameManager.positions[playerID] else { continue }
-            playerViews[position].setHearts(to: heartCount)
-        }
-    }
-    
     func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String : String]) {
-        for (playerID, updatedWord) in playerWords {
-            guard let position = manager.positions[playerID],
-                  let originalWord = playerViews[position].wordLabel.text,
-                  originalWord != updatedWord
-            else { continue }
-            
-            if manager.currentPlayerTurn != manager.service.currentUser?.uid {
-                soundManager.playKeyboardClickSound()
-            }
-            
-            playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
-        }
+//        for (playerID, updatedWord) in playerWords {
+//            guard let position = manager.positions[playerID],
+//                  let originalWord = playerViews[position].wordLabel.text,
+//                  originalWord != updatedWord
+//            else { continue }
+//            
+//            if manager.currentPlayerTurn != manager.service.currentUser?.uid {
+//                soundManager.playKeyboardClickSound()
+//            }
+//            
+//            playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
+//        }
     }
     
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String) {
@@ -449,14 +421,12 @@ extension GameViewController: GameManagerDelegate {
         guard let playerInfo = manager.playersInfo[playerID] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int
         else { return }
+        playerViews[position].wordLabel.text = ""
         pointArrow(to: position)
     }
     
     private func pointArrow(to position: Int) {
-        // Called within async func "startGame()"
-//        DispatchQueue.main.async {
-            self.currentWordView.pointArrow(at: self.playerViews[position], self)
-//        }
+        self.currentWordView.pointArrow(at: self.playerViews[position], self)
     }
     
     func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: Game.Status) {
@@ -464,7 +434,7 @@ extension GameViewController: GameManagerDelegate {
         switch roomStatus {
         case .notStarted:
             gameManager.turnTimer?.stopTimer()
-//            currentWordView.isHidden = true
+            currentWordView.isHidden = true
             
             // If user in game
             if let _ = manager.playersInfo.first(where: { $0.key == uid }) {
@@ -475,7 +445,7 @@ extension GameViewController: GameManagerDelegate {
                 leaveButton.isHidden = true
             }
         case .inProgress:
-//            currentWordView.isHidden = false
+            currentWordView.isHidden = false
             leaveButton.isHidden = true
             joinButton.isHidden = true
             gameManager.lettersUsed = Set("XZ")
@@ -488,10 +458,10 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func showWinner(userID: String) {
-        guard let position = gameManager.getPosition(userID) else { return }
-        playerViews[position].crownView.isHidden = false
-        playerViews[position].heartsView.isHidden = true
-        playerViews[position].skullView.isHidden = true
+//        guard let position = gameManager.getPosition(userID) else { return }
+//        playerViews[position].crownView.isHidden = false
+//        playerViews[position].heartsView.isHidden = true
+//        playerViews[position].skullView.isHidden = true
     }
 
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int) {
@@ -513,11 +483,12 @@ extension GameViewController: CountDownViewDelegate {
 
 extension GameViewController: KeyboardViewDelegate {
     func keyboardView(_ sender: KeyboardView, didTapKey letter: String) {
-        guard let currentUser = gameManager.service.currentUser,
-              currentUser.uid == gameManager.currentPlayerTurn,
-              let position = gameManager.getPosition(currentUser.uid),
-              let partialWord = playerViews[position].wordLabel.text
+        guard let uid = gameManager.service.currentUser?.uid,
+              uid == gameManager.currentPlayerTurn,
+              let playerInfo = gameManager.playersInfo[uid] as? [String: AnyObject],
+              let position = playerInfo["position"] as? Int
         else { return }
+        let partialWord = playerViews[position].wordLabel.text ?? ""
         
         let updatedWord = partialWord + letter
         playerViews[position].updateUserWordTextColor(word: updatedWord, matching: gameManager.currentLetters)
@@ -533,12 +504,14 @@ extension GameViewController: KeyboardViewDelegate {
     }
     
     func keyboardView(_ sender: KeyboardView, didTapBackspace: Bool) {
-        guard let currentUser = gameManager.service.currentUser,
-              currentUser.uid == gameManager.currentPlayerTurn,
-              let position = gameManager.getPosition(currentUser.uid),
-              var word = playerViews[position].wordLabel.text
+        guard let uid = gameManager.service.currentUser?.uid,
+              uid == gameManager.currentPlayerTurn,
+              let playerInfo = gameManager.playersInfo[uid] as? [String: AnyObject],
+              let position = playerInfo["position"] as? Int
         else { return }
         
+        var word = playerViews[position].wordLabel.text ?? ""
+
         if !word.isEmpty {
             word.removeLast()
         }
@@ -560,12 +533,14 @@ extension GameViewController: KeyboardViewDelegate {
     }
     
     func handleSubmit() {
-        guard let currentUser = gameManager.service.currentUser,
-              currentUser.uid == gameManager.currentPlayerTurn,
-              let position = gameManager.getPosition(currentUser.uid),
-              let word = playerViews[position].wordLabel.text
+        guard let uid = gameManager.service.currentUser?.uid,
+              uid == gameManager.currentPlayerTurn,
+              let playerInfo = gameManager.playersInfo[uid] as? [String: AnyObject],
+              let position = playerInfo["position"] as? Int
         else { return }
         
+        var word = playerViews[position].wordLabel.text ?? ""
+
         Task {
             do {
                 try await gameManager.submit(word)
