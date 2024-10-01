@@ -143,6 +143,13 @@ class KeyboardView: UIView {
     
     func update(letters: String, lettersUsed: Set<Character>) {
         DispatchQueue.main.async {  // ensure ui updates are on main thread
+            print(
+            """
+            update(
+                letters: \(letters)
+                lettersUsed: \(lettersUsed)
+            )
+            """)
             for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
                 let letter = "\(char)"
                 guard let keyButton = self.alphabetButtons.first(where: { $0.title(for: .normal) == letter }) else { continue }

@@ -18,6 +18,7 @@ struct Game: Codable {
     var shake: [String: Bool]?
     var status: Status = .notStarted
     var countdownStartTime: [String: TimeInterval]?
+    var playersWord: [String: String]?
     
     enum Status: String, Codable {
         case notStarted, inProgress
@@ -27,7 +28,6 @@ struct Game: Codable {
 struct PlayerInfo: Codable {
     var hearts: Int
     var position: Int
-    var words: String
     var additionalInfo: [String: String]
 }
 

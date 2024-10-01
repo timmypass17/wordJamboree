@@ -92,7 +92,6 @@ class FirebaseService {
                     PlayerInfo(
                         hearts: 3,
                         position: 0,
-                        words: "",
                         additionalInfo: [
                             "name": currentUser.name
                         ]
@@ -100,6 +99,9 @@ class FirebaseService {
             ],
             shake: [
                 currentUser.uid: false
+            ],
+            playersWord: [
+                currentUser.uid: ""
             ]
         )
 

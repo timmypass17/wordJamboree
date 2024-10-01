@@ -66,6 +66,9 @@ class GameViewController: UIViewController {
         return button
     }()
     
+    var afkTimer: Timer?
+    var currentCountdownValue = 5
+    
     var exitBarButton: UIBarButtonItem!
     
     var gameManager: GameManager
@@ -89,8 +92,6 @@ class GameViewController: UIViewController {
     }
     
     func setupView() {
-//        navigationItem.title = "Waiting for 2 more players..."
-//        navigationItem.title = "Game starting in 15 seconds"
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.setHidesBackButton(true, animated: true)
         exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
@@ -103,10 +104,16 @@ class GameViewController: UIViewController {
         keyboardView.delegate = self
         keyboardView.soundManager = soundManager
         keyboardView.update(letters: "XZ", lettersUsed: gameManager.lettersUsed)
-
-        // Don't use didEnterBackground. Doesn't get called if user swipes up and removes app.
-        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
         
+        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+
         submitButton.addAction(didTapSubmit(), for: .touchUpInside)
         
         view.addSubview(keyboardView)
@@ -203,19 +210,57 @@ class GameViewController: UIViewController {
         }
     }
     
-    // Gets called multiple times for some reason
+    // Give players X seconds till kick to clean up afk players
     @objc func appMovedToBackground() {
-//        exitTask?.cancel()
-//        exitTask = Task {
-//            do {
-//                try await gameManager.exit()
-//                navigationController?.popViewController(animated: true)
-//                
-//            } catch {
-//                print("Error removing player: \(error)")
-//            }
-//        }
+        currentCountdownValue = 5
+        afkTimer?.invalidate()
+        afkTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+            if currentCountdownValue == 0 {
+                afkTimer?.invalidate()
+                
+                let alert = UIAlertController(
+                    title: "Session Timeout",
+                    message: "You were away from the game for too long and have been removed from the session. Please join again to continue playing!",
+                    preferredStyle: .alert
+                )
+                
+                alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                    self.navigationController?.popViewController(animated: true)
+                })
+                
+                self.present(alert, animated: true, completion: nil)
+                
+                exitTask?.cancel()
+                exitTask = Task {
+                    do {
+                        try await gameManager.exit()
+                    } catch {
+                        print("Error removing player: \(error)")
+                    }
+                }
+            } else {
+                print("Time remaining till kick: \(currentCountdownValue)")
+            }
+            
+            currentCountdownValue -= 1
+        }
+    }
+    
+    @objc func appDidBecomeActive() {
+        afkTimer?.invalidate()
 
+        if currentCountdownValue > 0 && currentCountdownValue < 3 {
+            let alert = UIAlertController(
+                title: "Inactive Warning",
+                message: "Leaving the app for too long will result in being kicked from this session. Please stay active to continue playing!",
+                preferredStyle: .alert
+            )
+            
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            
+            self.present(alert, animated: true, completion: nil)
+        }
+        
     }
     
     // Strong references not allowing gameviewcontroller to be deallocated
@@ -347,8 +392,7 @@ extension GameViewController: GameManagerDelegate {
             guard let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
                   let name = additionalInfo["name"],
                   let position = playerInfo["position"] as? Int,
-                  let hearts = playerInfo["hearts"] as? Int,
-                  let word = playerInfo["words"] as? String
+                  let hearts = playerInfo["hearts"] as? Int
             else { continue }
             playerViews[position].nameLabel.text = name
             playerViews[position].isHidden = false
@@ -356,20 +400,20 @@ extension GameViewController: GameManagerDelegate {
             
             // TODO: Maybe move word's to seperate node, kinda messy listening here
             // Update text for current player turn
-            if uid == manager.currentPlayerTurn {
-                let originalWord = playerViews[position].wordLabel.text
-                // Only update current player's turn text (Don't want to ruin other user's text
-                playerViews[position].updateUserWordTextColor(word: word, matching: manager.currentLetters)
-                // Player typed new letter
-                if originalWord != word && uid != manager.service.currentUser?.uid {
-                    soundManager.playKeyboardClickSound()
-                }
-            }
+//            if uid == manager.currentPlayerTurn {
+//                let originalWord = playerViews[position].wordLabel.text
+//                // Only update current player's turn text (Don't want to ruin other user's text
+//                playerViews[position].updateUserWordTextColor(word: word, matching: manager.currentLetters)
+//                // Player typed new letter
+//                if originalWord != word && uid != manager.service.currentUser?.uid {
+//                    soundManager.playKeyboardClickSound()
+//                }
+//            }
         }
     }
     
-    func gameManager(_ manager: GameManager, lettersUsedUpdated: Bool) {
-        keyboardView.update(letters: "", lettersUsed: manager.lettersUsed)
+    func gameManager(_ manager: GameManager, lettersUsedUpdated: Set<Character>) {
+        keyboardView.update(letters: "", lettersUsed: lettersUsedUpdated)
     }
     
     func gameManager(_ manager: GameManager, timeRanOut: Bool) {
@@ -404,7 +448,31 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
+    func gameManager(_ manager: GameManager, player playerID: String, updatedWord: String) {
+        guard let playerInfo = manager.playersInfo[playerID] as? [String: AnyObject],
+              let position = playerInfo["position"] as? Int
+        else { return }
+        
+        if playerID != manager.service.currentUser?.uid {
+            soundManager.playKeyboardClickSound()
+        }
+        
+        playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
+    }
+    
     func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String : String]) {
+        for (uid, playerInfo) in manager.playersInfo {
+            guard let position = playerInfo["position"] as? Int,
+                  let updatedWord = playerWords[uid]
+            else { continue }
+            
+            if manager.currentPlayerTurn != manager.service.currentUser?.uid {
+                soundManager.playKeyboardClickSound()
+            }
+            
+            playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
+        }
+        
 //        for (playerID, updatedWord) in playerWords {
 //            guard let position = manager.positions[playerID],
 //                  let originalWord = playerViews[position].wordLabel.text,
@@ -427,7 +495,7 @@ extension GameViewController: GameManagerDelegate {
         guard let playerInfo = manager.playersInfo[playerID] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int
         else { return }
-        playerViews[position].wordLabel.text = ""
+//        playerViews[position].wordLabel.text = ""
         pointArrow(to: position)
     }
     
@@ -455,6 +523,11 @@ extension GameViewController: GameManagerDelegate {
             leaveButton.isHidden = true
             joinButton.isHidden = true
             gameManager.lettersUsed = Set("XZ")
+            print("inProgress")
+            // TODO: this is causing keyboard to clear
+            // room status is being called after being hit?
+            // transaction is trigger observers?
+            // print out observers to see what gets called after player takes damage
             keyboardView.update(letters: "", lettersUsed: gameManager.lettersUsed)
             updatePlayerStatus()
         }
