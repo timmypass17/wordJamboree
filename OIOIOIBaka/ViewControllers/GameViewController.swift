@@ -361,7 +361,7 @@ extension GameViewController: GameManagerDelegate {
               let position = playerInfo["position"] as? Int,
               position == 0
         else { return }
-        
+
         Task {
             do {
                 try await manager.startGame()
@@ -379,7 +379,7 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    func gameManager(_ manager: GameManager, playersInfoChanged: [String : AnyObject]) {
+    func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : AnyObject]) {
         if 2 - manager.playersInfo.count > 0 {
             navigationItem.title = "Waiting for \(2 - manager.playersInfo.count) more players..."
         } else {
@@ -388,12 +388,14 @@ extension GameViewController: GameManagerDelegate {
         
         playerViews.forEach { $0.isHidden = true }
         
-        for (uid, playerInfo) in manager.playersInfo {
+        for (uid, playerInfo) in playersInfo {
             guard let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
                   let name = additionalInfo["name"],
                   let position = playerInfo["position"] as? Int,
                   let hearts = playerInfo["hearts"] as? Int
-            else { continue }
+            else {
+                continue
+            }
             playerViews[position].nameLabel.text = name
             playerViews[position].isHidden = false
             playerViews[position].setHearts(to: hearts)

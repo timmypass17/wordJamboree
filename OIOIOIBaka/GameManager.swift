@@ -10,6 +10,12 @@ import UIKit
 import FirebaseDatabaseInternal
 import FirebaseAuth
 
+// Notes:
+// - Transactions are made to be called multible times and should handle nil (usually nil initally)
+//  - succeeds eventually
+//  - when it writes nil, it triggers .childDeleted from observers
+//  - normal behavior for transaction to be called multiple time (retries), triggering observers multiple time
+
 protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: Game.Status)
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String: Bool])
@@ -24,7 +30,7 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, lettersUsedUpdated: Set<Character>)
     func gameManager(_ manager: GameManager, countdownTimeUpdated timeRemaining: Int)
     func gameManager(_ manager: GameManager, countdownEnded: Bool)
-    func gameManager(_ manager: GameManager, playersInfoChanged: [String: AnyObject])
+    func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String: AnyObject])
 }
 
 
@@ -65,21 +71,110 @@ class GameManager {
         turnTimer = TurnTimer(soundManager: soundManager)
         turnTimer?.delegate = self
     }
+    // TODO: Im optimzing observers because using .value triggers as a side effect of transaction even if data doesn't change
     
     func setup() {
-        observePlayers()
-        observeCountdownStop()
-        observeCountdown()
-        observeRoomStatus()
-        observeShakes()
-        observeCurrentLetters()
-        observePlayersWord()
-        observeRounds()
-        observeSecondsPerTurn()
-        observePlayerTurn()
-        observeWinner()
+        Task {
+            do {
+//                try await getGame()
+                observePlayersInfo()
+                observePlayerAdded()
+                observePlayerRemoved()
+                observeCountdownStop()
+                observeCountdown()
+                observeRoomStatus()
+                observeShakes()
+                observeCurrentLetters()
+                observePlayersWord()
+                observeRounds()
+                observeSecondsPerTurn()
+                observePlayerTurn()
+                observeWinner()
+            } catch {
+                print("Error fetching game: \(error)")
+            }
+        }
+    }
+    
+    //    func observePlayerAdded() {
+    //        ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [self] snapshot in
+    //            print("ref.child('games/\(roomID)/playersInfo').observe(.childAdded)")
+    //            guard let playerInfo = snapshot.value as? [String: AnyObject] else {
+    //                print("failed to convert snapshot to playerInfo: \(snapshot)")
+    //                return
+    //            }
+    //            let uid = snapshot.key
+    //            print("got player info: \(playerInfo)")
+    //            playersInfo[uid] = playerInfo as AnyObject
+    //            delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+    //        }
+    //    }
+    
+//    func getGame() async throws  {
+//        let snapshot = try await ref.child("games/\(roomID)").getData()
+//        guard let game = snapshot.value as? [String: AnyObject],
+//              let playersInfo = game["playersInfo"] as? [String: AnyObject]
+//        else {
+//            print("failed to convert snapshot to game: \(snapshot)")
+//            return
+//        }
+//        
+//        self.playersInfo = playersInfo
+//        DispatchQueue.main.async {
+//            print("got game succesfully")
+//            self.delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+//        }
+//    }
+
+    func observePlayerAdded() {
+        ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [self] snapshot in
+            print("ref.child('games/\(roomID)/playersInfo').observe(.childAdded)")
+            guard let playerInfo = snapshot.value as? [String: AnyObject] else {
+                print("failed to convert snapshot to playerInfo: \(snapshot)")
+                return
+            }
+            let uid = snapshot.key
+            print("got player info: \(playerInfo)")
+            playersInfo[uid] = playerInfo as AnyObject
+            delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+        }
+    }
+    
+    func observePlayerRemoved() {
+        ref.child("games/\(roomID)/playersInfo").observe(.childRemoved) { [self] snapshot in
+            print("ref.child('games/\(roomID)/playersInfo').observe(.childRemoved)")
+            guard let playerInfo = snapshot.value as? [String: AnyObject] else {
+                print("failed to convert snapshot to playerInfo: \(snapshot)")
+                return
+            }
+            print("remove: \(playerInfo)")
+            let uid = snapshot.key
+            playersInfo[uid] = nil
+            delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+        }
     }
 
+    func observePlayersInfo() {
+        // .value
+        ref.child("games/\(roomID)/playersInfo").observe(.childChanged) { [self] snapshot in
+            print("ref.child('games/\(roomID)/playersInfo').observe(.childChanged)")
+            print("(observePlayersInfo) snapshot: \(snapshot)")
+            let playerInfo = snapshot.value as? [String: AnyObject] ?? [:] // playersInfo could be empty, empty room
+            let uid = snapshot.key
+            self.playersInfo[uid] = playerInfo as AnyObject
+            self.delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+        }
+    }
+    
+//    Snap (vAsn4MjsMuUB7wYofGsj9iZkel02) {
+//        additionalInfo =     {
+//            name = timmy;
+//        };
+//        hearts = 2;
+//        position = 0;
+//    }
+
+    
     func startGame() async throws {
         let (result, updatedSnapshot) = try await ref.child("/games/\(roomID)").runTransactionBlock { currentData in
             if var game = currentData.value as? [String: AnyObject],
@@ -101,8 +196,10 @@ class GameManager {
                 game["countdownStartTime"] = NSNull()
                 
                 currentData.value = game
+                print("(start game) success")
                 return .success(withValue: currentData)
             }
+            print("(start game) fail")
             return .success(withValue: currentData)
         }
 
@@ -187,6 +284,7 @@ class GameManager {
                 guard currentPlayerCount < 4,
                       roomStatus == .notStarted
                 else {
+                    print("(join game) fail 1")
                     return .success(withValue: currentData)
                 }
                 
@@ -214,8 +312,11 @@ class GameManager {
                 game["shake"] = shake as AnyObject
                 game["countdownStartTime"] = countdownStartTime as AnyObject
                 currentData.value = game
+                print("(join game) success")
                 return .success(withValue: currentData)
             }
+            print("(join game) fail 2") // note: we update game
+            print(currentData.value) // entire game is null initally, causes playersInfo .childRemove to be trigged (and other values in game)
             return .success(withValue: currentData)
         }
                 
@@ -233,15 +334,6 @@ class GameManager {
         }
     }
     
-    func observePlayers() {
-        ref.child("games/\(roomID)/playersInfo").observe(.value) { [self] snapshot in
-            print("ref.child('games/\(roomID)/playersInfo').observe(.value) - (name, hearts, position)")
-            let playersInfo = snapshot.value as? [String: AnyObject] ?? [:] // playersInfo could be empty, empty room
-            self.playersInfo = playersInfo
-            self.delegate?.gameManager(self, playersInfoChanged: playersInfo)
-        }
-    }
-
     func observePlayersWord() {
         playerWordsHandle = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [self] snapshot in
             print("ref.child('games/\(roomID)/playersWord').observe(.childChanged)")
@@ -278,11 +370,15 @@ class GameManager {
     }
     
     func observeRoomStatus() {
-        roomStatusHandle = ref.child("games/\(roomID)/status").observe(.value) { [self] snapshot in
-            print("ref.child('games/\(roomID)/status).observe(.value)")
+        // .value
+        roomStatusHandle = ref.child("games/\(roomID)/status").observe(.childChanged) { [self] snapshot in
+            print("ref.child('games/\(roomID)/status).observe(.childChanged)")
             guard let statusString = snapshot.value as? String,
                   let gameStatus = Game.Status(rawValue: statusString)
-            else { return }
+            else { 
+                print("Fail to convert snapshot to status: \(snapshot)")
+                return
+            }
             self.delegate?.gameManager(self, gameStatusUpdated: gameStatus)
         }
     }
@@ -545,13 +641,12 @@ class GameManager {
         }
     }
     
-    // TOOD: Last player killed doesn't shake?
     func damagePlayer(playerID: String) async throws {
         // Only user can damage self
         guard playerID == service.currentUser?.uid else { return }
         
         // Damage player
-        let (result, updatedSnapshot) = try await ref.child("games/\(roomID)").runTransactionBlock { currentData in
+        ref.child("games/\(roomID)").runTransactionBlock({ currentData in
             if var game = currentData.value as? [String: AnyObject],
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
                var currentPlayerInfo = playersInfo[playerID] as? [String: AnyObject],
@@ -562,10 +657,9 @@ class GameManager {
                var currentRound = rounds["currentRound"]
             {
                 hearts -= 1
-                shake[playerID]?.toggle()   // doesn't matter what value shake is, just want to trigger change
-                
                 currentPlayerInfo["hearts"] = hearts as AnyObject
                 playersInfo[playerID] = currentPlayerInfo as AnyObject
+                shake[playerID]?.toggle()   // doesn't matter what value shake is, just want to trigger change
                 game["playersInfo"] = playersInfo as AnyObject
                 game["shake"] = shake as AnyObject
                 
@@ -619,30 +713,132 @@ class GameManager {
                 print("(damagePlayer \(playerID)) success")
                 return .success(withValue: currentData)
             }
+            print("(damagePlayer \(playerID)) fail")
             return .success(withValue: currentData)
-        }
-        
-        // note: firebase does some optimization so client who fired this transaction doesn't trigger .childChange (e.g. "currentPlayerTurn")
-        // manually trigger update for this client that made transaction
-        guard let updatedGame = updatedSnapshot.value as? [String: AnyObject],
-              let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
-              let nextPlayerID = currentPlayerTurn["playerID"],
-              nextPlayerID != "", // when game ends, currentPlayerID set to empty string, don't start timer
-              let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
-              let playerInfo = playersInfo[playerID] as? [String: AnyObject],
-              let position = playerInfo["position"] as? Int,
-              let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
-        else { return }
-        
-        self.currentPlayerTurn = nextPlayerID
-        
-        DispatchQueue.main.async { [self] in
-            turnTimer?.startTimer(duration: secondsPerTurn)
-            delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
-            delegate?.gameManager(self, willShakePlayerAt: position)
-            delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")  // cleared next person's text
-        }
+        }, andCompletionBlock: { error, committed, updatedSnapshot in
+            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject],
+                  let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
+                  let nextPlayerID = currentPlayerTurn["playerID"],
+                  nextPlayerID != "", // when game ends, currentPlayerID set to empty string, don't start timer
+                  let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
+                  let playerInfo = playersInfo[playerID] as? [String: AnyObject],
+                  let position = playerInfo["position"] as? Int,
+                  let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
+            else { return }
+            
+            self.currentPlayerTurn = nextPlayerID
+            
+            DispatchQueue.main.async { [self] in
+                turnTimer?.startTimer(duration: secondsPerTurn)
+                delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
+                delegate?.gameManager(self, willShakePlayerAt: position)
+                delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")  // cleared next person's text
+            }
+        }, withLocalEvents: false)
+        // false - only care about final state, doesn't trigger adds/removes when return .success(nil) then .success(updatedGame)
+        // true - shows intermediate, triggers adds/removes from observers
+
     }
+//    
+    // GOOD
+//    // TOOD: Last player killed doesn't shake?
+//    func damagePlayer(playerID: String) async throws {
+//        // Only user can damage self
+//        guard playerID == service.currentUser?.uid else { return }
+//        
+//        // Damage player
+//        let (result, updatedSnapshot) = try await ref.child("games/\(roomID)").runTransactionBlock { currentData in
+//            if var game = currentData.value as? [String: AnyObject],
+//               var playersInfo = game["playersInfo"] as? [String: AnyObject],
+//               var currentPlayerInfo = playersInfo[playerID] as? [String: AnyObject],
+//               var hearts = currentPlayerInfo["hearts"] as? Int,
+//               let currentPosition = currentPlayerInfo["position"] as? Int,
+//               var shake = game["shake"] as? [String: Bool],
+//               var rounds = game["rounds"] as? [String: Int],
+//               var currentRound = rounds["currentRound"]
+//            {
+//                hearts -= 1
+//                currentPlayerInfo["hearts"] = hearts as AnyObject
+//                playersInfo[playerID] = currentPlayerInfo as AnyObject
+//                shake[playerID]?.toggle()   // doesn't matter what value shake is, just want to trigger change
+//                game["playersInfo"] = playersInfo as AnyObject
+//                game["shake"] = shake as AnyObject
+//                
+//                // Check if winner exists
+//                var playersAlive = 0
+//                var winnerID = ""
+//                for item in playersInfo {
+//                    guard let playerInfo = item.value as? [String: AnyObject],
+//                          let hearts = playerInfo["hearts"] as? Int
+//                    else { continue }
+//                    if hearts > 0 {
+//                        playersAlive += 1
+//                        winnerID = item.key
+//                    }
+//                }
+//                
+//                var currentPlayerTurn = game["currentPlayerTurn"] as? [String: String] ?? [:]
+//                
+//                let winnerExists = playersAlive == 1
+//                if winnerExists {
+//                    currentPlayerTurn["playerID"] = ""
+//                    var winner = game["winner"] as? [String: String] ?? [:]
+//                    winner["winnerID"] = winnerID
+//                    
+//                    game["winner"] = winner as AnyObject
+//                    game["status"] = Game.Status.notStarted.rawValue as AnyObject
+//                    game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+//                    game["secondsPerTurn"] = Int.random(in: 10...30) as AnyObject
+//                } else {
+//                    // Get next player's turn
+//                    guard let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo) else {
+//                        return .success(withValue: currentData)
+//                    }
+//                    
+//                    // Get next player turn
+//                    currentPlayerTurn["playerID"] = nextPlayerID
+//                    game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+//                    // Clear next player's input
+//                    var playersWord = game["playersWord"] as? [String: String] ?? [:]
+//                    playersWord[nextPlayerID] = ""
+//                    game["playersWord"] = playersWord as AnyObject
+//
+//                    let isLastTurn = currentPosition == playersInfo.count - 1
+//                    if isLastTurn {
+//                        currentRound += 1
+//                        rounds["currentRound"] = currentRound
+//                        game["rounds"] = rounds as AnyObject
+//                    }
+//                }
+//                currentData.value = game
+//                print("(damagePlayer \(playerID)) success")
+//                return .success(withValue: currentData)
+//            }
+//            
+//            return .success(withValue: currentData)
+//        }
+//        
+//        // note: firebase does some optimization so client who fired this transaction doesn't trigger .childChange (e.g. "currentPlayerTurn")
+//        // manually trigger update for this client that made transaction
+//        guard let updatedGame = updatedSnapshot.value as? [String: AnyObject],
+//              let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
+//              let nextPlayerID = currentPlayerTurn["playerID"],
+//              nextPlayerID != "", // when game ends, currentPlayerID set to empty string, don't start timer
+//              let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
+//              let playerInfo = playersInfo[playerID] as? [String: AnyObject],
+//              let position = playerInfo["position"] as? Int,
+//              let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
+//        else { return }
+//        
+//        self.currentPlayerTurn = nextPlayerID
+//        
+//        DispatchQueue.main.async { [self] in
+//            turnTimer?.startTimer(duration: secondsPerTurn)
+//            delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
+//            delegate?.gameManager(self, willShakePlayerAt: position)
+//            delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")  // cleared next person's text
+//        }
+//    }
     
 //    func damagePlayer(playerID: String) async throws {
 ////        // Only user can damage self
