@@ -134,7 +134,6 @@ class GameManager {
                 return
             }
             let uid = snapshot.key
-            print("got player info: \(playerInfo)")
             playersInfo[uid] = playerInfo as AnyObject
             delegate?.gameManager(self, playersInfoUpdated: playersInfo)
         }
@@ -147,18 +146,20 @@ class GameManager {
                 print("failed to convert snapshot to playerInfo: \(snapshot)")
                 return
             }
-            print("remove: \(playerInfo)")
             let uid = snapshot.key
             playersInfo[uid] = nil
             delegate?.gameManager(self, playersInfoUpdated: playersInfo)
         }
     }
 
+    // Trigger when
+    // 1. Player takes damage (hearts)
+    // 2. Player moves due to players joining/leaving (position)
     func observePlayersInfo() {
         // .value
         ref.child("games/\(roomID)/playersInfo").observe(.childChanged) { [self] snapshot in
             print("ref.child('games/\(roomID)/playersInfo').observe(.childChanged)")
-            print("(observePlayersInfo) snapshot: \(snapshot)")
+            print("\(snapshot)")
             let playerInfo = snapshot.value as? [String: AnyObject] ?? [:] // playersInfo could be empty, empty room
             let uid = snapshot.key
             self.playersInfo[uid] = playerInfo as AnyObject
@@ -166,6 +167,7 @@ class GameManager {
         }
     }
     
+//    .childChanged (better, only fetch data that changes)
 //    Snap (vAsn4MjsMuUB7wYofGsj9iZkel02) {
 //        additionalInfo =     {
 //            name = timmy;
@@ -173,10 +175,27 @@ class GameManager {
 //        hearts = 2;
 //        position = 0;
 //    }
+//    
+//    .value (bad, returns entire list of players even if only 1 player changed)
+//    Snap (playersInfo) {
+//        N5mAHMdLXeVdydbQ6CwjbiX1RSO2 =     {
+//            additionalInfo =         {
+//                name = bob;
+//            };
+//            hearts = 3;
+//            position = 1;
+//        };
+//        vAsn4MjsMuUB7wYofGsj9iZkel02 =     {
+//            additionalInfo =         {
+//                name = timmy;
+//            };
+//            hearts = 3;
+//            position = 0;
+//        };
+//    }
 
-    
-    func startGame() async throws {
-        let (result, updatedSnapshot) = try await ref.child("/games/\(roomID)").runTransactionBlock { currentData in
+    func startGame() {
+        ref.child("/games/\(roomID)").runTransactionBlock({ currentData in
             if var game = currentData.value as? [String: AnyObject],
                let roomStatusString = game["status"] as? String,
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
@@ -201,23 +220,56 @@ class GameManager {
             }
             print("(start game) fail")
             return .success(withValue: currentData)
-        }
-
-        // note: firebase does some optimization so client who fired this transaction doesn't trigger .childChange (e.g. "currentPlayerTurn")
-        // manually update this client
-        guard let updatedGame = updatedSnapshot.value as? [String: AnyObject],
-              let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
-              let startingPlayerID = currentPlayerTurn["playerID"],
-              startingPlayerID != ""
-        else { return }
-        
-        self.currentPlayerTurn = startingPlayerID
-        DispatchQueue.main.async { [self] in
-            // TODO: Maybe wrap 2 methods below in dispatch.main.async
-            turnTimer?.startTimer(duration: secondsPerTurn)
-            delegate?.gameManager(self, playerTurnChanged: startingPlayerID)
-        }
+        }, andCompletionBlock: { error, committed, snapshot in
+            if let error {
+                print(error.localizedDescription)
+            }
+        }, withLocalEvents: false)
     }
+    
+//    func startGame() async throws {
+//        let (result, updatedSnapshot) = try await ref.child("/games/\(roomID)").runTransactionBlock { currentData in
+//            if var game = currentData.value as? [String: AnyObject],
+//               let roomStatusString = game["status"] as? String,
+//               var playersInfo = game["playersInfo"] as? [String: AnyObject],
+//               let roomStatus = Game.Status(rawValue: roomStatusString),
+//               // TODO: Use random player
+////               let startingPlayerID = playersInfo.randomElement()?.key,
+//               playersInfo.count >= 2,
+//               roomStatus == .notStarted {
+//                
+//                let startingPlayerID = self.service.currentUser?.uid
+//
+//                var currentPlayerTurn = game["currentPlayerTurn"] as? [String: AnyObject] ?? [:]
+//                currentPlayerTurn["playerID"] = startingPlayerID as AnyObject
+//                
+//                game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+//                game["status"] = Game.Status.inProgress.rawValue as AnyObject
+//                game["countdownStartTime"] = NSNull()
+//                
+//                currentData.value = game
+//                print("(start game) success")
+//                return .success(withValue: currentData)
+//            }
+//            print("(start game) fail")
+//            return .success(withValue: currentData)
+//        }
+//
+//        // note: firebase does some optimization so client who fired this transaction doesn't trigger .childChange (e.g. "currentPlayerTurn")
+//        // manually update this client
+//        guard let updatedGame = updatedSnapshot.value as? [String: AnyObject],
+//              let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
+//              let startingPlayerID = currentPlayerTurn["playerID"],
+//              startingPlayerID != ""
+//        else { return }
+//        
+//        self.currentPlayerTurn = startingPlayerID
+//        DispatchQueue.main.async { [self] in
+//            // TODO: Maybe wrap 2 methods below in dispatch.main.async
+//            turnTimer?.startTimer(duration: secondsPerTurn)
+//            delegate?.gameManager(self, playerTurnChanged: startingPlayerID)
+//        }
+//    }
     
     func observeCountdownStop() {
         ref.child("games/\(roomID)/countdownStartTime").observe(.childRemoved) { [self] snapshot in
@@ -266,12 +318,10 @@ class GameManager {
         }
     }
     
-    func joinGame() async throws {
+    func joinGame() {
         guard let user = service.currentUser else { return }
-        let gameRef = ref.child("games").child(roomID)
 
-        // Perform transaction to ensure atomic update
-        let (_, updatedSnapshot) = try await gameRef.runTransactionBlock { currentData in
+        ref.child("games").child(roomID).runTransactionBlock({ currentData in
             if var game = currentData.value as? [String: AnyObject],
                let roomStatusString = game["status"] as? String,
                let roomStatus = Game.Status(rawValue: roomStatusString) {
@@ -318,12 +368,75 @@ class GameManager {
             print("(join game) fail 2") // note: we update game
             print(currentData.value) // entire game is null initally, causes playersInfo .childRemove to be trigged (and other values in game)
             return .success(withValue: currentData)
-        }
-                
-        try await ref.updateChildValues([
-            "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1),
-        ])
+        }, andCompletionBlock: { [self] error, committed, snapshot in
+            if let error {
+                print(error.localizedDescription)
+                return
+            }
+            ref.updateChildValues([
+                "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1)
+            ])
+        }, withLocalEvents: false)
     }
+    
+//    func joinGame() async throws {
+//        guard let user = service.currentUser else { return }
+//        let gameRef = ref.child("games").child(roomID)
+//
+//        // Perform transaction to ensure atomic update
+//        let (_, updatedSnapshot) = try await gameRef.runTransactionBlock { currentData in
+//            if var game = currentData.value as? [String: AnyObject],
+//               let roomStatusString = game["status"] as? String,
+//               let roomStatus = Game.Status(rawValue: roomStatusString) {
+//                
+//                var playersInfo = game["playersInfo"] as? [String: AnyObject] ?? [:]
+//                var playersWord = game["playersWord"] as? [String: AnyObject] ?? [:]
+//                var shake = game["shake"] as? [String: Bool] ?? [:]
+//
+//                let currentPlayerCount = playersInfo.count
+//                guard currentPlayerCount < 4,
+//                      roomStatus == .notStarted
+//                else {
+//                    print("(join game) fail 1")
+//                    return .success(withValue: currentData)
+//                }
+//                
+//                playersInfo[user.uid] = [
+//                    "hearts": 3,
+//                    "position": currentPlayerCount,
+//                    "additionalInfo": [
+//                        "name": user.name
+//                    ]
+//                ] as AnyObject
+//                
+//                playersWord[user.uid] = "" as AnyObject
+//                
+//                shake[user.uid] = false
+//                
+//                var countdownStartTime = game["countdownStartTime"] as? [String: AnyObject] ?? [:]
+//                if playersInfo.count == 2 {
+//                    let countdownDuration: TimeInterval = 15 // seconds
+//                    countdownStartTime["time"] = ServerValue.timestamp() as AnyObject
+//                }
+//                
+//                // Apply changes
+//                game["playersInfo"] = playersInfo as AnyObject
+//                game["playersWord"] = playersWord as AnyObject
+//                game["shake"] = shake as AnyObject
+//                game["countdownStartTime"] = countdownStartTime as AnyObject
+//                currentData.value = game
+//                print("(join game) success")
+//                return .success(withValue: currentData)
+//            }
+//            print("(join game) fail 2") // note: we update game
+//            print(currentData.value) // entire game is null initally, causes playersInfo .childRemove to be trigged (and other values in game)
+//            return .success(withValue: currentData)
+//        }
+//                
+//        try await ref.updateChildValues([
+//            "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1),
+//        ])
+//    }
     
     func observeWinner() {
         ref.child("games/\(roomID)/winner").observe(.childAdded) { [self] snapshot in
@@ -371,8 +484,8 @@ class GameManager {
     
     func observeRoomStatus() {
         // .value
-        roomStatusHandle = ref.child("games/\(roomID)/status").observe(.childChanged) { [self] snapshot in
-            print("ref.child('games/\(roomID)/status).observe(.childChanged)")
+        roomStatusHandle = ref.child("games/\(roomID)/status").observe(.value) { [self] snapshot in
+            print("ref.child('games/\(roomID)/status).observe(.value)")
             guard let statusString = snapshot.value as? String,
                   let gameStatus = Game.Status(rawValue: statusString)
             else { 
@@ -397,13 +510,13 @@ class GameManager {
         ])
     }
     
-    func submit(_ word: String) async throws -> Bool  {
+    func submit(_ word: String) async throws  {
         let wordIsValid = word.isWord && word.contains(currentLetters)
         
         if wordIsValid {
-            return try await handleSubmitSuccess(word: word)
+            handleSubmitSuccess(word: word)
         } else {
-            return try await handleSubmitFail()
+            handleSubmitFail()
         }
     }
     
@@ -433,14 +546,11 @@ class GameManager {
         return nil
     }
     
-    private func handleSubmitSuccess(word: String) async throws -> Bool {
-        guard let uid = service.currentUser?.uid else { return false }
-        // if return .abort() returns immediately, no retries? "fail 1" and stop for some reason
-        // if return .success, "fails 1", "success". Fails once, then succeeds
-        // result is always true if only returning .success
-        var committed = false
-        var localLettersUsed = lettersUsed  // Create a local copy of lettersUsed (modifiying lettersUsed in transaction doesn't persist)
-        let (result, updatedSnapshot) = try await ref.child("/games/\(roomID)").runTransactionBlock { [self] currentData in
+    private func handleSubmitSuccess(word: String) {
+        guard let uid = service.currentUser?.uid else { return }
+        
+        var localLettersUsed = lettersUsed
+        ref.child("/games/\(roomID)").runTransactionBlock({ currentData in
             guard var game = currentData.value as? [String: AnyObject],
                   var playersInfo = game["playersInfo"] as? [String: AnyObject],
                   var currentPlayerInfo = playersInfo[uid] as? [String: AnyObject],
@@ -454,11 +564,13 @@ class GameManager {
                   var secondsPerTurn = game["secondsPerTurn"] as? Int,
                   let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo)
             else {
+                print("(handleSubmitSuccess) fail 1")
                 return .success(withValue: currentData)
             }
             
             var wordsUsed = game["wordsUsed"] as? [String: Bool] ?? [:]
             guard wordsUsed[word] == nil else {
+                print("(handleSubmitSuccess) fail 2")
                 return .success(withValue: currentData)
             }
             
@@ -492,33 +604,128 @@ class GameManager {
             game["playersInfo"] = playersInfo as AnyObject
             game["secondsPerTurn"] = secondsPerTurn as AnyObject
             currentData.value = game
-            print("success")
-            committed = true
+            print("(handleSubmitSuccess) success")
             return .success(withValue: currentData)
-        }
-        
-        guard let updatedGame = updatedSnapshot.value as? [String: AnyObject],
-              let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
-              let nextPlayerID = currentPlayerTurn["playerID"],
-              let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
-              let playerInfo = playersInfo[uid] as? [String: AnyObject],
-              let position = playerInfo["position"] as? Int,
-              let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
-        else { return false }
-        
-        if committed {
-            self.lettersUsed = localLettersUsed
-            self.currentPlayerTurn = nextPlayerID
-            DispatchQueue.main.async { [self] in
-                turnTimer?.startTimer(duration: secondsPerTurn)
-                delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
-                delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")
-                delegate?.gameManager(self, lettersUsedUpdated: lettersUsed)
+        }, andCompletionBlock: { error, committed, snapshot in
+            if let error = error {
+                print(error.localizedDescription)
+                return
             }
-        }
-        
-        return committed
+            self.lettersUsed = localLettersUsed
+            self.delegate?.gameManager(self, lettersUsedUpdated: self.lettersUsed)
+        }, withLocalEvents: false)
+
+//
+//        guard let updatedGame = updatedSnapshot.value as? [String: AnyObject],
+//              let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
+//              let nextPlayerID = currentPlayerTurn["playerID"],
+//              let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
+//              let playerInfo = playersInfo[uid] as? [String: AnyObject],
+//              let position = playerInfo["position"] as? Int,
+//              let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
+//        else { return false }
+//        
+//        if committed {
+//            self.lettersUsed = localLettersUsed
+//            self.currentPlayerTurn = nextPlayerID
+//            DispatchQueue.main.async { [self] in
+//                turnTimer?.startTimer(duration: secondsPerTurn)
+//                delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
+//                delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")
+//                delegate?.gameManager(self, lettersUsedUpdated: lettersUsed)
+//            }
+//        }
+//        
+//        return committed
     }
+    
+    // await version bad
+//    private func handleSubmitSuccess(word: String) async throws -> Bool {
+//        guard let uid = service.currentUser?.uid else { return false }
+//        // if return .abort() returns immediately, no retries? "fail 1" and stop for some reason
+//        // if return .success, "fails 1", "success". Fails once, then succeeds
+//        // result is always true if only returning .success
+//        var committed = false
+//        var localLettersUsed = lettersUsed  // Create a local copy of lettersUsed (modifiying lettersUsed in transaction doesn't persist)
+//        let (result, updatedSnapshot) = try await ref.child("/games/\(roomID)").runTransactionBlock { [self] currentData in
+//            guard var game = currentData.value as? [String: AnyObject],
+//                  var playersInfo = game["playersInfo"] as? [String: AnyObject],
+//                  var currentPlayerInfo = playersInfo[uid] as? [String: AnyObject],
+//                  let currentPosition = currentPlayerInfo["position"] as? Int,
+//                  var hearts = currentPlayerInfo["hearts"] as? Int,
+//                  var currentPlayerTurn = game["currentPlayerTurn"] as? [String: String],
+//                  var currentLetters = game["currentLetters"] as? String,
+//                  var playersWord = game["playersWord"] as? [String: String],
+//                  var rounds = game["rounds"] as? [String: Int],
+//                  var currentRound = rounds["currentRound"],
+//                  var secondsPerTurn = game["secondsPerTurn"] as? Int,
+//                  let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo)
+//            else {
+//                return .success(withValue: currentData)
+//            }
+//            
+//            var wordsUsed = game["wordsUsed"] as? [String: Bool] ?? [:]
+//            guard wordsUsed[word] == nil else {
+//                return .success(withValue: currentData)
+//            }
+//            
+//            wordsUsed[word] = true
+//            currentPlayerTurn["playerID"] = nextPlayerID
+//            currentLetters = GameManager.generateRandomLetters()
+//            playersWord[nextPlayerID] = ""
+//            
+//            if currentPosition == playersInfo.count - 1 {
+//                currentRound += 1
+//                rounds["currentRound"] = currentRound
+//                secondsPerTurn -= 1
+//            }
+//            
+//            for letter in word {
+//                localLettersUsed.insert(letter)
+//            }
+//            
+//            if localLettersUsed.count == 26 {
+//                hearts += 1
+//                currentPlayerInfo["hearts"] = hearts as AnyObject
+//                playersInfo[uid] = currentPlayerInfo as AnyObject
+//                localLettersUsed = Set("XZ")
+//            }
+//            
+//            game["wordsUsed"] = wordsUsed as AnyObject
+//            game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+//            game["currentLetters"] = currentLetters as AnyObject
+//            game["playersWord"] = playersWord as AnyObject
+//            game["rounds"] = rounds as AnyObject
+//            game["playersInfo"] = playersInfo as AnyObject
+//            game["secondsPerTurn"] = secondsPerTurn as AnyObject
+//            currentData.value = game
+//            print("success")
+//            committed = true
+//            return .success(withValue: currentData)
+//        }
+//        
+//        guard let updatedGame = updatedSnapshot.value as? [String: AnyObject],
+//              let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
+//              let nextPlayerID = currentPlayerTurn["playerID"],
+//              let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
+//              let playerInfo = playersInfo[uid] as? [String: AnyObject],
+//              let position = playerInfo["position"] as? Int,
+//              let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
+//        else { return false }
+//        
+//        if committed {
+//            self.lettersUsed = localLettersUsed
+//            self.currentPlayerTurn = nextPlayerID
+//            DispatchQueue.main.async { [self] in
+//                turnTimer?.startTimer(duration: secondsPerTurn)
+//                delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
+//                delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")
+//                delegate?.gameManager(self, lettersUsedUpdated: lettersUsed)
+//            }
+//        }
+//        
+//        return committed
+//    }
     
 //    private func handleSubmitSuccess(word: String) async throws {
 //        guard let currentUser = service.currentUser,
@@ -580,12 +787,23 @@ class GameManager {
         return hearts[playerID, default: 0] != 0
     }
     
-    private func handleSubmitFail() async throws -> Bool {
-        guard let currentUser = service.currentUser else { return false }
-        try await ref.updateChildValues([
-            "shake/\(roomID)/players/\(currentUser.uid)": true
-        ])
-        return false
+    private func handleSubmitFail() {
+        ref.child("/games/\(roomID)").runTransactionBlock({ currentData in
+            if var game = currentData.value as? [String: AnyObject],
+               var shake = game["shake"] as? [String: Bool],
+               let uid = self.service.currentUser?.uid {
+                shake[uid]?.toggle()
+                game["shake"] = shake as AnyObject
+                currentData.value = game
+                return .success(withValue: currentData)
+            }
+            return .success(withValue: currentData)
+        }, andCompletionBlock: { error, committed, snapshot in
+            if let error {
+                print(error.localizedDescription)
+                return
+            }
+        }, withLocalEvents: false)
     }
     
     func observeShakes() {
@@ -716,27 +934,33 @@ class GameManager {
             print("(damagePlayer \(playerID)) fail")
             return .success(withValue: currentData)
         }, andCompletionBlock: { error, committed, updatedSnapshot in
-            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject],
-                  let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
-                  let nextPlayerID = currentPlayerTurn["playerID"],
-                  nextPlayerID != "", // when game ends, currentPlayerID set to empty string, don't start timer
-                  let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
-                  let playerInfo = playersInfo[playerID] as? [String: AnyObject],
-                  let position = playerInfo["position"] as? Int,
-                  let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
-            else { return }
-            
-            self.currentPlayerTurn = nextPlayerID
-            
-            DispatchQueue.main.async { [self] in
-                turnTimer?.startTimer(duration: secondsPerTurn)
-                delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
-                delegate?.gameManager(self, willShakePlayerAt: position)
-                delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")  // cleared next person's text
+            if let error {
+                print(error.localizedDescription)
+                return
             }
-        }, withLocalEvents: false)
-        // false - only care about final state, doesn't trigger adds/removes when return .success(nil) then .success(updatedGame)
-        // true - shows intermediate, triggers adds/removes from observers
+            
+//            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject],
+//                  let currentPlayerTurn = updatedGame["currentPlayerTurn"] as? [String: String],
+//                  let nextPlayerID = currentPlayerTurn["playerID"],
+//                  nextPlayerID != "", // when game ends, currentPlayerID set to empty string, don't start timer
+//                  let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject],
+//                  let playerInfo = playersInfo[playerID] as? [String: AnyObject],
+//                  let position = playerInfo["position"] as? Int,
+//                  let secondsPerTurn = updatedGame["secondsPerTurn"] as? Int
+//            else { return }
+//            
+//            self.currentPlayerTurn = nextPlayerID
+            
+            // Don't need?
+//            DispatchQueue.main.async { [self] in
+//                turnTimer?.startTimer(duration: secondsPerTurn)
+//                delegate?.gameManager(self, playerTurnChanged: nextPlayerID)
+//                delegate?.gameManager(self, willShakePlayerAt: position)
+//                delegate?.gameManager(self, player: nextPlayerID, updatedWord: "")  // cleared next person's text
+//            }
+        }, withLocalEvents: false) // IMPORTANT
+        // false - only care about final state of transaction, doesn't trigger multiple adds/removes when return .success(nil) -> .success(updatedGame)
+        // true - shows intermediate states of transaction, triggers adds/removes from observers when transaction retries
 
     }
 //    
