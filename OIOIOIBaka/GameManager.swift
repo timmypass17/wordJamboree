@@ -76,7 +76,6 @@ class GameManager {
     func setup() {
         Task {
             do {
-//                try await getGame()
                 observePlayersInfo()
                 observePlayerAdded()
                 observePlayerRemoved()
@@ -206,11 +205,7 @@ class GameManager {
                roomStatus == .notStarted {
                 
                 let startingPlayerID = self.service.currentUser?.uid
-
-                var currentPlayerTurn = game["currentPlayerTurn"] as? [String: AnyObject] ?? [:]
-                currentPlayerTurn["playerID"] = startingPlayerID as AnyObject
-                
-                game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+                game["currentPlayerTurn"] = startingPlayerID as AnyObject
                 game["status"] = Game.Status.inProgress.rawValue as AnyObject
                 game["countdownStartTime"] = NSNull()
                 
@@ -466,10 +461,10 @@ class GameManager {
         }
     }
     
-    // try using .value
+    // try using .value (.childChange original)
     func observePlayerTurn() {
-        playerTurnHandle = ref.child("games/\(roomID)/currentPlayerTurn").observe(.childChanged) { [self] snapshot in
-            print("ref.child('games/\(roomID)/currentPlayerTurn').observe(.childChanged)")
+        playerTurnHandle = ref.child("games/\(roomID)/currentPlayerTurn").observe(.value) { [self] snapshot in
+            print("ref.child('games/\(roomID)/currentPlayerTurn').observe(.value)")
             guard let playerID = snapshot.value as? String,
                   playerID != ""
             else {
@@ -556,13 +551,12 @@ class GameManager {
                   var currentPlayerInfo = playersInfo[uid] as? [String: AnyObject],
                   let currentPosition = currentPlayerInfo["position"] as? Int,
                   var hearts = currentPlayerInfo["hearts"] as? Int,
-                  var currentPlayerTurn = game["currentPlayerTurn"] as? [String: String],
                   var currentLetters = game["currentLetters"] as? String,
                   var playersWord = game["playersWord"] as? [String: String],
-                  var rounds = game["rounds"] as? [String: Int],
-                  var currentRound = rounds["currentRound"],
+                  var rounds = game["rounds"] as? Int,
                   var secondsPerTurn = game["secondsPerTurn"] as? Int,
                   let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo)
+//                  currentPlayerTurn == uid
             else {
                 print("(handleSubmitSuccess) fail 1")
                 return .success(withValue: currentData)
@@ -575,13 +569,12 @@ class GameManager {
             }
             
             wordsUsed[word] = true
-            currentPlayerTurn["playerID"] = nextPlayerID
+            game["currentPlayerTurn"] = nextPlayerID as AnyObject
             currentLetters = GameManager.generateRandomLetters()
             playersWord[nextPlayerID] = ""
             
             if currentPosition == playersInfo.count - 1 {
-                currentRound += 1
-                rounds["currentRound"] = currentRound
+                rounds += 1
                 secondsPerTurn -= 1
             }
             
@@ -597,7 +590,7 @@ class GameManager {
             }
             
             game["wordsUsed"] = wordsUsed as AnyObject
-            game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+            game["currentPlayerTurn"] = nextPlayerID as AnyObject
             game["currentLetters"] = currentLetters as AnyObject
             game["playersWord"] = playersWord as AnyObject
             game["rounds"] = rounds as AnyObject
@@ -841,13 +834,10 @@ class GameManager {
     }
     
     func observeRounds() {
-        roundsHandle = ref.child("games/\(roomID)/rounds").observe(.childChanged) { [self] snapshot in
-            print("ref.child('games/\(roomID)/rounds').observe(.childChanged)")
+        roundsHandle = ref.child("games/\(roomID)/rounds").observe(.value) { [self] snapshot in
+            print("ref.child('games/\(roomID)/rounds').observe(.value)")
             guard let currentRound = snapshot.value as? Int else { return }
             self.currentRound = currentRound
-            ref.updateChildValues([
-                "games/\(roomID)/secondsPerTurn": max(minimumTime, secondsPerTurn - 1)
-            ])
         }
     }
     
@@ -871,8 +861,8 @@ class GameManager {
                var hearts = currentPlayerInfo["hearts"] as? Int,
                let currentPosition = currentPlayerInfo["position"] as? Int,
                var shake = game["shake"] as? [String: Bool],
-               var rounds = game["rounds"] as? [String: Int],
-               var currentRound = rounds["currentRound"]
+               var rounds = game["rounds"] as? Int,
+               var secondsPerTurn = game["secondsPerTurn"] as? Int
             {
                 hearts -= 1
                 currentPlayerInfo["hearts"] = hearts as AnyObject
@@ -894,17 +884,15 @@ class GameManager {
                     }
                 }
                 
-                var currentPlayerTurn = game["currentPlayerTurn"] as? [String: String] ?? [:]
                 
                 let winnerExists = playersAlive == 1
                 if winnerExists {
-                    currentPlayerTurn["playerID"] = ""
                     var winner = game["winner"] as? [String: String] ?? [:]
                     winner["winnerID"] = winnerID
                     
                     game["winner"] = winner as AnyObject
                     game["status"] = Game.Status.notStarted.rawValue as AnyObject
-                    game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+                    game["currentPlayerTurn"] = NSNull() as AnyObject // maybe use ""
                     game["secondsPerTurn"] = Int.random(in: 10...30) as AnyObject
                 } else {
                     // Get next player's turn
@@ -913,8 +901,7 @@ class GameManager {
                     }
                     
                     // Get next player turn
-                    currentPlayerTurn["playerID"] = nextPlayerID
-                    game["currentPlayerTurn"] = currentPlayerTurn as AnyObject
+                    game["currentPlayerTurn"] = nextPlayerID as AnyObject
                     // Clear next player's input
                     var playersWord = game["playersWord"] as? [String: String] ?? [:]
                     playersWord[nextPlayerID] = ""
@@ -922,9 +909,10 @@ class GameManager {
 
                     let isLastTurn = currentPosition == playersInfo.count - 1
                     if isLastTurn {
-                        currentRound += 1
-                        rounds["currentRound"] = currentRound
+                        rounds += 1
                         game["rounds"] = rounds as AnyObject
+                        secondsPerTurn -= 1
+                        game["secondsPerRound"] = secondsPerTurn as AnyObject
                     }
                 }
                 currentData.value = game

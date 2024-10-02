@@ -81,12 +81,8 @@ class FirebaseService {
             roomID: roomID,
             currentLetters: GameManager.generateRandomLetters(),
             secondsPerTurn: Int.random(in: 10...30) + 3,
-            rounds: [
-                "currentRound": 1
-            ],
-            currentPlayerTurn: [
-                "playerID": ""
-            ],
+            rounds: 1,
+            currentPlayerTurn: nil,
             playersInfo: [
                 currentUser.uid:
                     PlayerInfo(

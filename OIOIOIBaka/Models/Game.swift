@@ -11,8 +11,8 @@ struct Game: Codable {
     var roomID: String
     var currentLetters: String
     var secondsPerTurn: Int
-    var rounds: [String: Int]?
-    var currentPlayerTurn: [String: String]?
+    var rounds: Int
+    var currentPlayerTurn: String?
     var playersInfo: [String: PlayerInfo]? // Updated to use a PlayerInfo struct
     var winner: String?
     var shake: [String: Bool]?
