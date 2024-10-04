@@ -11,7 +11,7 @@ import SwiftUI
 import AVFAudio
 
 
-// TODO: Add mechanic where u can't submit previously submitted words
+// TODO: Player not shake if used same word
 // - fix bug where if user leaves and rejoins, there will be duplicate observres causing double damage. make sure observers are detached when use exists
 class GameViewController: UIViewController {
     
@@ -22,11 +22,13 @@ class GameViewController: UIViewController {
         return playerView
     }
 
-    let currentWordView: CurrentWordView = {
-        let currentWordView = CurrentWordView()
-        currentWordView.translatesAutoresizingMaskIntoConstraints = false
-        return currentWordView
-    }()
+//    let currentWordView: CurrentWordView = {
+//        let currentWordView = CurrentWordView()
+//        currentWordView.translatesAutoresizingMaskIntoConstraints = false
+//        return currentWordView
+//    }()
+    
+    var currentWordView: CurrentWordView?
     
     let joinButton: UIButton = {
         var config = UIButton.Configuration.filled()
@@ -65,6 +67,8 @@ class GameViewController: UIViewController {
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
+    
+    var container: UIView!
     
     var afkTimer: Timer?
     var currentCountdownValue = 5
@@ -129,13 +133,13 @@ class GameViewController: UIViewController {
             submitButton.heightAnchor.constraint(equalToConstant: keyHeight)
         ])
                 
-        let container = UIView()
+        container = UIView()
         container.translatesAutoresizingMaskIntoConstraints = false
         
         view.addSubview(container)
 
         NSLayoutConstraint.activate([
-            container.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            container.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor),
             container.bottomAnchor.constraint(equalTo: keyboardView.topAnchor),
             container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -143,15 +147,11 @@ class GameViewController: UIViewController {
         ])
         
         playerViews.forEach { container.addSubview($0) }
-        container.addSubview(currentWordView)
 //        container.addSubview(countDownView)
         container.addSubview(joinButton)
         container.addSubview(leaveButton)
         
         NSLayoutConstraint.activate([
-            currentWordView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            currentWordView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-
             playerViews[0].centerXAnchor.constraint(equalTo: container.centerXAnchor),
             playerViews[0].topAnchor.constraint(equalTo: container.topAnchor),
             playerViews[0].bottomAnchor.constraint(equalTo: joinButton.topAnchor),
@@ -168,14 +168,26 @@ class GameViewController: UIViewController {
             playerViews[3].trailingAnchor.constraint(equalTo: container.trailingAnchor),
             playerViews[3].leadingAnchor.constraint(equalTo: container.centerXAnchor, constant: 25),
 
-//            countDownView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-//            countDownView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            
             joinButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             
             leaveButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             leaveButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+        ])
+    
+        // note: setting contraints doesn't layout it out immediately, so frames aren't set properly
+        view.layoutIfNeeded()
+    
+        // playerViews[0].wordLabel.frame.maxY returns top of label for some reason so i need to add height of label to get bottom
+        let arrowLength = container.frame.midY - (playerViews[0].wordLabel.frame.maxY + playerViews[0].wordLabel.frame.height)
+
+        currentWordView = CurrentWordView(arrowLength: arrowLength) // ~50
+        currentWordView!.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(currentWordView!)
+        
+        NSLayoutConstraint.activate([
+            currentWordView!.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            currentWordView!.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         ])
     }
     
@@ -361,6 +373,7 @@ extension GameViewController: GameManagerDelegate {
               let position = playerInfo["position"] as? Int,
               position == 0
         else { return }
+        print("2")
 
         Task {
             do {
@@ -490,7 +503,7 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String) {
-        currentWordView.wordLabel.text = letters
+        currentWordView?.wordLabel.text = letters
     }
     
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String) {
@@ -502,7 +515,7 @@ extension GameViewController: GameManagerDelegate {
     }
     
     private func pointArrow(to position: Int) {
-        self.currentWordView.pointArrow(at: self.playerViews[position], self)
+        self.currentWordView?.pointArrow(at: self.playerViews[position], self)
     }
     
     func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: Game.Status) {
@@ -510,7 +523,7 @@ extension GameViewController: GameManagerDelegate {
         switch roomStatus {
         case .notStarted:
             gameManager.turnTimer?.stopTimer()
-            currentWordView.isHidden = true
+            currentWordView?.isHidden = true
             
             // If user in game
             if let _ = manager.playersInfo.first(where: { $0.key == uid }) {
@@ -521,7 +534,7 @@ extension GameViewController: GameManagerDelegate {
                 leaveButton.isHidden = true
             }
         case .inProgress:
-            currentWordView.isHidden = false
+            currentWordView?.isHidden = false
             leaveButton.isHidden = true
             joinButton.isHidden = true
             gameManager.lettersUsed = Set("XZ")

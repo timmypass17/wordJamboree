@@ -11,17 +11,19 @@ class CurrentWordView: UIView {
     
     let wordLabel: UILabel = {
         let label = UILabel()
-        label.text = "-"
+        label.text = "ILY"
         label.font = .preferredFont(forTextStyle: .title1)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
-    let arrowView: ArrowView = {
-        let arrowView = ArrowView()
-        arrowView.translatesAutoresizingMaskIntoConstraints = false
-        return arrowView
-    }()
+    let arrowView: ArrowView!
+    
+//    let arrowView: ArrowView = {
+//        let arrowView = ArrowView()
+//        arrowView.translatesAutoresizingMaskIntoConstraints = false
+//        return arrowView
+//    }()
     
     let container: UIView = {
         let view = UIView()
@@ -32,27 +34,52 @@ class CurrentWordView: UIView {
     
     let padding: CGFloat = 5
     
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(arrowLength: CGFloat) {
+        arrowView = ArrowView(arrowLength: arrowLength)
+        arrowView.translatesAutoresizingMaskIntoConstraints = false
         
+        super.init(frame: .zero)
+
         container.addSubview(wordLabel)
         addSubview(arrowView)
         addSubview(container)
-        
+
         NSLayoutConstraint.activate([
             container.centerXAnchor.constraint(equalTo: centerXAnchor),
             container.centerYAnchor.constraint(equalTo: centerYAnchor),
-                        
+
             wordLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: padding),
             wordLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -padding),
             wordLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: padding),
             wordLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -padding),
-            
+
             arrowView.centerXAnchor.constraint(equalTo: centerXAnchor),
             arrowView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            
+
         ])
     }
+    
+//    override init(frame: CGRect) {
+//        super.init(frame: frame)
+//        
+//        container.addSubview(wordLabel)
+//        addSubview(arrowView)
+//        addSubview(container)
+//        
+//        NSLayoutConstraint.activate([
+//            container.centerXAnchor.constraint(equalTo: centerXAnchor),
+//            container.centerYAnchor.constraint(equalTo: centerYAnchor),
+//                        
+//            wordLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: padding),
+//            wordLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -padding),
+//            wordLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: padding),
+//            wordLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -padding),
+//            
+//            arrowView.centerXAnchor.constraint(equalTo: centerXAnchor),
+//            arrowView.centerYAnchor.constraint(equalTo: centerYAnchor),
+//            
+//        ])
+//    }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -85,5 +112,5 @@ class CurrentWordView: UIView {
 }
 
 #Preview("CurrentWordView") {
-    CurrentWordView()
+    CurrentWordView(arrowLength: 50)
 }

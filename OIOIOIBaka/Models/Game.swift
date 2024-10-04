@@ -12,12 +12,12 @@ struct Game: Codable {
     var currentLetters: String
     var secondsPerTurn: Int
     var rounds: Int
-    var currentPlayerTurn: String?
+    var currentPlayerTurn: String? = nil
     var playersInfo: [String: PlayerInfo]? // Updated to use a PlayerInfo struct
     var winner: String?
     var shake: [String: Bool]?
     var status: Status = .notStarted
-    var countdownStartTime: [String: TimeInterval]?
+    var countdownStartTime: TimeInterval? = nil
     var playersWord: [String: String]?
     
     enum Status: String, Codable {

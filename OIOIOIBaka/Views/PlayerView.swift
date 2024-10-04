@@ -19,7 +19,7 @@ class PlayerView: UIView {
     let profileImageView: ProfileImageView = {
         let view = ProfileImageView()
         NSLayoutConstraint.activate([
-            view.heightAnchor.constraint(equalToConstant: 100),
+            view.heightAnchor.constraint(equalToConstant: 75),
             view.widthAnchor.constraint(equalTo: view.heightAnchor)
         ])
         return view
@@ -112,7 +112,12 @@ class PlayerView: UIView {
             skullView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
             
             crownView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            crownView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10)
+            crownView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
+            
+//            profileImageView.heightAnchor.constraint(equalTo: profileImageView.widthAnchor), // Square ratio
+//            profileImageView.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: 0.3), // 30% of the container width
+//
+            
         ])
     }
     
