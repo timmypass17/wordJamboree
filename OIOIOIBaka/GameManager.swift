@@ -32,6 +32,8 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, countdownTimeUpdated timeRemaining: Int)
     func gameManager(_ manager: GameManager, countdownEnded: Bool)
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String: AnyObject])
+    func gameManager(_ manager: GameManager, newPlayerJoined playerInfo: [String: AnyObject], playerID: String)
+
 }
 
 
@@ -117,6 +119,7 @@ class GameManager {
                     }
                 }
                 DispatchQueue.main.async {
+                    self.delegate?.gameManager(self, newPlayerJoined: playerInfo, playerID: snapshot.key)
                     self.delegate?.gameManager(self, playersInfoUpdated: self.playersInfo)
                 }
             }

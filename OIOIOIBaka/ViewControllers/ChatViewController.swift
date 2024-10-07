@@ -7,6 +7,10 @@
 
 import UIKit
 
+extension Notification.Name {
+    static let newMessageNotification = Notification.Name("newMessage")
+}
+
 class ChatViewController: UIViewController {
         
     var gameManager: GameManager!
@@ -17,15 +21,6 @@ class ChatViewController: UIViewController {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         return tableView
     }()
-    
-//    let textField: UITextField = {
-//        let textField = UITextField()
-//        textField.placeholder = "Add a comment..."
-//        textField.borderStyle = .roundedRect
-//        textField.returnKeyType = .send
-//        textField.translatesAutoresizingMaskIntoConstraints = false
-//        return textField
-//    }()
     
     let addMessageView: AddMessageView = {
         let addMessageView = AddMessageView()
@@ -39,7 +34,6 @@ class ChatViewController: UIViewController {
         super.viewDidLoad()
         navigationItem.title = "Chat Room"
         tableView.dataSource = self
-//        tableView.delegate = self
         addMessageView.textField.delegate = self
         chatManager.delegate = self
         
@@ -48,7 +42,6 @@ class ChatViewController: UIViewController {
         view.addSubview(tableView)
         view.addSubview(addMessageView)
         
-//        addMessageViewBottomConstraint = addMessageView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
         addMessageViewBottomConstraint = addMessageView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         
         NSLayoutConstraint.activate([
@@ -59,7 +52,6 @@ class ChatViewController: UIViewController {
             
             addMessageView.leftAnchor.constraint(equalTo: view.leftAnchor),
             addMessageView.rightAnchor.constraint(equalTo: view.rightAnchor),
-//            addMessageView.heightAnchor.constraint(equalToConstant: 40),
             addMessageViewBottomConstraint!
         ])
         
@@ -69,6 +61,8 @@ class ChatViewController: UIViewController {
         let tap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         view.addGestureRecognizer(tap)
         scrollToBottom(animated: false)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(handleInsertingNewMessage), name: .newMessageNotification, object: nil)
     }
 
     // Handle keyboard showing
@@ -127,7 +121,7 @@ class ChatViewController: UIViewController {
                 chatManager.messages.append(message)
                 let indexPath = IndexPath(row: chatManager.messages.count - 1, section: 0)
                 tableView.insertRows(at: [indexPath], with: .automatic)
-                scrollToBottom()
+                scrollToBottom(animated: true)
                 try await chatManager.sendMessage(message: message)
             } catch {
                 print("Error sending message: \(error)")
@@ -151,18 +145,6 @@ extension ChatViewController: UITextFieldDelegate {
         return true
     }
 }
-
-//extension ChatViewController: UITableViewDelegate {
-//    
-//}
-//
-//// TODO: Add dismiss keyboard when dragging
-//extension ChatViewController: UIScrollViewDelegate {
-//    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-//        print("dragging")
-//        view.endEditing(true) // Dismiss keyboard
-//    }
-//}
 
 extension ChatViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -193,8 +175,19 @@ extension ChatViewController: UITableViewDataSource {
 
 extension ChatViewController: ChatManagerDelegate {
     func chatManager(_ chatManager: ChatManager, didReceiveNewMessage message: Message) {
-        guard message.uid != chatManager.service.currentUser?.uid else { return }
+        handleInsertingNewMessage()
+    }
+    
+    @objc func handleInsertingNewMessage() {
         let indexPath = IndexPath(row: chatManager.messages.count - 1, section: 0)
         tableView.insertRows(at: [indexPath], with: .automatic)
+        
+        // Only scroll to bottom if user is at bottom
+        // - annoyig if user is looking at older messages and suddenly forced to scroll to bottom when new message arrived
+        let oldLastIndexPath = IndexPath(row: chatManager.messages.count - 2, section: 0)
+        if let visiblePaths = tableView.indexPathsForVisibleRows,
+           visiblePaths.contains(oldLastIndexPath) {
+            self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+        }
     }
 }

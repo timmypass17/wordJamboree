@@ -414,6 +414,19 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
+    func gameManager(_ manager: GameManager, newPlayerJoined playerInfo: [String : AnyObject], playerID: String) {
+        print("newPlayerJoined 1")
+        guard let additionalInfo = playerInfo["additionalInfo"],
+              let name = additionalInfo["name"] as? String,
+              let pfpImage = manager.pfps[playerID]
+        else { return }
+        print("newPlayerJoined 2")
+
+        let message = Message(uid: playerID, name: name, message: "Player Joined", pfpImage: pfpImage, createdAt: nil)
+        chatManager.messages.append(message)
+        NotificationCenter.default.post(name: .newMessageNotification, object: nil)
+    }
+    
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : AnyObject]) {
         if 2 - manager.playersInfo.count > 0 {
             navigationItem.title = "Waiting for \(2 - manager.playersInfo.count) more players..."
