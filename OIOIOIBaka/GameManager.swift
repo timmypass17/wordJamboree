@@ -9,6 +9,7 @@ import Foundation
 import UIKit
 import FirebaseDatabaseInternal
 import FirebaseAuth
+import FirebaseFirestore
 
 // Notes:
 // - Transactions are made to be called multible times and should handle nil (usually nil initally)
@@ -49,7 +50,8 @@ class GameManager {
     
     var service: FirebaseService
     let soundManager = SoundManager()
-    var ref = Database.database().reference()
+    var ref = Database.database().reference()   // RTDB
+    let db = Firestore.firestore()              // Firestore
     weak var delegate: GameManagerDelegate?
     var turnTimer: TurnTimer?
     var countdownTimer: Timer?
@@ -64,7 +66,9 @@ class GameManager {
     var heartsHandle: DatabaseHandle?
     var roundsHandle: DatabaseHandle?
     var secondsPerTurnHandle: DatabaseHandle?
-        
+    
+    var pfps: [String: UIImage?] = [:]
+
     init(roomID: String, service: FirebaseService) {
         self.service = service
         self.roomID = roomID
@@ -104,7 +108,18 @@ class GameManager {
             }
             let uid = snapshot.key
             playersInfo[uid] = playerInfo as AnyObject
-            delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+            Task {
+                if pfps[uid] == nil {
+                    if let pfpImage = try? await service.getProfilePicture(uid: uid) {
+                        pfps[uid] = pfpImage
+                    } else {
+                        pfps[uid] = nil // can store nil because pfps is type [String: UIImage?]
+                    }
+                }
+                DispatchQueue.main.async {
+                    self.delegate?.gameManager(self, playersInfoUpdated: self.playersInfo)
+                }
+            }
         }
     }
     
@@ -132,6 +147,7 @@ class GameManager {
             let playerInfo = snapshot.value as? [String: AnyObject] ?? [:] // playersInfo could be empty, empty room
             let uid = snapshot.key
             self.playersInfo[uid] = playerInfo as AnyObject
+            
             self.delegate?.gameManager(self, playersInfoUpdated: playersInfo)
         }
     }
@@ -685,8 +701,8 @@ class GameManager {
                     
                     // Update positions after removal of player
                     let playerIDs: [String] = playersInfo.sorted { playerInfo1, playerInfo2 in
-                        let position1 = playerInfo1.value["position"] as? Int ?? .max
-                        let position2 = playerInfo2.value["position"] as? Int ?? .max
+                        let position1 = (playerInfo1.value as? [String: AnyObject])?["position"] as? Int ?? .max
+                        let position2 = (playerInfo2.value as? [String: AnyObject])?["position"] as? Int ?? .max
                         return position1 < position2
                     }.map { $0.key }
                     

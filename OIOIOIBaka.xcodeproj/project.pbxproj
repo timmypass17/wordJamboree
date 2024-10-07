@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		321398302CB4476600A636A7 /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3213982F2CB4476600A636A7 /* ChatManager.swift */; };
+		321398322CB4630A00A636A7 /* AddMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398312CB4630A00A636A7 /* AddMessageView.swift */; };
 		32610AEC2C98C9440011946E /* ArrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AEB2C98C9440011946E /* ArrowView.swift */; };
 		32610AF12C9929390011946E /* ding.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF02C9929390011946E /* ding.mp3 */; };
 		32610AF32C992D2B0011946E /* bonk.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF22C992D2B0011946E /* bonk.mp3 */; };
@@ -45,10 +47,21 @@
 		32EF33DF2C8FAFE8000850A5 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 32EF33DE2C8FAFE8000850A5 /* FirebaseDatabase */; };
 		32F64FEE2C9B6C6B0046C20E /* ticking.wav in Resources */ = {isa = PBXBuildFile; fileRef = 32F64FED2C9B6C6B0046C20E /* ticking.wav */; };
 		32F64FF02C9B77A50046C20E /* TurnTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F64FEF2C9B77A50046C20E /* TurnTimer.swift */; };
+		32F9565B2CB0620F00DAA6E6 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9565A2CB0620F00DAA6E6 /* SettingsViewController.swift */; };
+		32F9565D2CB0628E00DAA6E6 /* SettingsTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9565C2CB0628E00DAA6E6 /* SettingsTableViewCell.swift */; };
+		32F9565F2CB0637000DAA6E6 /* SignInTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9565E2CB0637000DAA6E6 /* SignInTableViewCell.swift */; };
+		32F956612CB065C500DAA6E6 /* SignOutTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F956602CB065C500DAA6E6 /* SignOutTableViewCell.swift */; };
+		32F956652CB0755000DAA6E6 /* SettingsHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F956642CB0755000DAA6E6 /* SettingsHeaderView.swift */; };
+		32F956672CB1DEB500DAA6E6 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 32F956662CB1DEB500DAA6E6 /* FirebaseStorage */; };
+		32F956692CB3256A00DAA6E6 /* ChatViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F956682CB3256A00DAA6E6 /* ChatViewController.swift */; };
+		32F9566B2CB3275C00DAA6E6 /* MessageTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9566A2CB3275C00DAA6E6 /* MessageTableViewCell.swift */; };
+		32F9566D2CB32AE800DAA6E6 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9566C2CB32AE800DAA6E6 /* Message.swift */; };
 		32FC923C2C9CC85B00F09B00 /* JoinGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FC923B2C9CC85B00F09B00 /* JoinGameView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3213982F2CB4476600A636A7 /* ChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatManager.swift; sourceTree = "<group>"; };
+		321398312CB4630A00A636A7 /* AddMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMessageView.swift; sourceTree = "<group>"; };
 		32610AEB2C98C9440011946E /* ArrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrowView.swift; sourceTree = "<group>"; };
 		32610AF02C9929390011946E /* ding.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = ding.mp3; sourceTree = "<group>"; };
 		32610AF22C992D2B0011946E /* bonk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bonk.mp3; sourceTree = "<group>"; };
@@ -82,6 +95,14 @@
 		32EF33DB2C8E8E2D000850A5 /* Room.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
 		32F64FED2C9B6C6B0046C20E /* ticking.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ticking.wav; sourceTree = "<group>"; };
 		32F64FEF2C9B77A50046C20E /* TurnTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnTimer.swift; sourceTree = "<group>"; };
+		32F9565A2CB0620F00DAA6E6 /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
+		32F9565C2CB0628E00DAA6E6 /* SettingsTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTableViewCell.swift; sourceTree = "<group>"; };
+		32F9565E2CB0637000DAA6E6 /* SignInTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInTableViewCell.swift; sourceTree = "<group>"; };
+		32F956602CB065C500DAA6E6 /* SignOutTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignOutTableViewCell.swift; sourceTree = "<group>"; };
+		32F956642CB0755000DAA6E6 /* SettingsHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHeaderView.swift; sourceTree = "<group>"; };
+		32F956682CB3256A00DAA6E6 /* ChatViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewController.swift; sourceTree = "<group>"; };
+		32F9566A2CB3275C00DAA6E6 /* MessageTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTableViewCell.swift; sourceTree = "<group>"; };
+		32F9566C2CB32AE800DAA6E6 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		32FC923B2C9CC85B00F09B00 /* JoinGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinGameView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -95,6 +116,7 @@
 				326F93DB2C8CE5E700B28F04 /* FirebaseAuth in Frameworks */,
 				326F93E62C8CEA0C00B28F04 /* GoogleSignInSwift in Frameworks */,
 				326F93DD2C8CE5E700B28F04 /* FirebaseFirestore in Frameworks */,
+				32F956672CB1DEB500DAA6E6 /* FirebaseStorage in Frameworks */,
 				32EF33DF2C8FAFE8000850A5 /* FirebaseDatabase in Frameworks */,
 				326F93DF2C8CE5E700B28F04 /* FirebaseFunctions in Frameworks */,
 			);
@@ -148,6 +170,7 @@
 				32C06C622C91082200D3676D /* GameManager.swift */,
 				32610AF42C9930140011946E /* SoundManager.swift */,
 				32F64FEF2C9B77A50046C20E /* TurnTimer.swift */,
+				3213982F2CB4476600A636A7 /* ChatManager.swift */,
 			);
 			path = OIOIOIBaka;
 			sourceTree = "<group>";
@@ -159,6 +182,8 @@
 				32EF33D72C8E7E81000850A5 /* CreateRoomViewController.swift */,
 				32C06C582C90E85200D3676D /* Item.swift */,
 				32C06C5E2C9104DB00D3676D /* GameViewController.swift */,
+				32F9565A2CB0620F00DAA6E6 /* SettingsViewController.swift */,
+				32F956682CB3256A00DAA6E6 /* ChatViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -176,6 +201,8 @@
 				32610AFA2C9A6D420011946E /* CountDownView.swift */,
 				32FC923B2C9CC85B00F09B00 /* JoinGameView.swift */,
 				32D23A2D2CA264F6002C4F04 /* KeyboardView.swift */,
+				32F956642CB0755000DAA6E6 /* SettingsHeaderView.swift */,
+				321398312CB4630A00A636A7 /* AddMessageView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -186,6 +213,10 @@
 				326F93CC2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift */,
 				326F93D32C8BE2B100B28F04 /* RoomCollectionViewCell.swift */,
 				32EF33D92C8E801F000850A5 /* RoomTitleTableViewCell.swift */,
+				32F9565C2CB0628E00DAA6E6 /* SettingsTableViewCell.swift */,
+				32F9565E2CB0637000DAA6E6 /* SignInTableViewCell.swift */,
+				32F956602CB065C500DAA6E6 /* SignOutTableViewCell.swift */,
+				32F9566A2CB3275C00DAA6E6 /* MessageTableViewCell.swift */,
 			);
 			path = Cells;
 			sourceTree = "<group>";
@@ -196,6 +227,7 @@
 				32EF33D52C8E7247000850A5 /* MyUser.swift */,
 				32EF33DB2C8E8E2D000850A5 /* Room.swift */,
 				32C06C682C92163A00D3676D /* Game.swift */,
+				32F9566C2CB32AE800DAA6E6 /* Message.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -231,6 +263,7 @@
 				326F93E32C8CEA0C00B28F04 /* GoogleSignIn */,
 				326F93E52C8CEA0C00B28F04 /* GoogleSignInSwift */,
 				32EF33DE2C8FAFE8000850A5 /* FirebaseDatabase */,
+				32F956662CB1DEB500DAA6E6 /* FirebaseStorage */,
 			);
 			productName = OIOIOIBaka;
 			productReference = 326F93AD2C8B928E00B28F04 /* OIOIOIBaka.app */;
@@ -296,10 +329,14 @@
 			files = (
 				32FC923C2C9CC85B00F09B00 /* JoinGameView.swift in Sources */,
 				32610AFB2C9A6D420011946E /* CountDownView.swift in Sources */,
+				32F9565F2CB0637000DAA6E6 /* SignInTableViewCell.swift in Sources */,
+				32F9566D2CB32AE800DAA6E6 /* Message.swift in Sources */,
 				326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */,
 				32EF33DA2C8E801F000850A5 /* RoomTitleTableViewCell.swift in Sources */,
 				326F93B12C8B928E00B28F04 /* AppDelegate.swift in Sources */,
 				326F93B32C8B928E00B28F04 /* SceneDelegate.swift in Sources */,
+				321398322CB4630A00A636A7 /* AddMessageView.swift in Sources */,
+				32F956652CB0755000DAA6E6 /* SettingsHeaderView.swift in Sources */,
 				32C06C592C90E85200D3676D /* Item.swift in Sources */,
 				32610AEC2C98C9440011946E /* ArrowView.swift in Sources */,
 				32D23A2E2CA264F6002C4F04 /* KeyboardView.swift in Sources */,
@@ -308,18 +345,24 @@
 				32C06C632C91082200D3676D /* GameManager.swift in Sources */,
 				32C06C652C9132B200D3676D /* HeartsView.swift in Sources */,
 				32C06C5B2C90F41900D3676D /* PlayerView.swift in Sources */,
+				32F956612CB065C500DAA6E6 /* SignOutTableViewCell.swift in Sources */,
 				32610AF72C9A28CB0011946E /* GameView.swift in Sources */,
 				32C06C692C92163A00D3676D /* Game.swift in Sources */,
 				32F64FF02C9B77A50046C20E /* TurnTimer.swift in Sources */,
 				32C06C5D2C90F6D800D3676D /* ProfileImageView.swift in Sources */,
+				32F9565D2CB0628E00DAA6E6 /* SettingsTableViewCell.swift in Sources */,
 				32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */,
 				32610AF52C9930140011946E /* SoundManager.swift in Sources */,
+				321398302CB4476600A636A7 /* ChatManager.swift in Sources */,
 				32C06C612C9106A200D3676D /* CurrentWordView.swift in Sources */,
 				32C06C5F2C9104DB00D3676D /* GameViewController.swift in Sources */,
+				32F9566B2CB3275C00DAA6E6 /* MessageTableViewCell.swift in Sources */,
+				32F956692CB3256A00DAA6E6 /* ChatViewController.swift in Sources */,
 				326F93CD2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift in Sources */,
 				326F93D42C8BE2B200B28F04 /* RoomCollectionViewCell.swift in Sources */,
 				32EF33D62C8E7247000850A5 /* MyUser.swift in Sources */,
 				32EF33DC2C8E8E2D000850A5 /* Room.swift in Sources */,
+				32F9565B2CB0620F00DAA6E6 /* SettingsViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -587,6 +630,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 326F93D72C8CE5E700B28F04 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseDatabase;
+		};
+		32F956662CB1DEB500DAA6E6 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 326F93D72C8CE5E700B28F04 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

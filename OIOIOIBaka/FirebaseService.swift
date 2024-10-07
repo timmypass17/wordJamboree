@@ -9,52 +9,154 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseDatabaseInternal
+import FirebaseStorage
 
 
 class FirebaseService {    
     
     var currentUser: MyUser? = nil
+    var pfpImage: UIImage? = nil
     
-    var ref = Database.database().reference()
-    let db = Firestore.firestore()
+    var ref = Database.database().reference()   // Realtime Database
+    let db = Firestore.firestore()              // Firestore
+    let storage = Storage.storage().reference() // Storage
     var authListener: AuthStateDidChangeListenerHandle?
 
     init() {
-        
         authListener = Auth.auth().addStateDidChangeListener { auth, user in
-            if user != nil {
-                Task {
-                    await self.loadUser()
+            guard let user else {
+                print("User not logged in or signed out")
+                self.currentUser = nil
+                return
+            }
+            
+            Task {
+                do  {
+                    if let fetchedUser = try await self.getUser(uid: user.uid) {
+                        self.currentUser = fetchedUser
+                    }
+                } catch {
+                    print("error getting user: \(error)")
                 }
             }
+            
+            Task {
+                do {
+                    self.pfpImage = try await self.getProfilePicture(uid: user.uid)
+                    print("Got pfp")
+                } catch {
+                    self.pfpImage = nil
+                    print("error getting pfp: \(error)")
+                }
+            }
+            
         }
     }
     
-    func loadUser() async {
-        guard let user = Auth.auth().currentUser else {
-            print("User is not logged in")
-            return
-        }
-        do {
-            let snapshot = try await ref.child("users").child(user.uid).getData()
-            self.currentUser = snapshot.toObject(MyUser.self)
-            print("Got user successfully")
-        } catch {
-            print("Error loading user: \(error)")
-        }
+    func getProfilePicture(uid: String) async throws -> UIImage? {
+        let pfpRef = storage.child("pfps/\(uid).jpg")
+        
+        // Download in memory with a maximum allowed size of 1MB (1 * 1024 * 1024 bytes)
+        let pfpData = try await pfpRef.data(maxSize: 1 * 1024 * 1024)
+        return UIImage(data: pfpData)
+        
     }
     
+    // can upload images either Data or URL
+    func uploadProfilePicture(imageData: Data) async throws {
+        guard let uid = currentUser?.uid else { return }
+        let pfpRef = storage.child("pfps/\(uid).jpg")
 
-    func createUser(user: User) async {
-        do {
-            let userToAdd = MyUser(name: generateRandomUsername(), uid: user.uid)
-            try await ref.child("users").child(user.uid).setValue(userToAdd.toDictionary())
-            currentUser = userToAdd
-            print("Created user successfully: \(user.uid)")
-        } catch {
-            print("Error creating user: \(error)")
+        let _ = try await pfpRef.putDataAsync(imageData)
+        self.pfpImage = UIImage(data: imageData)
+
+    }
+    
+    func signInWithGoogle(_ viewController: UIViewController) async throws {
+        guard let res = await startSignInWithGoogleFlow(viewController) else { return }
+        let uid = res.user.uid
+
+        if let existingUser = try await getUser(uid: uid) {
+            self.currentUser = existingUser
+        } else {
+            self.currentUser = try await createUser(uid: uid)
         }
     }
+    
+    private func getUser(uid: String) async throws -> MyUser? {
+        let userRef = db.collection("users").document(uid)
+        let userDocument = try await userRef.getDocument()
+        if userDocument.exists {
+            let user = try userDocument.data(as: MyUser.self)
+            print("Got existing user")
+            return user
+        }
+        print("User not found")
+        return nil
+    }
+
+    private func createUser(uid: String) async throws -> MyUser {
+        // Create new user
+        let userToAdd = MyUser(name: generateRandomUsername(), uid: uid)
+        try await db.collection("users").document(uid).setData([
+            "name": userToAdd.name,
+            "uid": userToAdd.uid,    // TODO: May remove
+            "createdAt": userToAdd.createdAt
+        ]) // document may not exist, merge to update existing user documents instead of overriding them completely
+        print("Created user successfully")
+        return userToAdd
+    }
+    
+    func updateName(newName: String) async throws {
+        guard let uid = currentUser?.uid else { throw FirebaseServiceError.userNotLoggedIn }
+        try await db.collection("users").document(uid).updateData([
+            "name": newName
+        ])
+        currentUser?.name = newName
+    }
+    
+//    func createRoom(title: String) async throws -> (String, Room) {
+//        guard let currentUser else { throw FirebaseServiceError.userNotLoggedIn }
+//
+//        let room = Room(
+//            creatorID: currentUser.uid,
+//            title: title,
+//            currentPlayerCount: 1
+//        )
+//        
+//        let roomRef = try await db.collection("rooms").addDocument(data: room.toDictionary())
+//        let roomID = roomRef.documentID
+//                
+//        let game = Game(
+//            roomID: roomID,
+//            currentLetters: GameManager.generateRandomLetters(),
+//            secondsPerTurn: Int.random(in: 10...30) + 3,
+//            rounds: 1,
+//            playersInfo: [
+//                currentUser.uid:
+//                    PlayerInfo(
+//                        hearts: 3,
+//                        position: 0,
+//                        additionalInfo: [
+//                            "name": currentUser.name
+//                        ]
+//                    )
+//            ],
+//            shake: [
+//                currentUser.uid: false
+//            ],
+//            playersWord: [
+//                currentUser.uid: ""
+//            ]
+//        )
+//
+//        try await ref.updateChildValues([
+//            "/games/\(roomID)": game.toDictionary()
+//        ])
+//        
+//        return (roomID, room)
+//    }
+    
     
     func createRoom(title: String) async throws -> (String, Room) {
         guard let currentUser else { throw FirebaseServiceError.userNotLoggedIn }
@@ -105,8 +207,8 @@ class FirebaseService {
         //          - see doc on incomingMove reference
         // simultaneous updates (u can observe nodes only, but can update specific fields using path)
         let updates: [String: Any] = [
-            "/rooms/\(roomID)": room.toDictionary()!,
-            "/games/\(roomID)": game.toDictionary()!
+            "/rooms/\(roomID)": room.toDictionary(),
+            "/games/\(roomID)": game.toDictionary()
         ]
         
         // atomic - either all updates succeed or all updates fail
@@ -236,12 +338,12 @@ extension FirebaseService {
 }
 
 extension Encodable {
-    func toDictionary() -> [String: Any]? {
+    func toDictionary() -> [String: Any] {
         guard let data = try? JSONEncoder().encode(self),
               let jsonObject = try? JSONSerialization.jsonObject(with: data),
               let dictionary = jsonObject as? [String: Any]
         else {
-            return nil
+            return [:]
         }
         
         return dictionary

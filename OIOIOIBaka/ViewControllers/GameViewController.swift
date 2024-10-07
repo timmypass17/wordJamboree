@@ -22,12 +22,6 @@ class GameViewController: UIViewController {
         return playerView
     }
 
-//    let currentWordView: CurrentWordView = {
-//        let currentWordView = CurrentWordView()
-//        currentWordView.translatesAutoresizingMaskIntoConstraints = false
-//        return currentWordView
-//    }()
-    
     var currentWordView: CurrentWordView?
     
     let joinButton: UIButton = {
@@ -63,6 +57,7 @@ class GameViewController: UIViewController {
     let submitButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Submit"
+        config.baseBackgroundColor = .systemFill
         let button = UIButton(configuration: config)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -73,15 +68,18 @@ class GameViewController: UIViewController {
     var afkTimer: Timer?
     var currentCountdownValue = 5
     
-    var exitBarButton: UIBarButtonItem!
+    var settingsButton: UIBarButtonItem!
+    var messageButton: UIBarButtonItem!
     
     var gameManager: GameManager
+    var chatManager: ChatManager
     let soundManager = SoundManager()
     var ref = Database.database().reference()
     var exitTask: Task<Void, Error>? = nil
 
-    init(gameManager: GameManager) {
+    init(gameManager: GameManager, chatManager: ChatManager) {
         self.gameManager = gameManager
+        self.chatManager = chatManager
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -98,8 +96,14 @@ class GameViewController: UIViewController {
     func setupView() {
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.setHidesBackButton(true, animated: true)
-        exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
-        navigationItem.rightBarButtonItem = exitBarButton
+//        exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
+        settingsButton = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: settingsMenu())
+        settingsButton.tintColor = .secondaryLabel
+        messageButton = UIBarButtonItem(image: UIImage(systemName: "message"), primaryAction: didTapMessageButton())
+        messageButton.tintColor = .secondaryLabel
+        navigationItem.leftBarButtonItem = settingsButton
+        navigationItem.rightBarButtonItem = messageButton
+
         gameManager.delegate = self
 //        countDownView.delegate = self
         joinButton.addAction(didTapJoinButton(), for: .touchUpInside)
@@ -189,6 +193,22 @@ class GameViewController: UIViewController {
             currentWordView!.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             currentWordView!.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         ])
+    }
+    
+    func didTapMessageButton() -> UIAction {
+        return UIAction { _ in
+            let messageViewController = ChatViewController()
+            messageViewController.gameManager = self.gameManager
+            messageViewController.chatManager = self.chatManager
+            let nav = UINavigationController(rootViewController: messageViewController)
+            nav.modalPresentationStyle = .pageSheet
+            if let sheet = nav.sheetPresentationController {
+                sheet.detents = [.medium(), .large()]
+                sheet.prefersGrabberVisible = true
+//                sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            }
+            self.present(nav, animated: true)
+        }
     }
     
     func didTapJoinButton() -> UIAction {
@@ -305,17 +325,19 @@ class GameViewController: UIViewController {
         playerViews.forEach { $0.skullView.isHidden = true }
     }
 
-    func didTapExitButton() -> UIAction {
-        return UIAction { [self] _ in
-            exitTask?.cancel()
-            exitTask = Task {
-                do {
-                    try await gameManager.exit()
-                    navigationController?.popViewController(animated: true)
-                } catch {
-                    print("Error removing player: \(error)")
-                }
-                
+    func settingsMenu() -> UIMenu {
+        
+        UIMenu(children: [exitAction()])
+
+    }
+    
+    func exitAction() -> UIAction {
+        return UIAction(title: "Exit Game", image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), attributes: .destructive) { [self] _ in
+            do {
+                try gameManager.exit()
+                navigationController?.popViewController(animated: true)
+            } catch {
+                print("Error removing player: \(error)")
             }
         }
     }
@@ -400,6 +422,8 @@ extension GameViewController: GameManagerDelegate {
         }
         
         playerViews.forEach { $0.isHidden = true }
+                
+        print(manager.pfps)
         
         for (uid, playerInfo) in playersInfo {
             guard let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
@@ -412,18 +436,9 @@ extension GameViewController: GameManagerDelegate {
             playerViews[position].nameLabel.text = name
             playerViews[position].isHidden = false
             playerViews[position].setHearts(to: hearts)
-            
-            // TODO: Maybe move word's to seperate node, kinda messy listening here
-            // Update text for current player turn
-//            if uid == manager.currentPlayerTurn {
-//                let originalWord = playerViews[position].wordLabel.text
-//                // Only update current player's turn text (Don't want to ruin other user's text
-//                playerViews[position].updateUserWordTextColor(word: word, matching: manager.currentLetters)
-//                // Player typed new letter
-//                if originalWord != word && uid != manager.service.currentUser?.uid {
-//                    soundManager.playKeyboardClickSound()
-//                }
-//            }
+            if let pfp = manager.pfps[uid] {
+                playerViews[position].profileImageView.update(image: pfp)
+            }
         }
     }
     
@@ -645,6 +660,6 @@ extension GameViewController: KeyboardViewDelegate {
     }
 }
 
-#Preview("GameViewController") {
-    GameViewController(gameManager: GameManager(roomID: "", service: FirebaseService()))
-}
+//#Preview("GameViewController") {
+//    GameViewController(gameManager: GameManager(roomID: "", service: FirebaseService()))
+//}

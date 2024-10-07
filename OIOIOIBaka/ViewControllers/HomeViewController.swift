@@ -20,12 +20,7 @@ class HomeViewController: UIViewController {
     var sections: [Section] = []
     var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
     
-    let settingsButton: UIBarButtonItem = {
-        let button = UIBarButtonItem()
-        button.image = UIImage(systemName: "gearshape.fill")
-        return button
-    }()
-    
+    var settingsButton: UIBarButtonItem!
     var signInButton: UIBarButtonItem!
     var signOutButton: UIBarButtonItem!
     
@@ -54,6 +49,9 @@ class HomeViewController: UIViewController {
         title = "🥳 Bomb Party"
         navigationController?.navigationBar.prefersLargeTitles = true
         
+        let settingsButton = UIBarButtonItem(primaryAction: didTapSettingsButton())
+        settingsButton.image = UIImage(systemName: "gearshape.fill")
+        
         setupLoginButton()
         setupSignOutButton()
         navigationItem.rightBarButtonItems = [settingsButton, signInButton, signOutButton]
@@ -61,12 +59,15 @@ class HomeViewController: UIViewController {
         setupCollectionView()
         
         loadRooms()
-        
-//        // Why does this work? (returns 1 room)
-//        Task {
-//            
-//            try? await service.getRoom()
-//        }
+    }
+    
+    // class func is similar to static func but class func is overridable
+    func didTapSettingsButton() -> UIAction {
+        return UIAction { _ in
+            let settingsViewController = SettingsViewController()
+            settingsViewController.service = self.service
+            self.navigationController?.pushViewController(settingsViewController, animated: true)
+        }
     }
     
     private func setupCollectionView() {
@@ -224,8 +225,10 @@ class HomeViewController: UIViewController {
     private func didTapSignInButton() -> UIAction {
         return UIAction { _ in
             Task {
-                if let res = await startSignInWithGoogleFlow(self) {
-                    await self.service.createUser(user: res.user)
+                do {
+                    try await self.service.signInWithGoogle(self)
+                } catch {
+                    print("Error signing in user: \(error)")
                 }
             }
         }
@@ -268,7 +271,10 @@ extension HomeViewController: UICollectionViewDelegate {
         }
         
         // TODO: Tapping background of top header crashes
-        let gameViewController = GameViewController(gameManager: GameManager(roomID: item.roomID!, service: service))
+        let gameViewController = GameViewController(
+            gameManager: GameManager(roomID: item.roomID!, service: service),
+            chatManager: ChatManager(roomID: item.roomID!, service: service)
+        )
         gameViewController.joinButton.isHidden = false
         navigationController?.pushViewController(gameViewController, animated: true)
     }
@@ -288,14 +294,19 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
     }
     
     func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapJoinRoom: Bool) {
+        
         print(#function)
     }
     
 }
 extension HomeViewController: CreateRoomViewControllerDelegate {
     func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String) {
-        let gameViewController = GameViewController(gameManager: GameManager(roomID: roomID, service: service))
+        guard let uid = service.currentUser?.uid else { return }
+        let gameManager = GameManager(roomID: roomID, service: service)
+        gameManager.pfps.updateValue(service.pfpImage, forKey: uid)
+        let gameViewController = GameViewController(gameManager: gameManager, chatManager: ChatManager(roomID: roomID, service: service))
         gameViewController.leaveButton.isHidden = false
+        
         navigationController?.pushViewController(gameViewController, animated: true)
     }
 }
