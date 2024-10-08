@@ -63,19 +63,14 @@ class GameManager {
     var turnTimer: TurnTimer?
     var countdownTimer: Timer?
     
-    var playersInfoHandle: DatabaseHandle?
-    var playerWordsHandle: DatabaseHandle?
-    var currentLettersHandle: DatabaseHandle?
-    var playerTurnHandle: DatabaseHandle?
-    var roomStatusHandle: DatabaseHandle?
-    var isReadyHandle: DatabaseHandle?
-    var positionsHandle: DatabaseHandle?
-    var heartsHandle: DatabaseHandle?
-    var roundsHandle: DatabaseHandle?
-    var secondsPerTurnHandle: DatabaseHandle?
+    var handles: [String: DatabaseHandle] = [:]
     
     var pfps: [String: UIImage?] = [:]
 
+    // TODO:
+    // - Chat message from other player is still being shown afte exiting and re-entering
+    // - "X Player Joined!" shown each time user joins
+    // Removing observers properly should fix? Observers still alive even if object is deallocated
     init(roomID: String, service: FirebaseService) {
         print("init gameManager")
         self.service = service
@@ -86,6 +81,7 @@ class GameManager {
     
     deinit {
         print("deinit gameManager")
+        detachObservers()
     }
     
     func setup() {
@@ -110,7 +106,7 @@ class GameManager {
     }
     
     func observePlayerAdded() {
-        ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [weak self] snapshot in
+        handles["playersInfo.childAdded"] = ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/playersInfo').observe(.childAdded)")
             guard let playerInfo = snapshot.value as? [String: AnyObject] else {
@@ -137,7 +133,7 @@ class GameManager {
     }
     
     func observePlayerRemoved() {
-        ref.child("games/\(roomID)/playersInfo").observe(.childRemoved) { [weak self] snapshot in
+        handles["playersInfo.childRemoved"] = ref.child("games/\(roomID)/playersInfo").observe(.childRemoved) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/playersInfo').observe(.childRemoved)")
             guard let playerInfo = snapshot.value as? [String: AnyObject] else {
@@ -158,7 +154,7 @@ class GameManager {
         // Unlike with weak references, a reference is not turned into an optional while using unowned
         // The only benefit of using unowned over weak is that you don’t have to deal with optionals
         // Be very careful when using unowned. It could be that you’re accessing an instance which is no longer there, causing a crash
-        ref.child("games/\(roomID)/playersInfo").observe(.childChanged) { [weak self] snapshot in
+        handles["playersInfo.childChange"] = ref.child("games/\(roomID)/playersInfo").observe(.childChanged) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/playersInfo').observe(.childChanged)")
             print("\(snapshot)")
@@ -227,7 +223,7 @@ class GameManager {
     
     func observeCountdown() {
         // countdownStartTime = UNIX timestamp in milliseconds since the Unix epoch (January 1, 1970, 00:00:00 UTC)
-        ref.child("games/\(roomID)/countdownStartTime").observe(.value) { [weak self] snapshot in
+        handles["countdownStartTime"] = ref.child("games/\(roomID)/countdownStartTime").observe(.value) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/countdownStartTime').observe(.value)")
             print(snapshot)
@@ -332,7 +328,7 @@ class GameManager {
     }
 
     func observeWinner() {
-        ref.child("games/\(roomID)/winner").observe(.value) { [weak self] snapshot in
+        handles["winner"] = ref.child("games/\(roomID)/winner").observe(.value) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/winner').observe(.value)")
             guard let winnerID = snapshot.value as? String else { return }
@@ -342,7 +338,7 @@ class GameManager {
     }
     
     func observePlayersWord() {
-        playerWordsHandle = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [weak self] snapshot in
+        handles["playersWord"] = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/playersWord').observe(.childChanged)")
             guard let word = snapshot.value as? String else { return }
@@ -353,7 +349,7 @@ class GameManager {
     
     
     func observeCurrentLetters() {
-        currentLettersHandle = ref.child("games/\(roomID)/currentLetters").observe(.value) { [weak self] snapshot in
+        handles["currentLetters"] = ref.child("games/\(roomID)/currentLetters").observe(.value) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/currentLetters').observe(.value)")
             guard let letters = snapshot.value as? String else { return }
@@ -364,7 +360,7 @@ class GameManager {
     
     // try using .value (.childChange original)
     func observePlayerTurn() {
-        playerTurnHandle = ref.child("games/\(roomID)/currentPlayerTurn").observe(.value) { [weak self] snapshot in
+        handles["currentPlayerTurn"] = ref.child("games/\(roomID)/currentPlayerTurn").observe(.value) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/currentPlayerTurn').observe(.value)")
             guard let playerID = snapshot.value as? String,
@@ -381,7 +377,7 @@ class GameManager {
     
     func observeRoomStatus() {
         // .value
-        roomStatusHandle = ref.child("games/\(roomID)/status").observe(.value) { [weak self] snapshot in
+        handles["status"] = ref.child("games/\(roomID)/status").observe(.value) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/status).observe(.value)")
             guard let statusString = snapshot.value as? String,
@@ -391,14 +387,6 @@ class GameManager {
                 return
             }
             self.delegate?.gameManager(self, gameStatusUpdated: gameStatus)
-        }
-    }
-    
-    func observeReady() {
-        isReadyHandle = ref.child("rooms/\(roomID)/isReady").observe(.value) { [weak self] snapshot in
-            guard let self else { return }
-            guard let isReady = snapshot.value as? [String: Bool] else { return }
-            self.delegate?.gameManager(self, playersReadyUpdated: isReady)
         }
     }
 
@@ -546,7 +534,7 @@ class GameManager {
     }
     
     func observeShakes() {
-        ref.child("games/\(roomID)/shake").observe(.childChanged) { [weak self] snapshot in
+        handles["shake"] = ref.child("games/\(roomID)/shake").observe(.childChanged) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/shake').observe(.childChanged)")
             let playerID = snapshot.key
@@ -575,7 +563,7 @@ class GameManager {
     }
     
     func observeRounds() {
-        roundsHandle = ref.child("games/\(roomID)/rounds").observe(.value) { [weak self] snapshot in
+        handles["rounds"] = ref.child("games/\(roomID)/rounds").observe(.value) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/rounds').observe(.value)")
             guard let currentRound = snapshot.value as? Int else { return }
@@ -584,7 +572,7 @@ class GameManager {
     }
     
     func observeSecondsPerTurn() {
-        secondsPerTurnHandle = ref.child("games/\(roomID)/secondsPerTurn").observe(.value) { [weak self] snapshot in
+        handles["secondsPerTurn"] = ref.child("games/\(roomID)/secondsPerTurn").observe(.value) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/secondsPerTurn').observe(.value)")
             guard let seconds = snapshot.value as? Int else { return }
@@ -822,39 +810,20 @@ class GameManager {
         ])
     }
     
-//    func removeListeners() {
-//        if let playersInfoHandle = playersInfoHandle {
-//            ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: playersInfoHandle)
-//        }
-//        if let playerWordsHandle = playerWordsHandle {
-//            ref.child("games/\(roomID)/playerWords").removeObserver(withHandle: playerWordsHandle)
-//        }
-//        if let currentLettersHandle = currentLettersHandle {
-//            ref.child("games/\(roomID)/currentLetters").removeObserver(withHandle: currentLettersHandle)
-//        }
-//        if let playerTurnHandle = playerTurnHandle {
-//            ref.child("games/\(roomID)/currentPlayerTurn").removeObserver(withHandle: playerTurnHandle)
-//        }
-//        if let roomStatusHandle = roomStatusHandle {
-//            ref.child("rooms/\(roomID)/status").removeObserver(withHandle: roomStatusHandle)
-//        }
-//        if let isReadyHandle = isReadyHandle {
-//            ref.child("rooms/\(roomID)/isReady").removeObserver(withHandle: isReadyHandle)
-//        }
-//        if let positionsHandle = positionsHandle {
-//            ref.child("games/\(roomID)/positions").removeObserver(withHandle: positionsHandle)
-//        }
-//        if let heartsHandle = heartsHandle {
-//            ref.child("games/\(roomID)/hearts").removeObserver(withHandle: heartsHandle)
-//        }
-//        if let roundsHandle = roundsHandle {
-//            ref.child("games/\(roomID)/rounds").removeObserver(withHandle: roundsHandle)
-//        }
-//        if let secondsPerTurnHandle = secondsPerTurnHandle {
-//            ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: secondsPerTurnHandle)
-//        }
-//    }
-    
+    func detachObservers() {
+        ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childChange"]!)
+        ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childAdded"]!)
+        ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childRemoved"]!)
+        ref.child("games/\(roomID)/countdownStartTime").removeObserver(withHandle: handles["countdownStartTime"]!)
+        ref.child("games/\(roomID)/status").removeObserver(withHandle: handles["status"]!)
+        ref.child("games/\(roomID)/shake").removeObserver(withHandle: handles["shake"]!)
+        ref.child("games/\(roomID)/currentLetters").removeObserver(withHandle: handles["currentLetters"]!)
+        ref.child("games/\(roomID)/playersWord").removeObserver(withHandle: handles["playersWord"]!)
+        ref.child("games/\(roomID)/rounds").removeObserver(withHandle: handles["rounds"]!)
+        ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: handles["secondsPerTurn"]!)
+        ref.child("games/\(roomID)/currentPlayerTurn").removeObserver(withHandle: handles["currentPlayerTurn"]!)
+        ref.child("games/\(roomID)/winner").removeObserver(withHandle: handles["winner"]!)
+    }
 }
 
 extension GameManager: TurnTimerDelegate {

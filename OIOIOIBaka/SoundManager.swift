@@ -17,6 +17,10 @@ class SoundManager {
         prepareSound(named: "ticking", withExtension: "wav")
     }
     
+    deinit {
+        print("deinit soundManager")
+    }
+    
     func playCountdownSound() {
         playSound(players["ding"])
     }

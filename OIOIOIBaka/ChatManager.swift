@@ -21,21 +21,32 @@ class ChatManager {
     weak var delegate: ChatManagerDelegate?
     
     init(roomID: String, service: FirebaseService) {
+        print("init chatManager")
         self.roomID = roomID
         self.service = service
         observeNewMessages()
+    }
+    
+    deinit {
+        print("deinit chatManager")
+        ref.child("messages").child(roomID).removeAllObservers()
     }
     
     func sendMessage(message: Message) async throws {
         try await ref.child("messages").child(roomID).childByAutoId().setValue([
             "uid": message.uid,
             "name": message.name,
-            "message": message.message
+            "message": message.message,
+            "createdAt": message.createdAt
         ])
     }
     
     func observeNewMessages() {
-        ref.child("messages").child(roomID).observe(.childAdded) { [weak self] snapshot in
+        // .queryLimited(toLast: 1) - only get 1 back
+        // .childAdded being called initally?
+        let currentTimestamp = Date().timeIntervalSince1970 * 1000
+        // Use .queryOrdered(byChild: "createdAt") and .queryStarting(atValue: currentTimestamp) to get "new" child added
+        ref.child("messages").child(roomID).queryOrdered(byChild: "createdAt").queryStarting(atValue: currentTimestamp).observe(.childAdded) { [weak self] snapshot in
             guard let self else { return }
             print("new message: \(snapshot)")
             guard let messageDict = snapshot.value as? [String: AnyObject],

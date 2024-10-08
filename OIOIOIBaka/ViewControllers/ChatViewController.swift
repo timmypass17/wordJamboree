@@ -29,6 +29,11 @@ class ChatViewController: UIViewController {
     }()
     
     var addMessageViewBottomConstraint: NSLayoutConstraint?
+    
+    deinit {
+        print("deinit chatViewController")
+        NotificationCenter.default.removeObserver(self)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -99,11 +104,6 @@ class ChatViewController: UIViewController {
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         print("viewDidDisappear")
-    }
-    
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
     }
     
     func didTapSendButton() {
