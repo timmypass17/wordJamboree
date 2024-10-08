@@ -100,8 +100,7 @@ class FirebaseService {
         let userToAdd = MyUser(name: generateRandomUsername(), uid: uid)
         try await db.collection("users").document(uid).setData([
             "name": userToAdd.name,
-            "uid": userToAdd.uid,    // TODO: May remove
-            "createdAt": userToAdd.createdAt
+            "uid": userToAdd.uid
         ]) // document may not exist, merge to update existing user documents instead of overriding them completely
         print("Created user successfully")
         return userToAdd

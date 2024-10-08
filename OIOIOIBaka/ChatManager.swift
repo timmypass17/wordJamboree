@@ -30,8 +30,7 @@ class ChatManager {
         try await ref.child("messages").child(roomID).childByAutoId().setValue([
             "uid": message.uid,
             "name": message.name,
-            "message": message.message,
-            "createdAt": ServerValue.timestamp()
+            "message": message.message
         ])
     }
     
@@ -41,13 +40,12 @@ class ChatManager {
             guard let messageDict = snapshot.value as? [String: AnyObject],
                   let uid = messageDict["uid"] as? String,
                   let name = messageDict["name"] as? String,
-                  let textMessage = messageDict["message"] as? String,
-                  let createdAt = messageDict["createdAt"] as? Int
+                  let textMessage = messageDict["message"] as? String
             else { return }
             
             // Add message to messages (that is not from current user)
             guard uid != self.service.currentUser?.uid else { return }
-            let message = Message(uid: uid, name: name, message: textMessage, pfpImage: nil, createdAt: createdAt)
+            let message = Message(uid: uid, name: name, message: textMessage, pfpImage: nil)
             self.messages.append(message)
             self.delegate?.chatManager(self, didReceiveNewMessage: message)
         }

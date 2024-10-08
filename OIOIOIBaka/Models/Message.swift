@@ -15,5 +15,10 @@ struct Message {
     var name: String
     var message: String
     var pfpImage: UIImage?
-    var createdAt: Int?
+    var createdAt: Int = Int(Date().timeIntervalSince1970 * 1000)
+    var messageType: MessageType = .user
+}
+
+enum MessageType {
+    case user, system
 }

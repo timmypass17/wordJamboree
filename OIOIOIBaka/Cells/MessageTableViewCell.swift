@@ -13,24 +13,41 @@ class MessageTableViewCell: UITableViewCell {
     
     let nameLabel: UILabel = {
         let label = UILabel()
-        label.textColor = .secondaryLabel
+        label.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .subheadline).pointSize, weight: .semibold)
+        label.setContentHuggingPriority(.required, for: .horizontal)
         return label
     }()
     
     let messageLabel: UILabel = {
         let label = UILabel()
+        label.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
+        label.numberOfLines = 0
+        return label
+    }()
+    
+    let dateLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption1).pointSize, weight: .regular)
+        label.textColor = .secondaryLabel
         return label
     }()
     
     let profileImageView: ProfileImageView = {
         let profileImageView = ProfileImageView()
         NSLayoutConstraint.activate([
-            profileImageView.heightAnchor.constraint(equalToConstant: 50),
+            profileImageView.heightAnchor.constraint(equalToConstant: 42),
             profileImageView.widthAnchor.constraint(equalTo: profileImageView.heightAnchor)
         ])
         return profileImageView
     }()
     
+    let hstack: UIStackView = {
+        let stackView = UIStackView()
+        stackView.spacing = 8
+        stackView.axis = .horizontal
+        return stackView
+    }()
+        
     let vstack: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
@@ -48,8 +65,9 @@ class MessageTableViewCell: UITableViewCell {
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        
-        vstack.addArrangedSubview(nameLabel)
+        hstack.addArrangedSubview(nameLabel)
+        hstack.addArrangedSubview(dateLabel)
+        vstack.addArrangedSubview(hstack)
         vstack.addArrangedSubview(messageLabel)
         container.addArrangedSubview(profileImageView)
         container.addArrangedSubview(vstack)
@@ -73,10 +91,30 @@ class MessageTableViewCell: UITableViewCell {
     func update(message: Message) {
         nameLabel.text = message.name
         messageLabel.text = message.message
+        let seconds = TimeInterval(message.createdAt) / 1000
+        let date = Date(timeIntervalSince1970: seconds)
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateStyle = .none
+        timeFormatter.timeStyle = .short // Use .short for "12:00 AM" format
+        
+        let formattedTime = timeFormatter.string(from: date)
+        dateLabel.text = formattedTime
         profileImageView.update(image: message.pfpImage)
+        
+        switch message.messageType {
+        case .user:
+            messageLabel.textColor = .label
+            messageLabel.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
+        case .system:
+            messageLabel.textColor = .secondaryLabel
+            messageLabel.font = .italicSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
+        }
     }
 }
 
 #Preview {
-    MessageTableViewCell()
+    let cell = MessageTableViewCell()
+    cell.update(message: Message(uid: "", name: "timmy", message: "Hello World", pfpImage: nil))
+    return cell
 }
+

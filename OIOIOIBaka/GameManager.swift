@@ -32,8 +32,8 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, countdownTimeUpdated timeRemaining: Int)
     func gameManager(_ manager: GameManager, countdownEnded: Bool)
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String: AnyObject])
-    func gameManager(_ manager: GameManager, newPlayerJoined playerInfo: [String: AnyObject], playerID: String)
-
+    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String: AnyObject], playerID: String)
+    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String: AnyObject], playerID: String)
 }
 
 
@@ -72,12 +72,16 @@ class GameManager {
     var pfps: [String: UIImage?] = [:]
 
     init(roomID: String, service: FirebaseService) {
+        print("init gameManager")
         self.service = service
         self.roomID = roomID
         turnTimer = TurnTimer(soundManager: soundManager)
         turnTimer?.delegate = self
     }
-    // TODO: Im optimzing observers because using .value triggers as a side effect of transaction even if data doesn't change
+    
+    deinit {
+        print("deinit gameManager")
+    }
     
     func setup() {
         Task {
@@ -85,7 +89,6 @@ class GameManager {
                 observePlayersInfo()
                 observePlayerAdded()
                 observePlayerRemoved()
-//                observeCountdownStop()
                 observeCountdown()
                 observeRoomStatus()
                 observeShakes()
@@ -111,6 +114,7 @@ class GameManager {
             let uid = snapshot.key
             playersInfo[uid] = playerInfo as AnyObject
             Task {
+                // Fetch pfp if seen for first time
                 if pfps[uid] == nil {
                     if let pfpImage = try? await service.getProfilePicture(uid: uid) {
                         pfps[uid] = pfpImage
@@ -119,7 +123,7 @@ class GameManager {
                     }
                 }
                 DispatchQueue.main.async {
-                    self.delegate?.gameManager(self, newPlayerJoined: playerInfo, playerID: snapshot.key)
+                    self.delegate?.gameManager(self, playerJoined: playerInfo, playerID: snapshot.key)
                     self.delegate?.gameManager(self, playersInfoUpdated: self.playersInfo)
                 }
             }
@@ -135,6 +139,7 @@ class GameManager {
             }
             let uid = snapshot.key
             playersInfo[uid] = nil
+            self.delegate?.gameManager(self, playerLeft: playerInfo, playerID: snapshot.key)
             delegate?.gameManager(self, playersInfoUpdated: playersInfo)
         }
     }
@@ -876,38 +881,38 @@ class GameManager {
 //        }
     }
     
-    func removeListeners() {
-        if let playersInfoHandle = playersInfoHandle {
-            ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: playersInfoHandle)
-        }
-        if let playerWordsHandle = playerWordsHandle {
-            ref.child("games/\(roomID)/playerWords").removeObserver(withHandle: playerWordsHandle)
-        }
-        if let currentLettersHandle = currentLettersHandle {
-            ref.child("games/\(roomID)/currentLetters").removeObserver(withHandle: currentLettersHandle)
-        }
-        if let playerTurnHandle = playerTurnHandle {
-            ref.child("games/\(roomID)/currentPlayerTurn").removeObserver(withHandle: playerTurnHandle)
-        }
-        if let roomStatusHandle = roomStatusHandle {
-            ref.child("rooms/\(roomID)/status").removeObserver(withHandle: roomStatusHandle)
-        }
-        if let isReadyHandle = isReadyHandle {
-            ref.child("rooms/\(roomID)/isReady").removeObserver(withHandle: isReadyHandle)
-        }
-        if let positionsHandle = positionsHandle {
-            ref.child("games/\(roomID)/positions").removeObserver(withHandle: positionsHandle)
-        }
-        if let heartsHandle = heartsHandle {
-            ref.child("games/\(roomID)/hearts").removeObserver(withHandle: heartsHandle)
-        }
-        if let roundsHandle = roundsHandle {
-            ref.child("games/\(roomID)/rounds").removeObserver(withHandle: roundsHandle)
-        }
-        if let secondsPerTurnHandle = secondsPerTurnHandle {
-            ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: secondsPerTurnHandle)
-        }
-    }
+//    func removeListeners() {
+//        if let playersInfoHandle = playersInfoHandle {
+//            ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: playersInfoHandle)
+//        }
+//        if let playerWordsHandle = playerWordsHandle {
+//            ref.child("games/\(roomID)/playerWords").removeObserver(withHandle: playerWordsHandle)
+//        }
+//        if let currentLettersHandle = currentLettersHandle {
+//            ref.child("games/\(roomID)/currentLetters").removeObserver(withHandle: currentLettersHandle)
+//        }
+//        if let playerTurnHandle = playerTurnHandle {
+//            ref.child("games/\(roomID)/currentPlayerTurn").removeObserver(withHandle: playerTurnHandle)
+//        }
+//        if let roomStatusHandle = roomStatusHandle {
+//            ref.child("rooms/\(roomID)/status").removeObserver(withHandle: roomStatusHandle)
+//        }
+//        if let isReadyHandle = isReadyHandle {
+//            ref.child("rooms/\(roomID)/isReady").removeObserver(withHandle: isReadyHandle)
+//        }
+//        if let positionsHandle = positionsHandle {
+//            ref.child("games/\(roomID)/positions").removeObserver(withHandle: positionsHandle)
+//        }
+//        if let heartsHandle = heartsHandle {
+//            ref.child("games/\(roomID)/hearts").removeObserver(withHandle: heartsHandle)
+//        }
+//        if let roundsHandle = roundsHandle {
+//            ref.child("games/\(roomID)/rounds").removeObserver(withHandle: roundsHandle)
+//        }
+//        if let secondsPerTurnHandle = secondsPerTurnHandle {
+//            ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: secondsPerTurnHandle)
+//        }
+//    }
     
 }
 
