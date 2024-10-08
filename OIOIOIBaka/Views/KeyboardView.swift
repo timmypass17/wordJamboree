@@ -142,7 +142,8 @@ class KeyboardView: UIView {
     }
     
     func update(letters: String, lettersUsed: Set<Character>) {
-        DispatchQueue.main.async {  // ensure ui updates are on main thread
+        DispatchQueue.main.async { [weak self] in  // ensure ui updates are on main thread
+            guard let self else { return }
             print(
             """
             update(
@@ -166,21 +167,24 @@ class KeyboardView: UIView {
     }
     
     func didTapKey(_ letter: String) -> UIAction {
-        return UIAction { _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             self.soundManager?.playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapKey: letter)
         }
     }
     
     func didTapBackspace() -> UIAction {
-        return UIAction { _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             self.soundManager?.playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapBackspace: true)
         }
     }
     
     func didTapSubmit() -> UIAction {
-        return UIAction { _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             self.soundManager?.playKeyboardClickSound()
             self.delegate?.keyboardView(self, didTapSubmit: true)
         }

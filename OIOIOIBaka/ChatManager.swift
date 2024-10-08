@@ -35,7 +35,8 @@ class ChatManager {
     }
     
     func observeNewMessages() {
-        ref.child("messages").child(roomID).observe(.childAdded) { snapshot in
+        ref.child("messages").child(roomID).observe(.childAdded) { [weak self] snapshot in
+            guard let self else { return }
             print("new message: \(snapshot)")
             guard let messageDict = snapshot.value as? [String: AnyObject],
                   let uid = messageDict["uid"] as? String,

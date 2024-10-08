@@ -28,10 +28,14 @@ class TurnTimer {
 //        DispatchQueue.main.async {
             var timeRemaining = duration
             
-            self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+            self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
                 if timeRemaining == 0 {
                     soundManager.playBonkSound()
-                    self.timer?.invalidate()
+                    timer.invalidate()
                     delegate?.turnTimer(self, timeRanOut: true)
                 } else if !soundManager.isPlayingTickingSound() && timeRemaining <= 10 {
                     soundManager.playTickingSound()

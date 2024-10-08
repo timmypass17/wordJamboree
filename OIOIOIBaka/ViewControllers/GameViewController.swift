@@ -196,7 +196,8 @@ class GameViewController: UIViewController {
     }
     
     func didTapMessageButton() -> UIAction {
-        return UIAction { _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             let messageViewController = ChatViewController()
             messageViewController.gameManager = self.gameManager
             messageViewController.chatManager = self.chatManager
@@ -212,32 +213,24 @@ class GameViewController: UIViewController {
     }
     
     func didTapJoinButton() -> UIAction {
-        return UIAction { [self] _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             joinButton.isHidden.toggle()
             leaveButton.isHidden.toggle()
-            
-            Task {
-                do {
-                    try await gameManager.joinGame()
-                } catch {
-                    print("Error joining game: \(error)")
-                }
-            }
+            gameManager.joinGame()
         }
     }
     
     func didTapLeaveButton() -> UIAction {
-        return UIAction { [self] _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             joinButton.isHidden.toggle()
             leaveButton.isHidden.toggle()
             
-            exitTask?.cancel()
-            exitTask = Task {
-                do {
-                    try await gameManager.exit()
-                } catch {
-                    print("Error removing player: \(error)")
-                }
+            do {
+                try gameManager.exit()
+            } catch {
+                print("Error removing player: \(error)")
             }
         }
     }
@@ -246,7 +239,11 @@ class GameViewController: UIViewController {
     @objc func appMovedToBackground() {
         currentCountdownValue = 5
         afkTimer?.invalidate()
-        afkTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+        afkTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
             if currentCountdownValue == 0 {
                 afkTimer?.invalidate()
                 
@@ -265,7 +262,7 @@ class GameViewController: UIViewController {
                 exitTask?.cancel()
                 exitTask = Task {
                     do {
-                        try await gameManager.exit()
+                        try await self.gameManager.exit()
                     } catch {
                         print("Error removing player: \(error)")
                     }
@@ -332,7 +329,8 @@ class GameViewController: UIViewController {
     }
     
     func exitAction() -> UIAction {
-        return UIAction(title: "Exit Game", image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), attributes: .destructive) { [self] _ in
+        return UIAction(title: "Exit Game", image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), attributes: .destructive) { [weak self] _ in
+            guard let self else { return }
             do {
                 try gameManager.exit()
                 navigationController?.popViewController(animated: true)
@@ -343,7 +341,8 @@ class GameViewController: UIViewController {
     }
     
     func didTapSubmit() -> UIAction {
-        return UIAction { _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             self.soundManager.playKeyboardClickSound()
             self.handleSubmit()
         }

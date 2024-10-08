@@ -17,6 +17,11 @@ import FirebaseFirestore
 //  - when it writes nil, it triggers .childDeleted from observers
 //  - normal behavior for transaction to be called multiple time (retries), triggering observers multiple time
 
+// - Only think about retain cycle when using classes
+// - weak self to avoid creating strong references
+// - strong references can create retain cycles -> objects not being deallocated
+// - "weak self" to closure to create weak reference. If object gets deallocated, then closure's value is nil and objects can be deallocated
+//      - if we didn't add "weak" then object will not deallocated because the closure has a strong reference to the object
 protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: Game.Status)
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String: Bool])
@@ -105,7 +110,8 @@ class GameManager {
     }
     
     func observePlayerAdded() {
-        ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [self] snapshot in
+        ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/playersInfo').observe(.childAdded)")
             guard let playerInfo = snapshot.value as? [String: AnyObject] else {
                 print("failed to convert snapshot to playerInfo: \(snapshot)")
@@ -115,11 +121,11 @@ class GameManager {
             playersInfo[uid] = playerInfo as AnyObject
             Task {
                 // Fetch pfp if seen for first time
-                if pfps[uid] == nil {
-                    if let pfpImage = try? await service.getProfilePicture(uid: uid) {
-                        pfps[uid] = pfpImage
+                if self.pfps[uid] == nil {
+                    if let pfpImage = try? await self.service.getProfilePicture(uid: uid) {
+                        self.pfps[uid] = pfpImage
                     } else {
-                        pfps[uid] = nil // can store nil because pfps is type [String: UIImage?]
+                        self.pfps[uid] = nil // can store nil because pfps is type [String: UIImage?]
                     }
                 }
                 DispatchQueue.main.async {
@@ -131,7 +137,8 @@ class GameManager {
     }
     
     func observePlayerRemoved() {
-        ref.child("games/\(roomID)/playersInfo").observe(.childRemoved) { [self] snapshot in
+        ref.child("games/\(roomID)/playersInfo").observe(.childRemoved) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/playersInfo').observe(.childRemoved)")
             guard let playerInfo = snapshot.value as? [String: AnyObject] else {
                 print("failed to convert snapshot to playerInfo: \(snapshot)")
@@ -148,14 +155,16 @@ class GameManager {
     // 1. Player takes damage (hearts)
     // 2. Player moves due to players joining/leaving (position)
     func observePlayersInfo() {
-        // .value
-        ref.child("games/\(roomID)/playersInfo").observe(.childChanged) { [self] snapshot in
+        // Unlike with weak references, a reference is not turned into an optional while using unowned
+        // The only benefit of using unowned over weak is that you don’t have to deal with optionals
+        // Be very careful when using unowned. It could be that you’re accessing an instance which is no longer there, causing a crash
+        ref.child("games/\(roomID)/playersInfo").observe(.childChanged) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/playersInfo').observe(.childChanged)")
             print("\(snapshot)")
             let playerInfo = snapshot.value as? [String: AnyObject] ?? [:] // playersInfo could be empty, empty room
             let uid = snapshot.key
             self.playersInfo[uid] = playerInfo as AnyObject
-            
             self.delegate?.gameManager(self, playersInfoUpdated: playersInfo)
         }
     }
@@ -188,7 +197,8 @@ class GameManager {
 //    }
 
     func startGame() {
-        ref.child("/games/\(roomID)").runTransactionBlock({ currentData in
+        ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
                let roomStatusString = game["status"] as? String,
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
@@ -217,7 +227,8 @@ class GameManager {
     
     func observeCountdown() {
         // countdownStartTime = UNIX timestamp in milliseconds since the Unix epoch (January 1, 1970, 00:00:00 UTC)
-        ref.child("games/\(roomID)/countdownStartTime").observe(.value) { [self] snapshot in
+        ref.child("games/\(roomID)/countdownStartTime").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/countdownStartTime').observe(.value)")
             print(snapshot)
 
@@ -243,7 +254,11 @@ class GameManager {
         // Invalidate any existing timer to avoid conflicts
         countdownTimer?.invalidate()
         
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
             self.delegate?.gameManager(self, countdownTimeUpdated: timeRemaining)
             if timeRemaining > 0 {
                 print("Game starting in \(timeRemaining) seconds")
@@ -259,7 +274,8 @@ class GameManager {
     func joinGame() {
         guard let user = service.currentUser else { return }
 
-        ref.child("games").child(roomID).runTransactionBlock({ currentData in
+        ref.child("games").child(roomID).runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
                let roomStatusString = game["status"] as? String,
                let roomStatus = Game.Status(rawValue: roomStatusString) {
@@ -303,7 +319,8 @@ class GameManager {
             print("(join game) fail 2") // note: we update game
             print(currentData.value) // entire game is null initally, causes playersInfo .childRemove to be trigged (and other values in game)
             return .success(withValue: currentData)
-        }, andCompletionBlock: { [self] error, committed, snapshot in
+        }, andCompletionBlock: { [weak self] error, committed, snapshot in
+            guard let self else { return }
             if let error {
                 print(error.localizedDescription)
                 return
@@ -315,7 +332,8 @@ class GameManager {
     }
 
     func observeWinner() {
-        ref.child("games/\(roomID)/winner").observe(.value) { [self] snapshot in
+        ref.child("games/\(roomID)/winner").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/winner').observe(.value)")
             guard let winnerID = snapshot.value as? String else { return }
             self.winnerID = winnerID
@@ -324,7 +342,8 @@ class GameManager {
     }
     
     func observePlayersWord() {
-        playerWordsHandle = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [self] snapshot in
+        playerWordsHandle = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/playersWord').observe(.childChanged)")
             guard let word = snapshot.value as? String else { return }
             let uid = snapshot.key
@@ -334,7 +353,8 @@ class GameManager {
     
     
     func observeCurrentLetters() {
-        currentLettersHandle = ref.child("games/\(roomID)/currentLetters").observe(.value) { [self] snapshot in
+        currentLettersHandle = ref.child("games/\(roomID)/currentLetters").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/currentLetters').observe(.value)")
             guard let letters = snapshot.value as? String else { return }
             self.currentLetters = letters
@@ -344,7 +364,8 @@ class GameManager {
     
     // try using .value (.childChange original)
     func observePlayerTurn() {
-        playerTurnHandle = ref.child("games/\(roomID)/currentPlayerTurn").observe(.value) { [self] snapshot in
+        playerTurnHandle = ref.child("games/\(roomID)/currentPlayerTurn").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/currentPlayerTurn').observe(.value)")
             guard let playerID = snapshot.value as? String,
                   playerID != ""
@@ -360,7 +381,8 @@ class GameManager {
     
     func observeRoomStatus() {
         // .value
-        roomStatusHandle = ref.child("games/\(roomID)/status").observe(.value) { [self] snapshot in
+        roomStatusHandle = ref.child("games/\(roomID)/status").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/status).observe(.value)")
             guard let statusString = snapshot.value as? String,
                   let gameStatus = Game.Status(rawValue: statusString)
@@ -373,7 +395,8 @@ class GameManager {
     }
     
     func observeReady() {
-        isReadyHandle = ref.child("rooms/\(roomID)/isReady").observe(.value) { [self] snapshot in
+        isReadyHandle = ref.child("rooms/\(roomID)/isReady").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             guard let isReady = snapshot.value as? [String: Bool] else { return }
             self.delegate?.gameManager(self, playersReadyUpdated: isReady)
         }
@@ -428,7 +451,8 @@ class GameManager {
         guard let uid = service.currentUser?.uid else { return }
         
         var localLettersUsed = lettersUsed
-        ref.child("/games/\(roomID)").runTransactionBlock({ currentData in
+        ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
             guard var game = currentData.value as? [String: AnyObject],
                   var playersInfo = game["playersInfo"] as? [String: AnyObject],
                   var currentPlayerInfo = playersInfo[uid] as? [String: AnyObject],
@@ -485,7 +509,8 @@ class GameManager {
             currentData.value = game
             
             return .success(withValue: currentData)
-        }, andCompletionBlock: { error, committed, snapshot in
+        }, andCompletionBlock: { [weak self] error, committed, snapshot in
+            guard let self else { return }
             if let error = error {
                 print(error.localizedDescription)
                 return
@@ -501,7 +526,8 @@ class GameManager {
     }
     
     private func handleSubmitFail() {
-        ref.child("/games/\(roomID)").runTransactionBlock({ currentData in
+        ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
                var shake = game["shake"] as? [String: Bool],
                let uid = self.service.currentUser?.uid {
@@ -520,7 +546,8 @@ class GameManager {
     }
     
     func observeShakes() {
-        ref.child("games/\(roomID)/shake").observe(.childChanged) { [self] snapshot in
+        ref.child("games/\(roomID)/shake").observe(.childChanged) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/shake').observe(.childChanged)")
             let playerID = snapshot.key
             guard let shouldShake = snapshot.value as? Bool,
@@ -548,7 +575,8 @@ class GameManager {
     }
     
     func observeRounds() {
-        roundsHandle = ref.child("games/\(roomID)/rounds").observe(.value) { [self] snapshot in
+        roundsHandle = ref.child("games/\(roomID)/rounds").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/rounds').observe(.value)")
             guard let currentRound = snapshot.value as? Int else { return }
             self.currentRound = currentRound
@@ -556,7 +584,8 @@ class GameManager {
     }
     
     func observeSecondsPerTurn() {
-        secondsPerTurnHandle = ref.child("games/\(roomID)/secondsPerTurn").observe(.value) { [self] snapshot in
+        secondsPerTurnHandle = ref.child("games/\(roomID)/secondsPerTurn").observe(.value) { [weak self] snapshot in
+            guard let self else { return }
             print("ref.child('games/\(roomID)/secondsPerTurn').observe(.value)")
             guard let seconds = snapshot.value as? Int else { return }
             self.secondsPerTurn = seconds
@@ -567,7 +596,8 @@ class GameManager {
     func damagePlayer(playerID: String) async throws {
         guard playerID == currentPlayerTurn else { return }
         
-        ref.child("games/\(roomID)").runTransactionBlock({ currentData in
+        ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
                var playersWord = game["playersWord"] as? [String: AnyObject],
@@ -627,6 +657,7 @@ class GameManager {
     
     // Called when user gets kill or when user leaves mid game
     func checkForWinner(_ hearts: [String: Int]) async throws -> Bool {
+        // TODO: Don't use isAlive(), relies on clients 
         let playersAliveCount = hearts.filter { isAlive($0.key) }.count
         let winnerExists = playersAliveCount == 1
         guard winnerExists,
@@ -686,7 +717,8 @@ class GameManager {
     func exit() throws {
         turnTimer?.stopTimer()
         
-        service.ref.child("games/\(roomID)").runTransactionBlock({ currentData in
+        service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
                let uid = self.service.currentUser?.uid,
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
@@ -768,7 +800,8 @@ class GameManager {
                 return .success(withValue: currentData)
             }
             return .success(withValue: currentData)
-        }, andCompletionBlock: { [self] error, committed, snapshot in
+        }, andCompletionBlock: { [weak self] error, committed, snapshot in
+            guard let self else { return }
             if let error {
                 print(error.localizedDescription)
                 return
@@ -779,63 +812,7 @@ class GameManager {
             ])
         }, withLocalEvents: false)
     }
-    
-    // TODO: Fix exit()
-    // If user puts app in background, call exit() and "kill" player.
-    // Bug if user swipes to delete, doesn't trigger app enter background so it doesn't call exit() so game will be paused,
-//    func exit() async throws {
-//        turnTimer?.stopTimer()
-//        
-//        let (result, gameSnapshot) = try await service.ref.child("games/\(roomID)").runTransactionBlock { [self] currentData in
-//            if var game = currentData.value as? [String: AnyObject],
-//               let statusString = game["status"] as? String,
-//               let status = Game.Status(rawValue: statusString),
-//               let uid = service.currentUser?.uid {
-//                var playersInfo = game["playersInfo"] as? [String: [String: AnyObject]] ?? [:]
-//                
-//                switch status {
-//                case .notStarted:
-//                    // Remove player
-//                    playersInfo[uid] = nil
-//                    // Update positions
-//                    let sortedPlayersByPosition = playersInfo.sorted { playerInfo1, playerInfo2 in
-//                        let position1 = playerInfo1.value["position"] as? Int ?? .max
-//                        let position2 = playerInfo2.value["position"] as? Int ?? .max
-//                        return position1 < position2
-//                    }
-//                    
-//                    sortedPlayersByPosition.enumerated().forEach { newPosition, playerInfo in
-//                        let userID = playerInfo.key
-//                        playersInfo[userID]?["position"] = newPosition as AnyObject
-//                    }
-//                    
-//                    if playersInfo.count < 2 {
-//                        game["countdownStartTime"] = NSNull()
-//                    }
-//                    
-//                case .inProgress:
-//                    // Kill player
-//                    playersInfo[uid]?["hearts"] = 0 as AnyObject
-//                    // TODO: Check for winner
-//                    // - set room status to notStarted
-//                    // - reset game state to empty state (e.g. no players)
-//                    // Observation: After transaction for damaging player completes, observers with .value gets called, even for values that do not change e.g. room status
-//                }
-//                
-//                // Apply updates
-//                game["playersInfo"] = playersInfo as AnyObject
-//
-//                currentData.value = game
-//                return .success(withValue: currentData)
-//            }
-//            return .success(withValue: currentData)
-//        }
-//        // How do i know if transaction suceeds? If it doesn't throw it's sucessfull?
-//        try await ref.updateChildValues([
-//            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-//        ])
-//    }
-    
+
     private func handleExitDuringNotStarted() async throws {
         guard let uid = service.currentUser?.uid else { return }
         
@@ -843,42 +820,6 @@ class GameManager {
             "games/\(roomID)/playersInfo/\(uid)/hearts": 0,
             "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
         ])
-    }
-    
-    private func handleExitDuringGame() async throws {
-//        guard let currentUser = service.currentUser else { return }
-//        var updates: [String: Any] = [:]
-//
-//        let gameSnapshot = try await ref.child("games/\(roomID)").getData()
-//        guard let game = gameSnapshot.toObject(Game.self),
-//              let positions = game.positions,
-//              let currentPosition = positions[currentUser.uid],
-//              var hearts = game.hearts
-//        else { return }
-//        
-//        let isCurrentPlayersTurn = currentUser.uid == game.currentPlayerTurn?["playerID"]
-//        if isCurrentPlayersTurn {
-//            let playerCount = positions.count
-//            var nextPosition = getNextAlivePosition(from: currentPosition, playerCount: playerCount)
-//            guard let nextPlayerUID = getUserID(position: nextPosition) else { return }
-//
-//            updates["games/\(roomID)/currentPlayerTurn/playerID"] = nextPlayerUID
-//        }
-//        
-//        updates["games/\(roomID)/hearts/\(currentUser.uid)"] = 0   // kill player
-//        updates["rooms/\(roomID)/currentPlayerCount"] = ServerValue.increment(-1)
-//        updates["rooms/\(roomID)/isReady/\(currentUser.uid)"] = NSNull()
-//
-//        try await ref.updateChildValues(updates)
-//
-//        // Whenever a player dies, check for winner
-//        if let livesRemaining = hearts[currentUser.uid] {
-//            let isAlive = livesRemaining > 0
-//            if isAlive {
-//                hearts[currentUser.uid] = 0  // kill player locally
-//                try await checkForWinner(hearts)
-//            }
-//        }
     }
     
 //    func removeListeners() {

@@ -56,7 +56,6 @@
 		32F956692CB3256A00DAA6E6 /* ChatViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F956682CB3256A00DAA6E6 /* ChatViewController.swift */; };
 		32F9566B2CB3275C00DAA6E6 /* MessageTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9566A2CB3275C00DAA6E6 /* MessageTableViewCell.swift */; };
 		32F9566D2CB32AE800DAA6E6 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9566C2CB32AE800DAA6E6 /* Message.swift */; };
-		32FC923C2C9CC85B00F09B00 /* JoinGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FC923B2C9CC85B00F09B00 /* JoinGameView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -103,7 +102,6 @@
 		32F956682CB3256A00DAA6E6 /* ChatViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewController.swift; sourceTree = "<group>"; };
 		32F9566A2CB3275C00DAA6E6 /* MessageTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTableViewCell.swift; sourceTree = "<group>"; };
 		32F9566C2CB32AE800DAA6E6 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
-		32FC923B2C9CC85B00F09B00 /* JoinGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinGameView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -199,7 +197,6 @@
 				32C06C642C9132B200D3676D /* HeartsView.swift */,
 				32610AEB2C98C9440011946E /* ArrowView.swift */,
 				32610AFA2C9A6D420011946E /* CountDownView.swift */,
-				32FC923B2C9CC85B00F09B00 /* JoinGameView.swift */,
 				32D23A2D2CA264F6002C4F04 /* KeyboardView.swift */,
 				32F956642CB0755000DAA6E6 /* SettingsHeaderView.swift */,
 				321398312CB4630A00A636A7 /* AddMessageView.swift */,
@@ -327,7 +324,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				32FC923C2C9CC85B00F09B00 /* JoinGameView.swift in Sources */,
 				32610AFB2C9A6D420011946E /* CountDownView.swift in Sources */,
 				32F9565F2CB0637000DAA6E6 /* SignInTableViewCell.swift in Sources */,
 				32F9566D2CB32AE800DAA6E6 /* Message.swift in Sources */,

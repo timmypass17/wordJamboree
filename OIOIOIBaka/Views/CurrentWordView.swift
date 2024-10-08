@@ -19,12 +19,6 @@ class CurrentWordView: UIView {
     
     let arrowView: ArrowView!
     
-//    let arrowView: ArrowView = {
-//        let arrowView = ArrowView()
-//        arrowView.translatesAutoresizingMaskIntoConstraints = false
-//        return arrowView
-//    }()
-    
     let container: UIView = {
         let view = UIView()
         view.backgroundColor = .systemBackground
@@ -59,28 +53,6 @@ class CurrentWordView: UIView {
         ])
     }
     
-//    override init(frame: CGRect) {
-//        super.init(frame: frame)
-//        
-//        container.addSubview(wordLabel)
-//        addSubview(arrowView)
-//        addSubview(container)
-//        
-//        NSLayoutConstraint.activate([
-//            container.centerXAnchor.constraint(equalTo: centerXAnchor),
-//            container.centerYAnchor.constraint(equalTo: centerYAnchor),
-//                        
-//            wordLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: padding),
-//            wordLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -padding),
-//            wordLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: padding),
-//            wordLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -padding),
-//            
-//            arrowView.centerXAnchor.constraint(equalTo: centerXAnchor),
-//            arrowView.centerYAnchor.constraint(equalTo: centerYAnchor),
-//            
-//        ])
-//    }
-    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -103,7 +75,8 @@ class CurrentWordView: UIView {
         UIView.animate(withDuration: 0.25, // Duration of the animation in seconds
                        delay: 0,          // Delay before the animation starts
                        options: .curveEaseInOut, // Easing option for smooth animation
-                       animations: {
+                       animations: { [weak self] in
+            guard let self else { return }
             self.arrowView.transform = CGAffineTransform(rotationAngle: angle)
         }, completion: nil)
         

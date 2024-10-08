@@ -45,7 +45,11 @@ class CountDownView: UIView {
     
     func startCountDown() {
         var currentCountdownValue = startingCoundownValue
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
             countDownLabel.text = "\(currentCountdownValue)"
             if currentCountdownValue == 0 {
                 stopCountDown()

@@ -170,7 +170,8 @@ class PlayerView: UIView {
     }
     
     func shake() {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
             UIView.animate(
                 withDuration: 0.07, delay: 0, options: [.autoreverse, .repeat], animations: {
                     UIView.modifyAnimations(withRepeatCount: 4, autoreverses: true) {

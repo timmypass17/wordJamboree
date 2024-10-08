@@ -151,7 +151,8 @@ class SettingsViewController: UIViewController {
             let message = "Are you sure you want to sign out?"
             
             let alert = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
-            alert.addAction(UIAlertAction(title: "Yes", style: .destructive) { [self] _ in
+            alert.addAction(UIAlertAction(title: "Yes", style: .destructive) { [weak self] _ in
+                guard let self else { return }
                 do {
                     try Auth.auth().signOut()
                     print("User signed out")
@@ -175,9 +176,10 @@ class SettingsViewController: UIViewController {
         let message = "Are you sure you want to delete your account? This action is permanent and will remove all your wishlist items. You may need to re-login to proceed with this security-sensitive operation. This cannot be undone."
         
         let alert = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
-        alert.addAction(UIAlertAction(title: "Delete Account", style: .destructive) { [self] _ in
+        alert.addAction(UIAlertAction(title: "Delete Account", style: .destructive) { [weak self] _ in
+            guard let self else { return }
             Task {
-                await deleteUser()
+                await self.deleteUser()
             }
         })
         alert.addAction(UIAlertAction(title: "Nevermind", style: .default))
