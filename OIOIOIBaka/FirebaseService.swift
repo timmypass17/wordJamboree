@@ -188,9 +188,9 @@ class FirebaseService {
                     PlayerInfo(
                         hearts: 3,
                         position: 0,
-                        additionalInfo: [
-                            "name": currentUser.name
-                        ]
+                        additionalInfo: AdditionalPlayerInfo(
+                            name: currentUser.name
+                        )
                     )
             ],
             shake: [

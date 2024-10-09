@@ -15,10 +15,15 @@ struct Message {
     var name: String
     var message: String
     var pfpImage: UIImage?
-    var createdAt: Int = Int(Date().timeIntervalSince1970 * 1000)
+    var createdAt: Int = currentTimestamp
     var messageType: MessageType = .user
 }
 
 enum MessageType {
     case user, system
+}
+
+
+var currentTimestamp: Int { // milliseconds
+    return Int(Date().timeIntervalSince1970 * 1000)
 }

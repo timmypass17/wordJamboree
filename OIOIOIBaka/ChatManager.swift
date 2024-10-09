@@ -44,22 +44,24 @@ class ChatManager {
     func observeNewMessages() {
         // .queryLimited(toLast: 1) - only get 1 back
         // .childAdded being called initally?
-        let currentTimestamp = Date().timeIntervalSince1970 * 1000
         // Use .queryOrdered(byChild: "createdAt") and .queryStarting(atValue: currentTimestamp) to get "new" child added
-        ref.child("messages").child(roomID).queryOrdered(byChild: "createdAt").queryStarting(atValue: currentTimestamp).observe(.childAdded) { [weak self] snapshot in
-            guard let self else { return }
-            print("new message: \(snapshot)")
-            guard let messageDict = snapshot.value as? [String: AnyObject],
-                  let uid = messageDict["uid"] as? String,
-                  let name = messageDict["name"] as? String,
-                  let textMessage = messageDict["message"] as? String
-            else { return }
-            
-            // Add message to messages (that is not from current user)
-            guard uid != self.service.currentUser?.uid else { return }
-            let message = Message(uid: uid, name: name, message: textMessage, pfpImage: nil)
-            self.messages.append(message)
-            self.delegate?.chatManager(self, didReceiveNewMessage: message)
-        }
+        ref.child("messages").child(roomID)
+            .queryOrdered(byChild: "createdAt")
+            .queryStarting(atValue: currentTimestamp)
+            .observe(.childAdded) { [weak self] snapshot in
+                guard let self else { return }
+                print("new message: \(snapshot)")
+                guard let messageDict = snapshot.value as? [String: AnyObject],
+                      let uid = messageDict["uid"] as? String,
+                      let name = messageDict["name"] as? String,
+                      let textMessage = messageDict["message"] as? String
+                else { return }
+                
+                // Add message to messages (that is not from current user)
+                guard uid != self.service.currentUser?.uid else { return }
+                let message = Message(uid: uid, name: name, message: textMessage, pfpImage: nil)
+                self.messages.append(message)
+                self.delegate?.chatManager(self, didReceiveNewMessage: message)
+            }
     }
 }

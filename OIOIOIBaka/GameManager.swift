@@ -105,11 +105,18 @@ class GameManager {
         }
     }
     
+    // childAdded is triggered once for each existing child and then again every time a new child is added to the specified path.
     func observePlayerAdded() {
-        handles["playersInfo.childAdded"] = ref.child("games/\(roomID)/playersInfo").observe(.childAdded) { [weak self] snapshot in
+        let joinedRoomTimestamp = currentTimestamp  // oldest time this user sees
+        handles["playersInfo.childAdded"] =
+        ref.child("games/\(roomID)/playersInfo")
+            .observe(.childAdded) { [weak self] snapshot in
             guard let self else { return }
             print("ref.child('games/\(roomID)/playersInfo').observe(.childAdded)")
-            guard let playerInfo = snapshot.value as? [String: AnyObject] else {
+            guard let playerInfo = snapshot.value as? [String: AnyObject],
+                  let additionalInfo = playerInfo["additionalInfo"] as? [String: AnyObject],
+                  let joinedAt = additionalInfo["joinedAt"] as? Int
+                else {
                 print("failed to convert snapshot to playerInfo: \(snapshot)")
                 return
             }
@@ -125,7 +132,12 @@ class GameManager {
                     }
                 }
                 DispatchQueue.main.async {
-                    self.delegate?.gameManager(self, playerJoined: playerInfo, playerID: snapshot.key)
+                    let newPlayerJoined = joinedAt > joinedRoomTimestamp
+                    if newPlayerJoined {
+                        // Only print "Player Joined" for new child added
+                        print("New player joined!")
+                        self.delegate?.gameManager(self, playerJoined: playerInfo, playerID: snapshot.key)
+                    }
                     self.delegate?.gameManager(self, playersInfoUpdated: self.playersInfo)
                 }
             }
@@ -292,7 +304,8 @@ class GameManager {
                     "hearts": 3,
                     "position": currentPlayerCount,
                     "additionalInfo": [
-                        "name": user.name
+                        "name": user.name,
+                        "joinedAt": currentTimestamp
                     ]
                 ] as AnyObject
                 
@@ -702,9 +715,14 @@ class GameManager {
         return winnerExists
     }
 
-    func exit() throws {
+    func exit() async throws {
         turnTimer?.stopTimer()
-        
+    
+        // Check if user was in game
+        guard let uid = self.service.currentUser?.uid else { return }
+        let userSnapshot = try await ref.child("games/\(roomID)/playersInfo/\(uid)").getData()
+        guard userSnapshot.exists() else { return }
+
         service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
@@ -794,7 +812,7 @@ class GameManager {
                 print(error.localizedDescription)
                 return
             }
-            // TODO: If user is not in game and leaves, this still decrements player count
+
             ref.updateChildValues([
                 "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
             ])

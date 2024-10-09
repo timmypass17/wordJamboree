@@ -233,7 +233,9 @@ class GameViewController: UIViewController {
             leaveButton.isHidden.toggle()
             
             do {
-                try gameManager.exit()
+                Task {
+                    try await self.gameManager.exit()
+                }
             } catch {
                 print("Error removing player: \(error)")
             }
@@ -336,11 +338,13 @@ class GameViewController: UIViewController {
     func exitAction() -> UIAction {
         return UIAction(title: "Exit Game", image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), attributes: .destructive) { [weak self] _ in
             guard let self else { return }
-            do {
-                try gameManager.exit()
-                navigationController?.popViewController(animated: true)
-            } catch {
-                print("Error removing player: \(error)")
+            Task {
+                do {
+                    try await self.gameManager.exit()
+                    self.navigationController?.popViewController(animated: true)
+                } catch {
+                    print("Error removing player: \(error)")
+                }
             }
         }
     }
@@ -452,8 +456,8 @@ extension GameViewController: GameManagerDelegate {
         print(manager.pfps)
         
         for (uid, playerInfo) in playersInfo {
-            guard let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
-                  let name = additionalInfo["name"],
+            guard let additionalInfo = playerInfo["additionalInfo"] as? [String: AnyObject],
+                  let name = additionalInfo["name"] as? String,
                   let position = playerInfo["position"] as? Int,
                   let hearts = playerInfo["hearts"] as? Int
             else {

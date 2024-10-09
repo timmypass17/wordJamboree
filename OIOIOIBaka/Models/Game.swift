@@ -28,7 +28,12 @@ struct Game: Codable {
 struct PlayerInfo: Codable {
     var hearts: Int
     var position: Int
-    var additionalInfo: [String: String]
+    var additionalInfo: AdditionalPlayerInfo
+}
+
+struct AdditionalPlayerInfo: Codable {
+    var name: String
+    var joinedAt: Int = currentTimestamp    // put this under playerInfo because we listen to playerInfo and can on see fields directly under playerInfo
 }
 
 // does support arrays but using dicitonary is recommended
