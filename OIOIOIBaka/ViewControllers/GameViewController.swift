@@ -63,6 +63,16 @@ class GameViewController: UIViewController {
         return button
     }()
     
+    let winnerPlayerView: PlayerView = {
+        let playerView = PlayerView()
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        playerView.isHidden = true
+        playerView.crownView.isHidden = false
+        playerView.heartsView.isHidden = true
+        playerView.wordLabel.text = "WINNER"
+        return playerView
+    }()
+    
     var container: UIView!
     
     var afkTimer: Timer?
@@ -76,6 +86,8 @@ class GameViewController: UIViewController {
     let soundManager = SoundManager()
     var ref = Database.database().reference()
     var exitTask: Task<Void, Error>? = nil
+    var joinButtonCenterYConstraint: NSLayoutConstraint!
+    var joinButtonTopConstraint: NSLayoutConstraint!
 
     init(gameManager: GameManager, chatManager: ChatManager) {
         self.gameManager = gameManager
@@ -159,13 +171,17 @@ class GameViewController: UIViewController {
 //        container.addSubview(countDownView)
         container.addSubview(joinButton)
         container.addSubview(leaveButton)
+        container.addSubview(winnerPlayerView)
+        
+        joinButtonCenterYConstraint = joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        joinButtonTopConstraint = joinButton.topAnchor.constraint(equalTo: winnerPlayerView.bottomAnchor, constant: 8)
         
         NSLayoutConstraint.activate([
             playerViews[0].centerXAnchor.constraint(equalTo: container.centerXAnchor),
             playerViews[0].topAnchor.constraint(equalTo: container.topAnchor),
-            playerViews[0].bottomAnchor.constraint(equalTo: joinButton.topAnchor),
+            playerViews[0].bottomAnchor.constraint(equalTo: container.centerYAnchor),
             
-            playerViews[1].topAnchor.constraint(equalTo: joinButton.bottomAnchor),
+            playerViews[1].topAnchor.constraint(equalTo: container.centerYAnchor),
             playerViews[1].bottomAnchor.constraint(equalTo: container.bottomAnchor),
             playerViews[1].centerXAnchor.constraint(equalTo: container.centerXAnchor),
             
@@ -178,10 +194,14 @@ class GameViewController: UIViewController {
             playerViews[3].leadingAnchor.constraint(equalTo: container.centerXAnchor, constant: 25),
 
             joinButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            joinButtonCenterYConstraint,
+//            joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             
             leaveButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             leaveButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            
+            winnerPlayerView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            winnerPlayerView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
         ])
     
         // note: setting contraints doesn't layout it out immediately, so frames aren't set properly
@@ -231,6 +251,8 @@ class GameViewController: UIViewController {
             guard let self else { return }
             joinButton.isHidden.toggle()
             leaveButton.isHidden.toggle()
+            joinButtonCenterYConstraint.isActive = true
+            joinButtonTopConstraint.isActive = false
             
             do {
                 Task {
@@ -396,6 +418,10 @@ extension GameViewController: UITextFieldDelegate {
 
 extension GameViewController: GameManagerDelegate {
     
+    func gameManager(_ manager: GameManager, countdownStarted: Bool) {
+        winnerPlayerView.isHidden = true
+    }
+    
     func gameManager(_ manager: GameManager, countdownEnded: Bool) {
         // Player 0 starts game
         guard let uid = manager.service.currentUser?.uid,
@@ -452,9 +478,7 @@ extension GameViewController: GameManagerDelegate {
         }
         
         playerViews.forEach { $0.isHidden = true }
-                
-        print(manager.pfps)
-        
+                        
         for (uid, playerInfo) in playersInfo {
             guard let additionalInfo = playerInfo["additionalInfo"] as? [String: AnyObject],
                   let name = additionalInfo["name"] as? String,
@@ -563,7 +587,7 @@ extension GameViewController: GameManagerDelegate {
         self.currentWordView?.pointArrow(at: self.playerViews[position], self)
     }
     
-    func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: Game.Status) {
+    func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: GameState.Status, winner: [String: AnyObject]?) {
         guard let uid = manager.service.currentUser?.uid else { return }
         switch roomStatus {
         case .notStarted:
@@ -578,18 +602,41 @@ extension GameViewController: GameManagerDelegate {
                 joinButton.isHidden = false
                 leaveButton.isHidden = true
             }
+            
+            // Play again
+            if let winnerID = winner?["playerID"] as? String,
+               let winnerName = winner?["name"] as? String,
+               let winnerPfp = manager.pfps[winnerID]
+            {
+//                winnerPlayerView.crownView.isHidden = false
+//                winnerPlayerView.heartsView.isHidden = true
+//                winnerPlayerView.wordLabel.text = "WINNER"
+                winnerPlayerView.nameLabel.text = winnerName
+                winnerPlayerView.profileImageView.update(image: winnerPfp)
+                winnerPlayerView.isHidden = false
+                // update join button to be under
+//                joinButton.titleLabel?.text = "Play Again"
+                joinButtonCenterYConstraint.isActive = false
+                joinButtonTopConstraint.isActive = true
+//                joinButton.topAnchor.constraint(equalTo: winnerPlayerView.bottomAnchor, constant: 8).isActive = true
+                joinButton.isHidden = false
+                playerViews.forEach { $0.wordLabel.text = "" }
+            } else {
+//                joinButton.titleLabel?.text = "Join Game"
+                joinButtonCenterYConstraint.isActive = true
+                joinButtonTopConstraint.isActive = false
+            }
+            
+            
         case .inProgress:
+            print("gameManager - inProgress")
             currentWordView?.isHidden = false
             leaveButton.isHidden = true
             joinButton.isHidden = true
             gameManager.lettersUsed = Set("XZ")
-            print("inProgress")
-            // TODO: this is causing keyboard to clear
-            // room status is being called after being hit?
-            // transaction is trigger observers?
-            // print out observers to see what gets called after player takes damage
             keyboardView.update(letters: "", lettersUsed: gameManager.lettersUsed)
             updatePlayerStatus()
+            winnerPlayerView.isHidden = true
         }
     }
     

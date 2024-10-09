@@ -16,9 +16,15 @@ struct Game: Codable {
     var playersInfo: [String: PlayerInfo]? // Updated to use a PlayerInfo struct
     var winner: String?
     var shake: [String: Bool]?
-    var status: Status = .notStarted
+    var state: GameState = GameState(roomStatus: .notStarted)
     var countdownStartTime: TimeInterval? = nil
     var playersWord: [String: String]?
+    
+}
+
+struct GameState: Codable {
+    var winner: String? = nil
+    var roomStatus: Status
     
     enum Status: String, Codable {
         case notStarted, inProgress

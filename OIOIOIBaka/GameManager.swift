@@ -11,6 +11,8 @@ import FirebaseDatabaseInternal
 import FirebaseAuth
 import FirebaseFirestore
 
+// TODO: Clear players after game ends
+
 // Notes:
 // - Transactions are made to be called multible times and should handle nil (usually nil initally)
 //  - succeeds eventually
@@ -23,7 +25,7 @@ import FirebaseFirestore
 // - "weak self" to closure to create weak reference. If object gets deallocated, then closure's value is nil and objects can be deallocated
 //      - if we didn't add "weak" then object will not deallocated because the closure has a strong reference to the object
 protocol GameManagerDelegate: AnyObject {
-    func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: Game.Status)
+    func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: GameState.Status, winner: [String: AnyObject]?)
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String: Bool])
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int)
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String)
@@ -35,6 +37,7 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, timeRanOut: Bool)
     func gameManager(_ manager: GameManager, lettersUsedUpdated: Set<Character>)
     func gameManager(_ manager: GameManager, countdownTimeUpdated timeRemaining: Int)
+    func gameManager(_ manager: GameManager, countdownStarted: Bool)
     func gameManager(_ manager: GameManager, countdownEnded: Bool)
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String: AnyObject])
     func gameManager(_ manager: GameManager, playerJoined playerInfo: [String: AnyObject], playerID: String)
@@ -65,7 +68,7 @@ class GameManager {
     
     var handles: [String: DatabaseHandle] = [:]
     
-    var pfps: [String: UIImage?] = [:]
+    var pfps: [String: UIImage?] = [:]  // cache profile pictures
 
     // TODO:
     // - Chat message from other player is still being shown afte exiting and re-entering
@@ -77,6 +80,9 @@ class GameManager {
         self.roomID = roomID
         turnTimer = TurnTimer(soundManager: soundManager)
         turnTimer?.delegate = self
+        if let uid = service.currentUser?.uid {
+            pfps[uid] = service.pfpImage
+        }
     }
     
     deinit {
@@ -98,7 +104,7 @@ class GameManager {
                 observeRounds()
                 observeSecondsPerTurn()
                 observePlayerTurn()
-                observeWinner()
+//                observeWinner()
             } catch {
                 print("Error fetching game: \(error)")
             }
@@ -125,11 +131,13 @@ class GameManager {
             Task {
                 // Fetch pfp if seen for first time
                 if self.pfps[uid] == nil {
-                    if let pfpImage = try? await self.service.getProfilePicture(uid: uid) {
-                        self.pfps[uid] = pfpImage
-                    } else {
-                        self.pfps[uid] = nil // can store nil because pfps is type [String: UIImage?]
-                    }
+                    print("fetching pfp: \(uid)")
+                    self.pfps[uid] = try? await self.service.getProfilePicture(uid: uid)
+//                    if let pfpImage = try? await self.service.getProfilePicture(uid: uid) {
+//                        self.pfps[uid] = pfpImage
+//                    } else {
+//                        self.pfps[uid] = nil // can store nil because pfps is type [String: UIImage?]
+//                    }
                 }
                 DispatchQueue.main.async {
                     let newPlayerJoined = joinedAt > joinedRoomTimestamp
@@ -208,9 +216,10 @@ class GameManager {
         ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
-               let roomStatusString = game["status"] as? String,
+               var state = game["state"] as? [String: AnyObject],
+               let roomStatusString = state["roomStatus"] as? String,
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
-               let roomStatus = Game.Status(rawValue: roomStatusString),
+               let roomStatus = GameState.Status(rawValue: roomStatusString),
                // TODO: Use random player
 //               let startingPlayerID = playersInfo.randomElement()?.key,
                playersInfo.count >= 2,
@@ -218,7 +227,8 @@ class GameManager {
                 
                 let startingPlayerID = self.service.currentUser?.uid
                 game["currentPlayerTurn"] = startingPlayerID as AnyObject
-                game["status"] = Game.Status.inProgress.rawValue as AnyObject
+                state["roomStatus"] = GameState.Status.inProgress.rawValue as AnyObject
+                game["state"] = state as AnyObject
                 
                 currentData.value = game
                 print("(start game) success")
@@ -257,9 +267,8 @@ class GameManager {
     }
     
     func startLocalCountdown(from initialTime: TimeInterval) {
+        self.delegate?.gameManager(self, countdownStarted: true)
         var timeRemaining = Int(round(initialTime))
-        
-        // Invalidate any existing timer to avoid conflicts
         countdownTimer?.invalidate()
         
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
@@ -281,12 +290,13 @@ class GameManager {
     
     func joinGame() {
         guard let user = service.currentUser else { return }
-
+        
         ref.child("games").child(roomID).runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
-               let roomStatusString = game["status"] as? String,
-               let roomStatus = Game.Status(rawValue: roomStatusString) {
+               let state = game["state"] as? [String: AnyObject],
+               let roomStatusString = state["roomStatus"] as? String,
+               let roomStatus = GameState.Status(rawValue: roomStatusString) {
                 
                 var playersInfo = game["playersInfo"] as? [String: AnyObject] ?? [:]
                 var playersWord = game["playersWord"] as? [String: AnyObject] ?? [:]
@@ -340,15 +350,15 @@ class GameManager {
         }, withLocalEvents: false)
     }
 
-    func observeWinner() {
-        handles["winner"] = ref.child("games/\(roomID)/winner").observe(.value) { [weak self] snapshot in
-            guard let self else { return }
-            print("ref.child('games/\(roomID)/winner').observe(.value)")
-            guard let winnerID = snapshot.value as? String else { return }
-            self.winnerID = winnerID
-            delegate?.gameManager(self, winnerUpdated: winnerID)
-        }
-    }
+//    func observeWinner() {
+//        handles["winner"] = ref.child("games/\(roomID)/winner").observe(.value) { [weak self] snapshot in
+//            guard let self else { return }
+//            print("ref.child('games/\(roomID)/winner').observe(.value)")
+//            guard let winnerID = snapshot.value as? String else { return }
+//            self.winnerID = winnerID
+//            delegate?.gameManager(self, winnerUpdated: winnerID)
+//        }
+//    }
     
     func observePlayersWord() {
         handles["playersWord"] = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [weak self] snapshot in
@@ -389,17 +399,22 @@ class GameManager {
     }
     
     func observeRoomStatus() {
+        // Put room status and winner under same node
         // .value
-        handles["status"] = ref.child("games/\(roomID)/status").observe(.value) { [weak self] snapshot in
+        handles["roomStatus"] = ref.child("games/\(roomID)/state").observe(.value) { [weak self] snapshot in
             guard let self else { return }
-            print("ref.child('games/\(roomID)/status).observe(.value)")
-            guard let statusString = snapshot.value as? String,
-                  let gameStatus = Game.Status(rawValue: statusString)
-            else { 
+            print("ref.child('games/\(roomID)/state).observe(.value)")
+            print("state: \(snapshot)")
+            guard let snapshot = snapshot.value as? [String: AnyObject],
+                  let statusString = snapshot["roomStatus"] as? String,
+                  let gameStatus = GameState.Status(rawValue: statusString)
+            else {
                 print("Fail to convert snapshot to status: \(snapshot)")
                 return
             }
-            self.delegate?.gameManager(self, gameStatusUpdated: gameStatus)
+            
+            let winner = snapshot["winner"] as? [String: AnyObject] ?? nil
+            self.delegate?.gameManager(self, gameStatusUpdated: gameStatus, winner: winner)
         }
     }
 
@@ -610,7 +625,10 @@ class GameManager {
                var secondsPerTurn = game["secondsPerTurn"] as? Int,
                let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo),
                let currentPlayerTurn = game["currentPlayerTurn"] as? String,
-               playerID == currentPlayerTurn
+               playerID == currentPlayerTurn,
+               var state = game["state"] as? [String: AnyObject],
+               let statusString = state["roomStatus"] as? String,
+               let status = GameState.Status(rawValue: statusString)
             {
                 hearts -= 1
                 currentPlayerInfo["hearts"] = hearts as AnyObject
@@ -619,10 +637,24 @@ class GameManager {
                 game["playersInfo"] = playersInfo as AnyObject
                 game["shake"] = shake as AnyObject
                 
-                if self.checkForWinner(game: &game) {
-                    game["status"] = Game.Status.notStarted.rawValue as AnyObject
+                if let winnerID = self.checkForWinner(game: game) {
+                    guard let winnerInfo = playersInfo[winnerID] as? [String: AnyObject],
+                          let additionalWinnerInfo = winnerInfo["additionalInfo"] as? [String: AnyObject],
+                          let name = additionalWinnerInfo["name"] as? String
+                    else { return .success(withValue: currentData) }
+                    var winner = state["winner"] as? [String: AnyObject] ?? [:]
+                    winner["playerID"] = winnerID as AnyObject
+                    winner["name"] = name as AnyObject
+                    state["winner"] = winner as AnyObject
+                    state["roomStatus"] = GameState.Status.notStarted.rawValue as AnyObject
+                    game["state"] = state as AnyObject
                     game["currentPlayerTurn"] = NSNull() as AnyObject
                     game["secondsPerTurn"] = Int.random(in: 10...30) as AnyObject
+                    game["playersInfo"] = NSNull() as AnyObject
+                    game["playersWord"] = NSNull() as AnyObject
+                    game["rounds"] = 1 as AnyObject
+                    game["shake"] = NSNull() as AnyObject
+                    game["wordsUsed"] = NSNull() as AnyObject
                 } else {
                     // Keep playing, get next turn
                     game["currentPlayerTurn"] = nextPlayerID as AnyObject
@@ -669,7 +701,7 @@ class GameManager {
 
         updates["games/\(roomID)/currentPlayerTurn/playerID"] = "" as AnyObject // incase current player == new game's current player
         updates["games/\(roomID)/secondsPerTurn"] = Int.random(in: 10...30) + 3 as AnyObject
-        updates["rooms/\(roomID)/status"] = Game.Status.notStarted.rawValue as AnyObject // stops game
+        updates["rooms/\(roomID)/status"] = GameState.Status.notStarted.rawValue as AnyObject // stops game
         updates["games/\(roomID)/winner/playerID"] = winnerID as AnyObject  // shows winners
         
         try await ref.updateChildValues(updates)
@@ -691,8 +723,8 @@ class GameManager {
         ])
     }
 
-    private func checkForWinner(game: inout [String: AnyObject]) -> Bool {
-        guard let playersInfo = game["playersInfo"] as? [String: AnyObject] else { return false}
+    private func checkForWinner(game: [String: AnyObject]) -> String? {
+        guard let playersInfo = game["playersInfo"] as? [String: AnyObject] else { return nil }
         var playersAlive = 0
         var winnerID = ""
 
@@ -709,10 +741,10 @@ class GameManager {
 
         let winnerExists = playersAlive == 1
         if winnerExists {
-            game["winner"] = winnerID as AnyObject
+            return winnerID
         }
-
-        return winnerExists
+        
+        return nil
     }
 
     func exit() async throws {
@@ -732,11 +764,12 @@ class GameManager {
                let currentPosition = playerInfo["position"] as? Int,
                let hearts = playerInfo["hearts"] as? Int,
                var playersWord = game["playersWord"] as? [String: AnyObject],
-               let statusString = game["status"] as? String,
-               let status = Game.Status(rawValue: statusString),
                var shake = game["shake"] as? [String: Bool],
                var rounds = game["rounds"] as? Int,
-               var secondsPerTurn = game["secondsPerTurn"] as? Int
+               var secondsPerTurn = game["secondsPerTurn"] as? Int,
+               var state = game["state"] as? [String: AnyObject],
+               let statusString = state["roomStatus"] as? String,
+               let status = GameState.Status(rawValue: statusString)
             {
                 switch status {
                 case .notStarted:
@@ -777,11 +810,24 @@ class GameManager {
                     playersInfo[uid] = playerInfo as AnyObject
                     game["playersInfo"] = playersInfo as AnyObject
                                         
-                    if self.checkForWinner(game: &game) {
-                        game["status"] = Game.Status.notStarted.rawValue as AnyObject
+                    if let winnerID = self.checkForWinner(game: game) {
+                        guard let winnerInfo = playersInfo[winnerID] as? [String: AnyObject],
+                              let additionalWinnerInfo = winnerInfo["additionalInfo"] as? [String: AnyObject],
+                              let name = additionalWinnerInfo["name"] as? String
+                        else { return .success(withValue: currentData) }
+                        var winner = state["winner"] as? [String: AnyObject] ?? [:]
+                        winner["playerID"] = winnerID as AnyObject
+                        winner["name"] = name as AnyObject
+                        state["winner"] = winner as AnyObject
+                        state["roomStatus"] = GameState.Status.notStarted.rawValue as AnyObject
+                        game["state"] = state as AnyObject
                         game["currentPlayerTurn"] = NSNull() as AnyObject
                         game["secondsPerTurn"] = Int.random(in: 10...30) as AnyObject
-                        // TODO: Game ended, clear players and give players choice to join game
+                        game["playersInfo"] = NSNull() as AnyObject
+                        game["playersWord"] = NSNull() as AnyObject
+                        game["rounds"] = 1 as AnyObject
+                        game["shake"] = NSNull() as AnyObject
+                        game["wordsUsed"] = NSNull() as AnyObject
                     } else {
                         // Player exited while it was their turn, get next player turn
                         if currentPlayerTurn == uid,
@@ -833,14 +879,14 @@ class GameManager {
         ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childAdded"]!)
         ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childRemoved"]!)
         ref.child("games/\(roomID)/countdownStartTime").removeObserver(withHandle: handles["countdownStartTime"]!)
-        ref.child("games/\(roomID)/status").removeObserver(withHandle: handles["status"]!)
+        ref.child("games/\(roomID)/status").removeObserver(withHandle: handles["roomStatus"]!)
         ref.child("games/\(roomID)/shake").removeObserver(withHandle: handles["shake"]!)
         ref.child("games/\(roomID)/currentLetters").removeObserver(withHandle: handles["currentLetters"]!)
         ref.child("games/\(roomID)/playersWord").removeObserver(withHandle: handles["playersWord"]!)
         ref.child("games/\(roomID)/rounds").removeObserver(withHandle: handles["rounds"]!)
         ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: handles["secondsPerTurn"]!)
         ref.child("games/\(roomID)/currentPlayerTurn").removeObserver(withHandle: handles["currentPlayerTurn"]!)
-        ref.child("games/\(roomID)/winner").removeObserver(withHandle: handles["winner"]!)
+//        ref.child("games/\(roomID)/winner").removeObserver(withHandle: handles["winner"]!)
     }
 }
 

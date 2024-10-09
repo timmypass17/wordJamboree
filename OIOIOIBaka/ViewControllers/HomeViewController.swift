@@ -303,7 +303,6 @@ extension HomeViewController: CreateRoomViewControllerDelegate {
     func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String) {
         guard let uid = service.currentUser?.uid else { return }
         let gameManager = GameManager(roomID: roomID, service: service)
-        gameManager.pfps.updateValue(service.pfpImage, forKey: uid)
         let gameViewController = GameViewController(gameManager: gameManager, chatManager: ChatManager(roomID: roomID, service: service))
         gameViewController.leaveButton.isHidden = false
         
