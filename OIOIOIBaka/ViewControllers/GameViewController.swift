@@ -130,14 +130,14 @@ class GameViewController: UIViewController {
         keyboardView.soundManager = soundManager
         keyboardView.update(letters: "XZ", lettersUsed: gameManager.lettersUsed)
         
-        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
 
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(appDidBecomeActive),
-            name: UIApplication.didBecomeActiveNotification,
-            object: nil
-        )
+//        NotificationCenter.default.addObserver(
+//            self,
+//            selector: #selector(appDidBecomeActive),
+//            name: UIApplication.didBecomeActiveNotification,
+//            object: nil
+//        )
 
         submitButton.addAction(didTapSubmit(), for: .touchUpInside)
         

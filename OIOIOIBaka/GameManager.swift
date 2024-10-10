@@ -625,10 +625,10 @@ class GameManager {
                var secondsPerTurn = game["secondsPerTurn"] as? Int,
                let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo),
                let currentPlayerTurn = game["currentPlayerTurn"] as? String,
-               playerID == currentPlayerTurn,
                var state = game["state"] as? [String: AnyObject],
                let statusString = state["roomStatus"] as? String,
-               let status = GameState.Status(rawValue: statusString)
+               let status = GameState.Status(rawValue: statusString),
+               playerID == currentPlayerTurn
             {
                 hearts -= 1
                 currentPlayerInfo["hearts"] = hearts as AnyObject
@@ -677,15 +677,23 @@ class GameManager {
             }
             print("(damagePlayer \(playerID)) fail")
             return .success(withValue: currentData)
-        }, andCompletionBlock: { error, committed, updatedSnapshot in
+        }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
+            guard let self else { return }
             if let error {
                 print(error.localizedDescription)
                 return
             }
+            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
+            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
+            if playersInfo.isEmpty {
+                ref.updateChildValues([
+                    "rooms/\(roomID)/currentPlayerCount": 0
+                ])
+            }
+            
         }, withLocalEvents: false) // IMPORTANT
         // false - only care about final state of transaction, doesn't trigger multiple adds/removes when return .success(nil) -> .success(updatedGame)
         // true - shows intermediate states of transaction, triggers adds/removes from observers when transaction retries
-
     }
     
     // Called when user gets kill or when user leaves mid game
@@ -852,27 +860,19 @@ class GameManager {
                 return .success(withValue: currentData)
             }
             return .success(withValue: currentData)
-        }, andCompletionBlock: { [weak self] error, committed, snapshot in
+        }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
             guard let self else { return }
             if let error {
                 print(error.localizedDescription)
                 return
             }
-
+            
             ref.updateChildValues([
                 "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
             ])
         }, withLocalEvents: false)
     }
 
-    private func handleExitDuringNotStarted() async throws {
-        guard let uid = service.currentUser?.uid else { return }
-        
-        try await ref.updateChildValues([
-            "games/\(roomID)/playersInfo/\(uid)/hearts": 0,
-            "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-        ])
-    }
     
     func detachObservers() {
         ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childChange"]!)
@@ -891,6 +891,9 @@ class GameManager {
 }
 
 extension GameManager: TurnTimerDelegate {
+    // TODO: Game stuck if user force quits and doesn't call exit()
+    // - call exit() when user enters background
+    // - call exit()
     func turnTimer(_ sender: TurnTimer, timeRanOut: Bool) {
         guard currentPlayerTurn == service.currentUser?.uid else { return }
         delegate?.gameManager(self, timeRanOut: true)
