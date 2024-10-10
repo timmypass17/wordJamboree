@@ -482,15 +482,15 @@ class GameManager {
                   let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo)
 //                  currentPlayerTurn == uid
             else {
-                print("(handleSubmitSuccess) fail 1")
                 return .success(withValue: currentData)
             }
             
             var wordsUsed = game["wordsUsed"] as? [String: Bool] ?? [:]
             guard wordsUsed[word] == nil else {
-                print("(handleSubmitSuccess) fail 2")
+                print("Word used already")
                 shake[uid]?.toggle()
                 game["shake"] = shake as AnyObject
+                currentData.value = game
                 return .success(withValue: currentData)
             }
             

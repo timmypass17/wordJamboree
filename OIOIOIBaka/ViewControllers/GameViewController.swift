@@ -130,8 +130,13 @@ class GameViewController: UIViewController {
         keyboardView.soundManager = soundManager
         keyboardView.update(letters: "XZ", lettersUsed: gameManager.lettersUsed)
         
-//        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
 
+        NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+        
+
+        //        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
+//
 //        NotificationCenter.default.addObserver(
 //            self,
 //            selector: #selector(appDidBecomeActive),
@@ -264,62 +269,100 @@ class GameViewController: UIViewController {
         }
     }
     
-    // Give players X seconds till kick to clean up afk players
-    @objc func appMovedToBackground() {
-        currentCountdownValue = 5
-        afkTimer?.invalidate()
-        afkTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self else {
-                timer.invalidate()
-                return
+    @objc func willTeriminate() {
+        print("wilLTeriminate")
+        exitTask?.cancel()
+        exitTask = Task {
+            do {
+                try await self.gameManager.exit()
+            } catch {
+                print("Error removing player: \(error)")
             }
-            if currentCountdownValue == 0 {
-                afkTimer?.invalidate()
-                
-                let alert = UIAlertController(
-                    title: "Session Timeout",
-                    message: "You were away from the game for too long and have been removed from the session. Please join again to continue playing!",
-                    preferredStyle: .alert
-                )
-                
-                alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                    self.navigationController?.popViewController(animated: true)
-                })
-                
-                self.present(alert, animated: true, completion: nil)
-                
-                exitTask?.cancel()
-                exitTask = Task {
-                    do {
-                        try await self.gameManager.exit()
-                    } catch {
-                        print("Error removing player: \(error)")
-                    }
-                }
-            } else {
-                print("Time remaining till kick: \(currentCountdownValue)")
-            }
-            
-            currentCountdownValue -= 1
         }
     }
     
-    @objc func appDidBecomeActive() {
-        afkTimer?.invalidate()
-
-        if currentCountdownValue > 0 && currentCountdownValue < 3 {
-            let alert = UIAlertController(
-                title: "Inactive Warning",
-                message: "Leaving the app for too long will result in being kicked from this session. Please stay active to continue playing!",
-                preferredStyle: .alert
-            )
-            
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            
-            self.present(alert, animated: true, completion: nil)
+    
+    @objc func didEnterBackground() {
+        print("didEnterBackground")
+        exitTask?.cancel()
+        exitTask = Task {
+            do {
+                try await self.gameManager.exit()
+            } catch {
+                print("Error removing player: \(error)")
+            }
         }
-        
     }
+    
+    @objc func willEnterForeground() {
+        print("willEnterForeground")
+        let alert = UIAlertController(
+            title: "Inactive Warning",
+            message: "Leaving the app will result in being kicked from this session. Please stay active to continue playing!",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+//    // Give players X seconds till kick to clean up afk players
+//    @objc func appMovedToBackground() {
+//        currentCountdownValue = 3
+//        afkTimer?.invalidate()
+//        afkTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+//            guard let self else {
+//                timer.invalidate()
+//                return
+//            }
+//            if currentCountdownValue == 0 {
+//                afkTimer?.invalidate()
+//                
+//                let alert = UIAlertController(
+//                    title: "Session Timeout",
+//                    message: "You were away from the game for too long and have been removed from the session. Please join again to continue playing!",
+//                    preferredStyle: .alert
+//                )
+//                
+//                alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+//                    self.navigationController?.popViewController(animated: true)
+//                })
+//                
+//                self.present(alert, animated: true, completion: nil)
+//                
+//                exitTask?.cancel()
+//                exitTask = Task {
+//                    do {
+//                        try await self.gameManager.exit()
+//                    } catch {
+//                        print("Error removing player: \(error)")
+//                    }
+//                }
+//            } else {
+//                print("Time remaining till kick: \(currentCountdownValue)")
+//            }
+//            
+//            currentCountdownValue -= 1
+//        }
+//    }
+//    
+//    @objc func appDidBecomeActive() {
+//        afkTimer?.invalidate()
+//
+//        if currentCountdownValue <= 1 {
+//            let alert = UIAlertController(
+//                title: "Inactive Warning",
+//                message: "Leaving the app will result in being kicked from this session. Please stay active to continue playing!",
+//                preferredStyle: .alert
+//            )
+//            
+//            alert.addAction(UIAlertAction(title: "OK", style: .default))
+//            
+//            self.present(alert, animated: true, completion: nil)
+//        }
+//        
+//    }
     
     // Strong references not allowing gameviewcontroller to be deallocated
 //    deinit {
