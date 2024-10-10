@@ -10,6 +10,10 @@ import FirebaseDatabaseInternal
 import SwiftUI
 import AVFAudio
 
+let darkBackground = UIColor(named: "background") 
+
+//let darkBackground = UIColor(red: 28/255.0, green: 29/255.0, blue: 34/255.0, alpha: 1.0)
+
 
 // TODO: Player not shake if used same word
 // - fix bug where if user leaves and rejoins, there will be duplicate observres causing double damage. make sure observers are detached when use exists
@@ -27,7 +31,7 @@ class GameViewController: UIViewController {
     let joinButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Join Game"
-        config.baseBackgroundColor = .systemGreen
+        config.baseBackgroundColor = .accent
         config.cornerStyle = .medium
         
         let button = UIButton(configuration: config)
@@ -37,9 +41,10 @@ class GameViewController: UIViewController {
     }()
     
     let leaveButton: UIButton = {
-        var config = UIButton.Configuration.filled()
+        var config = UIButton.Configuration.borderedTinted()
         config.title = "Leave"
-        config.baseBackgroundColor = .systemRed
+        config.baseBackgroundColor = .secondaryLabel
+        config.baseForegroundColor = .label
         config.cornerStyle = .medium
         
         let button = UIButton(configuration: config)
@@ -111,13 +116,16 @@ class GameViewController: UIViewController {
     }
     
     func setupView() {
+        view.backgroundColor = darkBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.setHidesBackButton(true, animated: true)
 //        exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
         settingsButton = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: settingsMenu())
-        settingsButton.tintColor = .secondaryLabel
+//        settingsButton.tintColor = .secondaryLabel
+        settingsButton.tintColor = .label
         messageButton = UIBarButtonItem(image: UIImage(systemName: "message"), primaryAction: didTapMessageButton())
-        messageButton.tintColor = .secondaryLabel
+//        messageButton.tintColor = .secondaryLabel
+        messageButton.tintColor = .label
         navigationItem.leftBarButtonItem = settingsButton
         navigationItem.rightBarButtonItem = messageButton
 
@@ -757,7 +765,7 @@ extension GameViewController: KeyboardViewDelegate {
         }
     }
     
-    func keyboardView(_ sender: KeyboardView, didTapSubmit: Bool) {
+    func keyboardView(_ sender: KeyboardView, didTapEnter: Bool) {
         handleSubmit()
     }
     

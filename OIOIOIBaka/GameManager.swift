@@ -867,9 +867,18 @@ class GameManager {
                 return
             }
             
-            ref.updateChildValues([
-                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-            ])
+            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
+            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
+            if playersInfo.isEmpty {
+                ref.updateChildValues([
+                    "rooms/\(roomID)/currentPlayerCount": 0
+                ])
+            } else {
+                ref.updateChildValues([
+                    "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+                ])
+            }
+            
         }, withLocalEvents: false)
     }
 

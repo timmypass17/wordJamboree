@@ -48,6 +48,7 @@ class HomeViewController: UIViewController {
         super.viewDidLoad()
         title = "🥳 Bomb Party"
         navigationController?.navigationBar.prefersLargeTitles = true
+        collectionView.backgroundColor = darkBackground
         
         let settingsButton = UIBarButtonItem(primaryAction: didTapSettingsButton())
         settingsButton.image = UIImage(systemName: "gearshape.fill")

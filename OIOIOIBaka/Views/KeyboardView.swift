@@ -16,7 +16,7 @@ let keyHeight = keyWidth * 1.4
 protocol KeyboardViewDelegate: AnyObject {
     func keyboardView(_ sender: KeyboardView, didTapKey letter: String)
     func keyboardView(_ sender: KeyboardView, didTapBackspace: Bool)
-    func keyboardView(_ sender: KeyboardView, didTapSubmit: Bool)
+    func keyboardView(_ sender: KeyboardView, didTapEnter: Bool)
 }
 
 class KeyboardView: UIView {
@@ -94,7 +94,7 @@ class KeyboardView: UIView {
     
     private func setupView() {        
         backspaceButton.addAction(didTapBackspace(), for: .touchUpInside)
-        enterButton.addAction(didTapSubmit(), for: .touchUpInside)
+        enterButton.addAction(didTapEnter(), for: .touchUpInside)
         feedback = UIImpactFeedbackGenerator(style: .light, view: self)
 
         addSubview(container)
@@ -158,7 +158,7 @@ class KeyboardView: UIView {
                 if lettersUsed.contains(Character(letter)) {
                     keyButton.backgroundColor = .systemFill
                 } else if letters.contains(letter) {
-                    keyButton.backgroundColor = .systemBlue
+                    keyButton.backgroundColor = .accent
                 } else {
                     keyButton.backgroundColor = .systemGray
                 }
@@ -182,11 +182,11 @@ class KeyboardView: UIView {
         }
     }
     
-    func didTapSubmit() -> UIAction {
+    func didTapEnter() -> UIAction {
         return UIAction { [weak self] _ in
             guard let self else { return }
             self.soundManager?.playKeyboardClickSound()
-            self.delegate?.keyboardView(self, didTapSubmit: true)
+            self.delegate?.keyboardView(self, didTapEnter: true)
         }
     }
 }

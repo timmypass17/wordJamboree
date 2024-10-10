@@ -134,7 +134,9 @@ class PlayerView: UIView {
         
         // Set the color of the matching letters to green
         let lettersRange = (word as NSString).range(of: letters)
+//        attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
         attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
+
         wordLabel.attributedText = attributedString
     }
     

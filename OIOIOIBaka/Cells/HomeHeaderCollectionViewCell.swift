@@ -25,7 +25,7 @@ class HomeHeaderCollectionViewCell: UICollectionViewCell {
     
     let createButton: UIButton = {
         let button = UIButton()
-        var config = UIButton.Configuration.borderedTinted()
+        var config = UIButton.Configuration.borderedProminent()
         config.title = "Create Room"
         config.buttonSize = .large
         button.configuration = config
@@ -37,8 +37,8 @@ class HomeHeaderCollectionViewCell: UICollectionViewCell {
         var config = UIButton.Configuration.borderedTinted()
         config.title = "Join Room"
         config.buttonSize = .large
-        config.baseBackgroundColor = .systemPink
-        config.baseForegroundColor = .systemPink
+        config.baseBackgroundColor = .secondaryLabel
+        config.baseForegroundColor = .label
         button.configuration = config
         return button
     }()
