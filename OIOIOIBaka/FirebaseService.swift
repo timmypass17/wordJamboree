@@ -100,7 +100,8 @@ class FirebaseService {
         let userToAdd = MyUser(name: generateRandomUsername(), uid: uid)
         try await db.collection("users").document(uid).setData([
             "name": userToAdd.name,
-            "uid": userToAdd.uid
+            "uid": userToAdd.uid,
+            "createdAt": Date()
         ]) // document may not exist, merge to update existing user documents instead of overriding them completely
         print("Created user successfully")
         return userToAdd
@@ -191,7 +192,40 @@ class FirebaseService {
                         additionalInfo: AdditionalPlayerInfo(
                             name: currentUser.name
                         )
-                    )
+                    ),
+//                // TODO: Remove later
+//                "p1":
+//                    PlayerInfo(
+//                        hearts: 3,
+//                        position: 1,
+//                        additionalInfo: AdditionalPlayerInfo(
+//                            name: "p1"
+//                        )
+//                    ),
+//                "p2":
+//                    PlayerInfo(
+//                        hearts: 3,
+//                        position: 2,
+//                        additionalInfo: AdditionalPlayerInfo(
+//                            name: "p2"
+//                        )
+//                    ),
+//                "p3":
+//                    PlayerInfo(
+//                        hearts: 3,
+//                        position: 3,
+//                        additionalInfo: AdditionalPlayerInfo(
+//                            name: "p3"
+//                        )
+//                    ),
+//                "p4":
+//                    PlayerInfo(
+//                        hearts: 3,
+//                        position: 4,
+//                        additionalInfo: AdditionalPlayerInfo(
+//                            name: "p4"
+//                        )
+//                    ),
             ],
             shake: [
                 currentUser.uid: false

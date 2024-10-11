@@ -72,10 +72,15 @@ class PlayerView: UIView {
     var heartCount: Int {
         return heartsView.container.arrangedSubviews.count
     }
+    
+    var topConstraint: NSLayoutConstraint!
+    var bottomConstraint: NSLayoutConstraint!
+    var leadingConstraint: NSLayoutConstraint!
+    var trailingConstraint: NSLayoutConstraint!
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
+
         let topSpacer = UIView()
         topSpacer.translatesAutoresizingMaskIntoConstraints = false
 
@@ -184,6 +189,111 @@ class PlayerView: UIView {
                     self.center = CGPoint(x: self.center.x - 5, y: self.center.y)
                 }
         }
+    }
+    
+    func updatePosition(position: Int, currentPlayerCount: Int) {
+        guard let superview else { return }
+        
+        
+        // IMPORTANT: Before assigning new constraints, deactivate the old ones to prevent conflicts.
+        if let topConstraint, let bottomConstraint, let leadingConstraint, let trailingConstraint {
+            NSLayoutConstraint.deactivate([topConstraint, bottomConstraint, leadingConstraint, trailingConstraint])
+        }
+
+        if position == 0 {
+            if currentPlayerCount == 1 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.centerYAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            } else if currentPlayerCount == 2 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.centerYAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            } else if currentPlayerCount == 3 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.centerYAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            } else if currentPlayerCount == 4 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.centerYAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.centerXAnchor)
+            } else if currentPlayerCount == 5 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.centerYAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            }
+        } else if position == 1 {
+            if currentPlayerCount == 2 {
+                topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            } else if currentPlayerCount == 3 {
+                print("P1 triggered")
+                topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.centerXAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            } else if currentPlayerCount == 4 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.centerYAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.centerXAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            } else if currentPlayerCount == 5 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.centerXAnchor, constant: 30)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            }
+        } else if position == 2 {
+            if currentPlayerCount == 3 {
+                topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.centerXAnchor)
+            } else if currentPlayerCount == 4 {
+                topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.centerXAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
+            } else if currentPlayerCount == 5 {
+                topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor, constant: 40)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.centerXAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor, constant: -30)
+            }
+        } else if position == 3 {
+            if currentPlayerCount == 4 {
+                topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.centerXAnchor)
+            } else if currentPlayerCount == 5 {
+                topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor, constant: 40)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor, constant: 30)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.centerXAnchor)
+            }
+        } else if position == 4 {
+            if currentPlayerCount == 5 {
+                topConstraint = topAnchor.constraint(equalTo: superview.topAnchor)
+                bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
+                leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
+                trailingConstraint = trailingAnchor.constraint(equalTo: superview.centerXAnchor, constant: -30)
+            }
+        }
+        
+        NSLayoutConstraint.activate([
+            topConstraint,
+            bottomConstraint,
+            leadingConstraint,
+            trailingConstraint
+        ])
     }
 }
 

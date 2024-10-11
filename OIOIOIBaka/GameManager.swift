@@ -56,7 +56,7 @@ class GameManager {
     var currentRound: Int = 1
     let minimumTime = 5
     var winnerID = ""
-    let countdownDuration: Double = 5 // 15
+    let countdownDuration: Double = 5 // TODO: Change to 15
     
     var service: FirebaseService
     let soundManager = SoundManager()
@@ -132,12 +132,13 @@ class GameManager {
                 // Fetch pfp if seen for first time
                 if self.pfps[uid] == nil {
                     print("fetching pfp: \(uid)")
-                    self.pfps[uid] = try? await self.service.getProfilePicture(uid: uid)
-//                    if let pfpImage = try? await self.service.getProfilePicture(uid: uid) {
-//                        self.pfps[uid] = pfpImage
-//                    } else {
-//                        self.pfps[uid] = nil // can store nil because pfps is type [String: UIImage?]
-//                    }
+//                    self.pfps[uid] = (try? await self.service.getProfilePicture(uid: uid))
+                    if let pfpImage = try? await self.service.getProfilePicture(uid: uid) {
+                        self.pfps[uid] = pfpImage
+                    } else {
+//                        self.pfps[uid] = nil  - doesn't store nil
+                        self.pfps.updateValue(nil, forKey: uid) // can store nil because pfps is type [String: UIImage?]
+                    }
                 }
                 DispatchQueue.main.async {
                     let newPlayerJoined = joinedAt > joinedRoomTimestamp
@@ -261,6 +262,7 @@ class GameManager {
             let remainingTime = (countdownDuration * 1000) - timeElapsed
             
             if remainingTime > 0 {
+                // TODO: Remove
                 self.startLocalCountdown(from: remainingTime / 1000) // Convert to seconds
             }
         }

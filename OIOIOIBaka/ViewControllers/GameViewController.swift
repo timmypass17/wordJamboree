@@ -10,7 +10,32 @@ import FirebaseDatabaseInternal
 import SwiftUI
 import AVFAudio
 
-let darkBackground = UIColor(named: "background") 
+//class PlayerViewContraints {
+//    var topConstraint = NSLayoutConstraint()
+//    var bottomConstraint = NSLayoutConstraint()
+//    var leadingConstraint = NSLayoutConstraint()
+//    var trailingConstraint = NSLayoutConstraint()
+//    
+//    func update(_ vc: GameViewController, position: Int, currentPlayerCount: Int) {
+//        if position == 0 {
+//            if currentPlayerCount == 1 {
+//                topConstraint = vc.playerViews[0].topAnchor.constraint(equalTo: vc.container.topAnchor)
+//                bottomConstraint = vc.playerViews[0].bottomAnchor.constraint(equalTo: vc.container.centerYAnchor)
+//                leadingConstraint = vc.playerViews[0].leadingAnchor.constraint(equalTo: vc.container.leadingAnchor)
+//                trailingConstraint = vc.playerViews[0].trailingAnchor.constraint(equalTo: vc.container.trailingAnchor)
+//            } else if currentPlayerCount == 2 {
+//                topConstraint = vc.playerViews[0].topAnchor.constraint(equalTo: vc.container.topAnchor)
+//                bottomConstraint = vc.playerViews[0].bottomAnchor.constraint(equalTo: vc.container.centerYAnchor)
+//                leadingConstraint = vc.playerViews[0].leadingAnchor.constraint(equalTo: vc.container.leadingAnchor)
+//                trailingConstraint = vc.playerViews[0].trailingAnchor.constraint(equalTo: vc.container.trailingAnchor)
+//            }
+//        } else if position == 1 {
+//            
+//        }
+//    }
+//}
+
+let darkBackground = UIColor(named: "background")
 
 //let darkBackground = UIColor(red: 28/255.0, green: 29/255.0, blue: 34/255.0, alpha: 1.0)
 
@@ -19,13 +44,13 @@ let darkBackground = UIColor(named: "background")
 // - fix bug where if user leaves and rejoins, there will be duplicate observres causing double damage. make sure observers are detached when use exists
 class GameViewController: UIViewController {
     
-    let playerViews: [PlayerView] = (0..<4).map { _ in
+    let playerViews: [PlayerView] = (0..<6).map { _ in
         let playerView = PlayerView()
         playerView.translatesAutoresizingMaskIntoConstraints = false
         playerView.isHidden = true
         return playerView
     }
-
+        
     var currentWordView: CurrentWordView?
     
     let joinButton: UIButton = {
@@ -78,7 +103,18 @@ class GameViewController: UIViewController {
         return playerView
     }()
     
-    var container: UIView!
+    let dummyPlayerView: PlayerView = {
+        let playerView = PlayerView()
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        playerView.isHidden = true
+        return playerView
+    }()
+    
+    var container: UIView = {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        return container
+    }()
     
     var afkTimer: Timer?
     var currentCountdownValue = 5
@@ -93,7 +129,7 @@ class GameViewController: UIViewController {
     var exitTask: Task<Void, Error>? = nil
     var joinButtonCenterYConstraint: NSLayoutConstraint!
     var joinButtonTopConstraint: NSLayoutConstraint!
-
+    
     init(gameManager: GameManager, chatManager: ChatManager) {
         self.gameManager = gameManager
         self.chatManager = chatManager
@@ -141,21 +177,12 @@ class GameViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
 
         NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
-        
-
-        //        NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
-//
-//        NotificationCenter.default.addObserver(
-//            self,
-//            selector: #selector(appDidBecomeActive),
-//            name: UIApplication.didBecomeActiveNotification,
-//            object: nil
-//        )
 
         submitButton.addAction(didTapSubmit(), for: .touchUpInside)
         
         view.addSubview(keyboardView)
         view.addSubview(submitButton)
+        view.addSubview(dummyPlayerView)
 
         NSLayoutConstraint.activate([
             keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -167,17 +194,13 @@ class GameViewController: UIViewController {
             submitButton.heightAnchor.constraint(equalToConstant: keyHeight)
         ])
                 
-        container = UIView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        
         view.addSubview(container)
 
         NSLayoutConstraint.activate([
-            container.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor),
+            container.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor, constant: -30),  // make container taller
             container.bottomAnchor.constraint(equalTo: keyboardView.topAnchor),
             container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-
         ])
         
         playerViews.forEach { container.addSubview($0) }
@@ -189,26 +212,14 @@ class GameViewController: UIViewController {
         joinButtonCenterYConstraint = joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         joinButtonTopConstraint = joinButton.topAnchor.constraint(equalTo: winnerPlayerView.bottomAnchor, constant: 8)
         
+        
         NSLayoutConstraint.activate([
-            playerViews[0].centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            playerViews[0].topAnchor.constraint(equalTo: container.topAnchor),
-            playerViews[0].bottomAnchor.constraint(equalTo: container.centerYAnchor),
+            dummyPlayerView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            dummyPlayerView.topAnchor.constraint(equalTo: container.topAnchor),
+            dummyPlayerView.bottomAnchor.constraint(equalTo: container.centerYAnchor),
             
-            playerViews[1].topAnchor.constraint(equalTo: container.centerYAnchor),
-            playerViews[1].bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            playerViews[1].centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            
-            playerViews[2].centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            playerViews[2].leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            playerViews[2].trailingAnchor.constraint(equalTo: container.centerXAnchor, constant: -25),
-            
-            playerViews[3].centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            playerViews[3].trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            playerViews[3].leadingAnchor.constraint(equalTo: container.centerXAnchor, constant: 25),
-
             joinButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             joinButtonCenterYConstraint,
-//            joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             
             leaveButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             leaveButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
@@ -220,9 +231,8 @@ class GameViewController: UIViewController {
         // note: setting contraints doesn't layout it out immediately, so frames aren't set properly
         view.layoutIfNeeded()
     
-        // playerViews[0].wordLabel.frame.maxY returns top of label for some reason so i need to add height of label to get bottom
-        let arrowLength = container.frame.midY - (playerViews[0].wordLabel.frame.maxY + playerViews[0].wordLabel.frame.height)
-
+        let arrowLength = container.frame.midY - (dummyPlayerView.wordLabel.frame.maxY)
+        
         currentWordView = CurrentWordView(arrowLength: arrowLength) // ~50
         currentWordView!.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(currentWordView!)
@@ -522,6 +532,7 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : AnyObject]) {
+        print(manager.pfps)
         if 2 - manager.playersInfo.count > 0 {
             navigationItem.title = "Waiting for \(2 - manager.playersInfo.count) more players..."
         } else {
@@ -538,8 +549,10 @@ extension GameViewController: GameManagerDelegate {
             else {
                 continue
             }
-            playerViews[position].nameLabel.text = name
             playerViews[position].isHidden = false
+            print("Updating p\(position). Position: \(position). CurrentPlayerCount: \(playersInfo.count)")
+            playerViews[position].updatePosition(position: position, currentPlayerCount: playersInfo.count)
+            playerViews[position].nameLabel.text = name
             playerViews[position].setHearts(to: hearts)
             if let pfp = manager.pfps[uid] {
                 playerViews[position].profileImageView.update(image: pfp)
@@ -562,26 +575,26 @@ extension GameViewController: GameManagerDelegate {
         showWinner(userID: playerID)
     }
     
-    func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String : Int]) {
-        playerViews.forEach { $0.isHidden = true }
-        
-        let playersInfo = manager.playersInfo
-        for (uid, position) in positions {
-            guard let playerInfo = playersInfo[uid] else { continue }
-            playerViews[position].nameLabel.text = playerInfo["name"] as? String
-            playerViews[position].isHidden = false
-            
-            if uid == manager.winnerID {
-                playerViews[position].crownView.isHidden = false
-                playerViews[position].heartsView.isHidden = true
-                playerViews[position].skullView.isHidden = true
-            } else {
-                playerViews[position].crownView.isHidden = true
-                playerViews[position].heartsView.isHidden = false
-                playerViews[position].skullView.isHidden = true
-            }
-        }
-    }
+//    func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String : Int]) {
+//        playerViews.forEach { $0.isHidden = true }
+//        
+//        let playersInfo = manager.playersInfo
+//        for (uid, position) in positions {
+//            guard let playerInfo = playersInfo[uid] else { continue }
+//            playerViews[position].nameLabel.text = playerInfo["name"] as? String
+//            playerViews[position].isHidden = false
+//            
+//            if uid == manager.winnerID {
+//                playerViews[position].crownView.isHidden = false
+//                playerViews[position].heartsView.isHidden = true
+//                playerViews[position].skullView.isHidden = true
+//            } else {
+//                playerViews[position].crownView.isHidden = true
+//                playerViews[position].heartsView.isHidden = false
+//                playerViews[position].skullView.isHidden = true
+//            }
+//        }
+//    }
     
     func gameManager(_ manager: GameManager, player playerID: String, updatedWord: String) {
         guard let playerInfo = manager.playersInfo[playerID] as? [String: AnyObject],
