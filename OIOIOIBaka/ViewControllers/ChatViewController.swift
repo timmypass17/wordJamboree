@@ -9,6 +9,7 @@ import UIKit
 
 extension Notification.Name {
     static let newMessageNotification = Notification.Name("newMessage")
+    static let userStateChangedNotification = Notification.Name("userStateChanged")
 }
 
 class ChatViewController: UIViewController {

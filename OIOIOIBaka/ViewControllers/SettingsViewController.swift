@@ -20,9 +20,7 @@ class SettingsViewController: UIViewController {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         return tableView
     }()
-    
-    private let email = "timmysappstuff@gmail.com"
-    
+
     enum Item {
         case settings(Model)
         case signInOut
@@ -103,7 +101,9 @@ class SettingsViewController: UIViewController {
     private var selection: PHPickerResult? = nil
     private var selectedAssetIdentifiers = [String]()
     var service: FirebaseService!
-    
+    private let email = "timmysappstuff@gmail.com"
+    private var authListener: AuthStateDidChangeListenerHandle?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.title = "Settings"
@@ -127,14 +127,33 @@ class SettingsViewController: UIViewController {
         ])
         
         headerView = SettingsHeaderView(frame: CGRect(x: 0, y: 0, width: tableView.frame.width, height: 150))
-        headerView.playerView.nameLabel.text = service.currentUser?.name ?? ""
+        headerView.playerView.nameLabel.text = service.currentUser?.name ?? "guest"
         headerView.playerView.profileImageView.update(image: service.pfpImage)
         tableView.tableHeaderView = headerView
         
-        // Gets called whenever user logs in or out
-//        Auth.auth().addStateDidChangeListener { [self] auth, user in
+        NotificationCenter.default.addObserver(self, selector: #selector(handleUserStateChanged), name: .userStateChangedNotification, object: nil)
+
+        
+//        // Gets called whenever user logs in or out
+//        authListener = Auth.auth().addStateDidChangeListener { [self] auth, user in
+//            if user
+//            
 //            tableView.reloadSections(IndexSet([signInOutIndexPath, deleteAccountIndexPath].map { $0.section }), with: .automatic)
 //        }
+        
+    }
+    
+    deinit {
+        print("deinit settingsViewController")
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc func handleUserStateChanged() {
+        DispatchQueue.main.async { [self] in
+            headerView.playerView.nameLabel.text = service.currentUser?.name ?? "guest"
+            headerView.playerView.profileImageView.update(image: service.pfpImage)
+            tableView.reloadSections(IndexSet([signInOutIndexPath, deleteAccountIndexPath].map { $0.section }), with: .automatic)
+        }
     }
     
     func dismissAction() -> UIAction {
@@ -285,18 +304,20 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         if indexPath == signInOutIndexPath {
-            // Sign Out
             let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
             let isLoggedIn = Auth.auth().currentUser != nil
-            cell.label.text = "Sign Out"
-            cell.label.textColor = .red
-            cell.label.isEnabled = isLoggedIn
-            cell.selectionStyle = isLoggedIn ? .default : .none
+            if isLoggedIn {
+                cell.label.text = "Sign Out"
+                cell.label.textColor = .red
+            } else {
+                cell.label.text = "Sign In"
+                cell.label.textColor = .accent
+            }
+            cell.selectionStyle = .default
             return cell
         }
         
         if indexPath == deleteAccountIndexPath {
-            // Sign Out
             let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
             let isLoggedIn = Auth.auth().currentUser != nil
             cell.label.text = "Delete Account"
@@ -363,19 +384,19 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         }
     }
     
-    // Disable selection (does not remove highlight, use cell.selectionStyle = .none)
-    func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
-        if indexPath == signInOutIndexPath || indexPath == deleteAccountIndexPath {
-            let isLoggedIn = Auth.auth().currentUser != nil
-            if isLoggedIn {
-                return indexPath
-            } else {
-                return nil
-            }
-        }
-        
-        return indexPath
-    }
+//    // Disable selection (does not remove highlight, use cell.selectionStyle = .none)
+//    func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
+//        if indexPath == signInOutIndexPath || indexPath == deleteAccountIndexPath {
+//            let isLoggedIn = Auth.auth().currentUser != nil
+//            if isLoggedIn {
+//                return indexPath
+//            } else {
+//                return nil
+//            }
+//        }
+//        
+//        return indexPath
+//    }
 }
 
 extension SettingsViewController: MFMailComposeViewControllerDelegate {

@@ -10,31 +10,6 @@ import FirebaseDatabaseInternal
 import SwiftUI
 import AVFAudio
 
-//class PlayerViewContraints {
-//    var topConstraint = NSLayoutConstraint()
-//    var bottomConstraint = NSLayoutConstraint()
-//    var leadingConstraint = NSLayoutConstraint()
-//    var trailingConstraint = NSLayoutConstraint()
-//    
-//    func update(_ vc: GameViewController, position: Int, currentPlayerCount: Int) {
-//        if position == 0 {
-//            if currentPlayerCount == 1 {
-//                topConstraint = vc.playerViews[0].topAnchor.constraint(equalTo: vc.container.topAnchor)
-//                bottomConstraint = vc.playerViews[0].bottomAnchor.constraint(equalTo: vc.container.centerYAnchor)
-//                leadingConstraint = vc.playerViews[0].leadingAnchor.constraint(equalTo: vc.container.leadingAnchor)
-//                trailingConstraint = vc.playerViews[0].trailingAnchor.constraint(equalTo: vc.container.trailingAnchor)
-//            } else if currentPlayerCount == 2 {
-//                topConstraint = vc.playerViews[0].topAnchor.constraint(equalTo: vc.container.topAnchor)
-//                bottomConstraint = vc.playerViews[0].bottomAnchor.constraint(equalTo: vc.container.centerYAnchor)
-//                leadingConstraint = vc.playerViews[0].leadingAnchor.constraint(equalTo: vc.container.leadingAnchor)
-//                trailingConstraint = vc.playerViews[0].trailingAnchor.constraint(equalTo: vc.container.trailingAnchor)
-//            }
-//        } else if position == 1 {
-//            
-//        }
-//    }
-//}
-
 let darkBackground = UIColor(named: "background")
 
 //let darkBackground = UIColor(red: 28/255.0, green: 29/255.0, blue: 34/255.0, alpha: 1.0)

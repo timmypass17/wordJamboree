@@ -51,9 +51,20 @@ func startSignInWithGoogleFlow(_ viewControlller: UIViewController) async -> Aut
     let config = GIDConfiguration(clientID: clientID)
     GIDSignIn.sharedInstance.configuration = config
     
-    // Start the google sign in flow!
+    // Start the Google sign-in flow!
     do {
-        let result: GIDSignInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller)
+        let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.main.async {
+                GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller) { userResult, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else if let userResult = userResult {
+                        continuation.resume(returning: userResult)
+                    }
+                }
+            }
+        }
+        
         let user: GIDGoogleUser = result.user
         guard let idToken = user.idToken?.tokenString else { return nil }
         

@@ -24,32 +24,28 @@ class FirebaseService {
 
     init() {
         authListener = Auth.auth().addStateDidChangeListener { auth, user in
-            guard let user else {
-                print("User not logged in or signed out")
-                self.currentUser = nil
-                return
-            }
-            
             Task {
-                do  {
+                guard let user else {
+                    print("User not logged in or signed out")
+                    self.currentUser = nil
+                    self.pfpImage = nil
+                    NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                    return
+                }
+
+                do {
                     if let fetchedUser = try await self.getUser(uid: user.uid) {
                         self.currentUser = fetchedUser
+                        self.pfpImage = try await self.getProfilePicture(uid: user.uid)
                     }
                 } catch {
-                    print("error getting user: \(error)")
-                }
-            }
-            
-            Task {
-                do {
-                    self.pfpImage = try await self.getProfilePicture(uid: user.uid)
-                    print("Got pfp")
-                } catch {
+                    print("Error getting user or pfp: \(error)")
+                    self.currentUser = nil
                     self.pfpImage = nil
-                    print("error getting pfp: \(error)")
                 }
+
+                NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
             }
-            
         }
     }
     
