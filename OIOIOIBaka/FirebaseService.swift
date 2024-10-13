@@ -12,6 +12,7 @@ import FirebaseDatabaseInternal
 import FirebaseStorage
 import FirebaseCore
 import GoogleSignIn
+import AuthenticationServices
 
 enum AuthenticationState {
     case permanent
@@ -90,47 +91,52 @@ class FirebaseService {
         }
     }
     
-    func signInWithGoogle(_ viewControlller: UIViewController) async -> AuthDataResult? {
+    func signInWithGoogle(_ viewControlller: UIViewController) async throws -> AuthDataResult? {
         guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
         
         let config = GIDConfiguration(clientID: clientID)
         GIDSignIn.sharedInstance.configuration = config
         
         // Start the Google sign-in flow!
-        do {
-            let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
-                DispatchQueue.main.async {
-                    GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller) { userResult, error in
-                        if let error = error {
-                            continuation.resume(throwing: error)
-                        } else if let userResult = userResult {
-                            continuation.resume(returning: userResult)
-                        }
+        let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.main.async {
+                GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller) { userResult, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else if let userResult = userResult {
+                        continuation.resume(returning: userResult)
                     }
                 }
             }
-            
-            let user: GIDGoogleUser = result.user
-            guard let idToken = user.idToken?.tokenString else { return nil }
-            
-            let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
-            if let guestUser = auth.currentUser, guestUser.isAnonymous {
-                // note: Doesn't trigger auth state listener
-                let res = try await guestUser.link(with: credential)
-                print("Link guest account to google account!")
-                self.authState = .permanent
-                return res
-            }
-            
-//            let res = try await Auth.auth().signIn(with: credential)
-            
-            return nil
-        } catch {
-            print("Error google signing: \(error)")
-            return nil
         }
+        
+        let user: GIDGoogleUser = result.user
+        guard let idToken = user.idToken?.tokenString else { return nil }
+        
+        let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
+        if let guestUser = auth.currentUser, guestUser.isAnonymous {
+            // note: Doesn't trigger auth state listener
+            let res = try await guestUser.link(with: credential)
+            print("Link guest account to google account!")
+            self.authState = .permanent
+            return res
+        }
+        
+        // let res = try await Auth.auth().signIn(with: credential)
+        
+        return nil
     }
 
+    func signInWithApple(_ viewController: UIViewController & ASAuthorizationControllerDelegate & ASAuthorizationControllerPresentationContextProviding) {
+        let appleIDProvider = ASAuthorizationAppleIDProvider()
+        let request = appleIDProvider.createRequest()
+        request.requestedScopes = [.fullName, .email]
+        
+        let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+        authorizationController.delegate = viewController
+        authorizationController.presentationContextProvider = viewController
+        authorizationController.performRequests()
+    }
     
     func getProfilePicture(uid: String) async throws -> UIImage? {
         let pfpRef = storage.child("pfps/\(uid).jpg")
@@ -188,6 +194,7 @@ class FirebaseService {
         ])
         currentUser?.name = newName
     }
+
     
 //    func createRoom(title: String) async throws -> (String, Room) {
 //        guard let currentUser else { throw FirebaseServiceError.userNotLoggedIn }

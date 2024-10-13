@@ -8,6 +8,7 @@
 import UIKit
 import AuthenticationServices
 import GoogleSignIn
+import FirebaseAuth
 
 protocol LoginViewControllerDelegate: AnyObject {
     func loginViewController(_ viewController: LoginViewController, didTapSignUpButton: Bool)
@@ -92,6 +93,7 @@ class LoginViewController: UIViewController {
         signUpButton.addAction(didTapSignUpButton(), for: .touchUpInside)
         
         let appleLoginButton = ASAuthorizationAppleIDButton(type: .signIn, style: traitCollection.userInterfaceStyle == .light ? .black : .white)
+        appleLoginButton.addAction(didTapAppleLoginButton(), for: .touchUpInside)
         appleLoginButton.cornerRadius = 8
         
         let googleLoginButton = UIButton()
@@ -175,7 +177,54 @@ class LoginViewController: UIViewController {
             }
         }
     }
+    
+    func didTapAppleLoginButton() -> UIAction {
+        return UIAction { _ in
+            self.service.signInWithApple(self)
+        }
+    }
 }
+
+extension LoginViewController: ASAuthorizationControllerDelegate {
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            guard let appleIDToken = appleIDCredential.identityToken else {
+                print("Unable to fetch identity token")
+                return
+            }
+            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+                print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
+                return
+            }
+
+            let credential = OAuthProvider.appleCredential(withIDToken: idTokenString,
+                                                           rawNonce: nil,
+                                                           fullName: appleIDCredential.fullName)
+            
+            Task {
+                if let guestUser = service.auth.currentUser, guestUser.isAnonymous {
+                    let res = try await guestUser.link(with: credential)
+                    print("Link guest account to apple account!")
+                    service.authState = .permanent
+                }
+            }
+            
+        }
+    }
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        // Handle error.
+        print("Sign in with Apple errored: \(error)")
+    }
+}
+
+extension LoginViewController: ASAuthorizationControllerPresentationContextProviding {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return self.view.window!
+    }
+}
+
 
 #Preview {
     LoginViewController()

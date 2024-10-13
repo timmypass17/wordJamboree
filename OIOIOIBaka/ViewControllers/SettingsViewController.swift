@@ -223,7 +223,7 @@ class SettingsViewController: UIViewController {
                 // Figure out which auth provider the user used to log in
                 let providerID = user.providerData[0].providerID
                 if providerID == "google.com" {
-                    let _: AuthDataResult? = await service.signInWithGoogle(self)
+                    let _: AuthDataResult? = try? await service.signInWithGoogle(self) ?? nil
                     await deleteUser()
                 } else if providerID == "apple.com" {
 //                    startSignInWithAppleFlow(self)

@@ -69,6 +69,7 @@
 		321398392CBAFA2200A636A7 /* LoginViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewController.swift; sourceTree = "<group>"; };
 		3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewController.swift; sourceTree = "<group>"; };
 		3213983D2CBB08DD00A636A7 /* DividerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DividerView.swift; sourceTree = "<group>"; };
+		3213983F2CBC6B0200A636A7 /* OIOIOIBaka.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OIOIOIBaka.entitlements; sourceTree = "<group>"; };
 		32610AEB2C98C9440011946E /* ArrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrowView.swift; sourceTree = "<group>"; };
 		32610AF02C9929390011946E /* ding.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = ding.mp3; sourceTree = "<group>"; };
 		32610AF22C992D2B0011946E /* bonk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bonk.mp3; sourceTree = "<group>"; };
@@ -161,6 +162,7 @@
 		326F93AF2C8B928E00B28F04 /* OIOIOIBaka */ = {
 			isa = PBXGroup;
 			children = (
+				3213983F2CBC6B0200A636A7 /* OIOIOIBaka.entitlements */,
 				32610AEF2C99291F0011946E /* SoundEffects */,
 				326F93CE2C8BCA0200B28F04 /* Cells */,
 				326F93C52C8BBAF600B28F04 /* Views */,
@@ -516,6 +518,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = OIOIOIBaka/OIOIOIBaka.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8KHAQ7W8KV;
@@ -543,6 +546,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = OIOIOIBaka/OIOIOIBaka.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8KHAQ7W8KV;
