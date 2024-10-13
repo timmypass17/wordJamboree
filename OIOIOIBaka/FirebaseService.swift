@@ -10,7 +10,13 @@ import FirebaseAuth
 import FirebaseFirestore
 import FirebaseDatabaseInternal
 import FirebaseStorage
+import FirebaseCore
+import GoogleSignIn
 
+enum AuthenticationState {
+    case permanent
+    case guest
+}
 
 class FirebaseService {    
     
@@ -20,24 +26,35 @@ class FirebaseService {
     var ref = Database.database().reference()   // Realtime Database
     let db = Firestore.firestore()              // Firestore
     let storage = Storage.storage().reference() // Storage
+    let auth = Auth.auth()
     var authListener: AuthStateDidChangeListenerHandle?
+    var authState: AuthenticationState = .guest
 
     init() {
-        authListener = Auth.auth().addStateDidChangeListener { auth, user in
+        
+        authListener = auth.addStateDidChangeListener { auth, user in
+            print("Auth state changed: \(user?.uid ?? "nil")")
+            guard let user else {
+                print("User not logged in")
+                self.currentUser = nil
+                self.pfpImage = nil
+                NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                return
+            }
+            
+            if user.isAnonymous {
+                self.authState = .guest
+            } else {
+                self.authState = .permanent
+            }
+            
             Task {
-                guard let user else {
-                    print("User not logged in or signed out")
-                    self.currentUser = nil
-                    self.pfpImage = nil
-                    NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
-                    return
-                }
-
                 do {
                     if let fetchedUser = try await self.getUser(uid: user.uid) {
                         self.currentUser = fetchedUser
-                        self.pfpImage = try await self.getProfilePicture(uid: user.uid)
+                        self.pfpImage = try? await self.getProfilePicture(uid: user.uid) ?? nil
                     }
+                    print("Got user information!")
                 } catch {
                     print("Error getting user or pfp: \(error)")
                     self.currentUser = nil
@@ -47,7 +64,73 @@ class FirebaseService {
                 NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
             }
         }
+        
+        Task {
+            await signIn()
+        }
     }
+    
+    func signIn() async {
+        if let user = auth.currentUser {
+            // If user signed in, do nothing
+            return
+        } else {
+            // If user is not signed in, create "guest" account if needed
+            do {
+                let result = try await auth.signInAnonymously()
+                if let existingUser = try await getUser(uid: result.user.uid) {
+                    self.currentUser = existingUser
+                } else {
+                    self.currentUser = try await createUser(uid: result.user.uid)
+                }
+                print("Signed in anonymously")
+            } catch {
+                print("Error signing in: \(error)")
+            }
+        }
+    }
+    
+    func signInWithGoogle(_ viewControlller: UIViewController) async -> AuthDataResult? {
+        guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
+        
+        let config = GIDConfiguration(clientID: clientID)
+        GIDSignIn.sharedInstance.configuration = config
+        
+        // Start the Google sign-in flow!
+        do {
+            let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
+                DispatchQueue.main.async {
+                    GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller) { userResult, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else if let userResult = userResult {
+                            continuation.resume(returning: userResult)
+                        }
+                    }
+                }
+            }
+            
+            let user: GIDGoogleUser = result.user
+            guard let idToken = user.idToken?.tokenString else { return nil }
+            
+            let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
+            if let guestUser = auth.currentUser, guestUser.isAnonymous {
+                // note: Doesn't trigger auth state listener
+                let res = try await guestUser.link(with: credential)
+                print("Link guest account to google account!")
+                self.authState = .permanent
+                return res
+            }
+            
+//            let res = try await Auth.auth().signIn(with: credential)
+            
+            return nil
+        } catch {
+            print("Error google signing: \(error)")
+            return nil
+        }
+    }
+
     
     func getProfilePicture(uid: String) async throws -> UIImage? {
         let pfpRef = storage.child("pfps/\(uid).jpg")
@@ -68,17 +151,6 @@ class FirebaseService {
 
     }
     
-    func signInWithGoogle(_ viewController: UIViewController) async throws {
-        guard let res = await startSignInWithGoogleFlow(viewController) else { return }
-        let uid = res.user.uid
-
-        if let existingUser = try await getUser(uid: uid) {
-            self.currentUser = existingUser
-        } else {
-            self.currentUser = try await createUser(uid: uid)
-        }
-    }
-    
     private func getUser(uid: String) async throws -> MyUser? {
         let userRef = db.collection("users").document(uid)
         let userDocument = try await userRef.getDocument()
@@ -92,13 +164,19 @@ class FirebaseService {
     }
 
     private func createUser(uid: String) async throws -> MyUser {
+//        // Check if user exists before creating new one
+//        if let existingUser = try await getUser(uid: uid) {
+//            return existingUser
+//        }
+//        
         // Create new user
         let userToAdd = MyUser(name: generateRandomUsername(), uid: uid)
         try await db.collection("users").document(uid).setData([
             "name": userToAdd.name,
             "uid": userToAdd.uid,
             "createdAt": Date()
-        ]) // document may not exist, merge to update existing user documents instead of overriding them completely
+        ])
+        
         print("Created user successfully")
         return userToAdd
     }

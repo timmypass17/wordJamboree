@@ -225,13 +225,13 @@ class HomeViewController: UIViewController {
     
     private func didTapSignInButton() -> UIAction {
         return UIAction { _ in
-            Task {
-                do {
-                    try await self.service.signInWithGoogle(self)
-                } catch {
-                    print("Error signing in user: \(error)")
-                }
-            }
+//            Task {
+//                do {
+//                    try await self.service.signInWithGoogle(self)
+//                } catch {
+//                    print("Error signing in user: \(error)")
+//                }
+//            }
         }
     }
     
@@ -260,6 +260,7 @@ class HomeViewController: UIViewController {
 
 extension HomeViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard indexPath.section != 0 else { return }
         didTapRoom(at: indexPath)
     }
     

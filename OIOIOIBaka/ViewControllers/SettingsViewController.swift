@@ -13,6 +13,7 @@ import MessageUI
 import AuthenticationServices
 import PhotosUI
 
+// If the user signs out or if the anonymous user account is deleted after each session, Firebase will generate a new anonymous user ID on the next sign-in
 class SettingsViewController: UIViewController {
     
     let tableView: UITableView = {
@@ -164,7 +165,7 @@ class SettingsViewController: UIViewController {
     
     
     func didTapSignInOutButton() {
-        let isLoggedIn = Auth.auth().currentUser != nil
+        let isLoggedIn = service.authState == .permanent
         if isLoggedIn {
             let title = "Sign Out?"
             let message = "Are you sure you want to sign out?"
@@ -184,9 +185,9 @@ class SettingsViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
             self.present(alert, animated: true, completion: nil)
         } else {
-            Task {
-                await startSignInWithGoogleFlow(self)
-            }
+            let authViewController = AuthViewController()
+            authViewController.service = service
+            present(UINavigationController(rootViewController: authViewController), animated: true)
         }
     }
     
@@ -222,7 +223,7 @@ class SettingsViewController: UIViewController {
                 // Figure out which auth provider the user used to log in
                 let providerID = user.providerData[0].providerID
                 if providerID == "google.com" {
-                    let result: AuthDataResult? = await startSignInWithGoogleFlow(self)
+                    let _: AuthDataResult? = await service.signInWithGoogle(self)
                     await deleteUser()
                 } else if providerID == "apple.com" {
 //                    startSignInWithAppleFlow(self)
@@ -305,7 +306,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         
         if indexPath == signInOutIndexPath {
             let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
-            let isLoggedIn = Auth.auth().currentUser != nil
+            let isLoggedIn = service.authState == .permanent
             if isLoggedIn {
                 cell.label.text = "Sign Out"
                 cell.label.textColor = .red
@@ -319,7 +320,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         
         if indexPath == deleteAccountIndexPath {
             let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
-            let isLoggedIn = Auth.auth().currentUser != nil
+            let isLoggedIn = service.authState == .permanent
             cell.label.text = "Delete Account"
             cell.label.textColor = .red
             cell.label.isEnabled = isLoggedIn
@@ -384,19 +385,15 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         }
     }
     
-//    // Disable selection (does not remove highlight, use cell.selectionStyle = .none)
-//    func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
-//        if indexPath == signInOutIndexPath || indexPath == deleteAccountIndexPath {
-//            let isLoggedIn = Auth.auth().currentUser != nil
-//            if isLoggedIn {
-//                return indexPath
-//            } else {
-//                return nil
-//            }
-//        }
-//        
-//        return indexPath
-//    }
+    // Disable cell selection (does not remove highlight, use cell.selectionStyle = .none)
+    func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
+        if indexPath == deleteAccountIndexPath {
+            let isLoggedIn = service.authState == .permanent
+            return isLoggedIn ? indexPath : nil
+        }
+        
+        return indexPath
+    }
 }
 
 extension SettingsViewController: MFMailComposeViewControllerDelegate {

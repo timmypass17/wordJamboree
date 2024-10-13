@@ -43,37 +43,3 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
-
-
-func startSignInWithGoogleFlow(_ viewControlller: UIViewController) async -> AuthDataResult? {
-    guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
-    
-    let config = GIDConfiguration(clientID: clientID)
-    GIDSignIn.sharedInstance.configuration = config
-    
-    // Start the Google sign-in flow!
-    do {
-        let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.main.async {
-                GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller) { userResult, error in
-                    if let error = error {
-                        continuation.resume(throwing: error)
-                    } else if let userResult = userResult {
-                        continuation.resume(returning: userResult)
-                    }
-                }
-            }
-        }
-        
-        let user: GIDGoogleUser = result.user
-        guard let idToken = user.idToken?.tokenString else { return nil }
-        
-        let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
-        let res = try await Auth.auth().signIn(with: credential)
-        
-        return res
-    } catch {
-        print("Error google signing: \(error)")
-        return nil
-    }
-}
