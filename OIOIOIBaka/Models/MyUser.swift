@@ -10,6 +10,6 @@ import FirebaseFirestore
 
 struct MyUser: Codable {
     var name: String
-    var uid: String
-    var createdAt = FirebaseFirestore.Timestamp()
+//    var uid: String
+//    var createdAt = FirebaseFirestore.Timestamp()
 }

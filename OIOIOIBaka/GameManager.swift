@@ -80,7 +80,7 @@ class GameManager {
         self.roomID = roomID
         turnTimer = TurnTimer(soundManager: soundManager)
         turnTimer?.delegate = self
-        if let uid = service.currentUser?.uid {
+        if let uid = service.uid {
             pfps[uid] = service.pfpImage
         }
     }
@@ -222,11 +222,11 @@ class GameManager {
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
                let roomStatus = GameState.Status(rawValue: roomStatusString),
                // TODO: Use random player
-//               let startingPlayerID = playersInfo.randomElement()?.key,
+               let startingPlayerID = playersInfo.randomElement()?.key,
                playersInfo.count >= 2,
                roomStatus == .notStarted {
+                //                let startingPlayerID = self.service.currentUser?.uid
                 
-                let startingPlayerID = self.service.currentUser?.uid
                 game["currentPlayerTurn"] = startingPlayerID as AnyObject
                 state["roomStatus"] = GameState.Status.inProgress.rawValue as AnyObject
                 game["state"] = state as AnyObject
@@ -291,7 +291,7 @@ class GameManager {
     }
     
     func joinGame() {
-        guard let user = service.currentUser else { return }
+        guard let uid = service.uid else { return }
         
         ref.child("games").child(roomID).runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
@@ -312,18 +312,18 @@ class GameManager {
                     return .success(withValue: currentData)
                 }
                 
-                playersInfo[user.uid] = [
+                playersInfo[uid] = [
                     "hearts": 3,
                     "position": currentPlayerCount,
                     "additionalInfo": [
-                        "name": user.name,
+                        "name": service.name,
                         "joinedAt": currentTimestamp
                     ]
                 ] as AnyObject
                 
-                playersWord[user.uid] = "" as AnyObject
+                playersWord[uid] = "" as AnyObject
                 
-                shake[user.uid] = false
+                shake[uid] = false
                 
                 if playersInfo.count == 2 {
                     game["countdownStartTime"] = ServerValue.timestamp() as AnyObject
@@ -421,9 +421,9 @@ class GameManager {
     }
 
     func typing(_ partialWord: String) async throws {
-        guard let currentUser = service.currentUser else { return }
+        guard let uid = service.uid else { return }
         try await ref.updateChildValues([
-            "games/\(roomID)/playersWord/\(currentUser.uid)": partialWord
+            "games/\(roomID)/playersWord/\(uid)": partialWord
         ])
     }
     
@@ -466,7 +466,7 @@ class GameManager {
     }
     
     private func handleSubmitSuccess(word: String) {
-        guard let uid = service.currentUser?.uid else { return }
+        guard let uid = service.uid else { return }
         
         var localLettersUsed = lettersUsed
         ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
@@ -548,7 +548,7 @@ class GameManager {
             guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
                var shake = game["shake"] as? [String: Bool],
-               let uid = self.service.currentUser?.uid {
+               let uid = self.service.uid {
                 shake[uid]?.toggle()
                 game["shake"] = shake as AnyObject
                 currentData.value = game
@@ -720,16 +720,16 @@ class GameManager {
     }
     
     func ready() {
-        guard let currentUser = service.currentUser else { return }
+        guard let uid = service.uid else { return }
         ref.updateChildValues([
-            "/rooms/\(roomID)/isReady/\(currentUser.uid)": true
+            "/rooms/\(roomID)/isReady/\(uid)": true
         ])
     }
     
     func unready() {
-        guard let currentUser = service.currentUser else { return }
+        guard let uid = service.uid else { return }
         ref.updateChildValues([
-            "/rooms/\(roomID)/isReady/\(currentUser.uid)": false
+            "/rooms/\(roomID)/isReady/\(uid)": false
         ])
     }
 
@@ -756,19 +756,86 @@ class GameManager {
         
         return nil
     }
+    
+    // User in lobby and leaves (doesn't delete room)
+    func leave() async throws {
+        turnTimer?.stopTimer()
 
+        service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
+            if var game = currentData.value as? [String: AnyObject],
+               let uid = service.uid,
+               var playersInfo = game["playersInfo"] as? [String: AnyObject],
+               var playerInfo = playersInfo[uid] as? [String: AnyObject],   // user in lobby
+               let currentPosition = playerInfo["position"] as? Int,
+               let hearts = playerInfo["hearts"] as? Int,
+               var playersWord = game["playersWord"] as? [String: AnyObject],
+               var shake = game["shake"] as? [String: Bool],
+               var state = game["state"] as? [String: AnyObject],
+               let statusString = state["roomStatus"] as? String,
+               let status = GameState.Status(rawValue: statusString),
+               status == .notStarted
+            {
+                // Remove player completely
+                playersInfo[uid] = nil
+                playersWord[uid] = nil
+                shake[uid] = nil
+                
+                // Update positions after removal of player
+                let playerIDs: [String] = playersInfo.sorted { playerInfo1, playerInfo2 in
+                    let position1 = (playerInfo1.value as? [String: AnyObject])?["position"] as? Int ?? .max
+                    let position2 = (playerInfo2.value as? [String: AnyObject])?["position"] as? Int ?? .max
+                    return position1 < position2
+                }.map { $0.key }
+                
+                for (newPosition, uid) in playerIDs.enumerated() {
+                    guard var playerInfo = playersInfo[uid] as? [String: AnyObject] else { continue }
+                    playerInfo["position"] = newPosition as AnyObject
+                    playersInfo[uid] = playerInfo as AnyObject
+                }
+                
+                if playersInfo.count < 2 {
+                    game["countdownStartTime"] = nil
+                }
+                
+                game["playersInfo"] = playersInfo as AnyObject
+                game["playersWord"] = playersWord as AnyObject
+                game["shake"] = shake as AnyObject
+
+                currentData.value = game
+                return .success(withValue: currentData)
+            }
+            return .success(withValue: currentData)
+        }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
+            guard let self else { return }
+            if let error {
+                print(error.localizedDescription)
+                return
+            }
+            
+            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
+            
+            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
+            ref.updateChildValues([
+                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+            ])
+            
+        }, withLocalEvents: false)
+    }
+
+    
     func exit() async throws {
         turnTimer?.stopTimer()
     
         // Check if user was in game
-        guard let uid = self.service.currentUser?.uid else { return }
+        guard let uid = self.service.uid else { return }
         let userSnapshot = try await ref.child("games/\(roomID)/playersInfo/\(uid)").getData()
         guard userSnapshot.exists() else { return }
 
         service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
-               let uid = self.service.currentUser?.uid,
+               let uid = self.service.uid,
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
                var playerInfo = playersInfo[uid] as? [String: AnyObject],
                let currentPosition = playerInfo["position"] as? Int,
@@ -785,6 +852,13 @@ class GameManager {
                 case .notStarted:
                     // Remove player completely
                     playersInfo[uid] = nil
+                    
+                    if playersInfo.count <= 0 {
+                        // Delete game
+                        currentData.value = NSNull()
+                        return .success(withValue: currentData)
+                    }
+                    
                     playersWord[uid] = nil
                     shake[uid] = nil
                     
@@ -869,17 +943,17 @@ class GameManager {
                 return
             }
             
-            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
-            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
-            if playersInfo.isEmpty {
+            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else {
+                // Game was deleted, delete corresponding room
                 ref.updateChildValues([
-                    "rooms/\(roomID)/currentPlayerCount": 0
+                    "rooms/\(roomID)": NSNull()
                 ])
-            } else {
-                ref.updateChildValues([
-                    "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-                ])
+                return
             }
+            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
+            ref.updateChildValues([
+                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+            ])
             
         }, withLocalEvents: false)
     }
@@ -906,7 +980,7 @@ extension GameManager: TurnTimerDelegate {
     // - call exit() when user enters background
     // - call exit()
     func turnTimer(_ sender: TurnTimer, timeRanOut: Bool) {
-        guard currentPlayerTurn == service.currentUser?.uid else { return }
+        guard currentPlayerTurn == service.uid else { return }
         delegate?.gameManager(self, timeRanOut: true)
         Task {
             try await damagePlayer(playerID: currentPlayerTurn)

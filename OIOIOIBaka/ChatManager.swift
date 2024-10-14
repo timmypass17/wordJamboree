@@ -58,7 +58,7 @@ class ChatManager {
                 else { return }
                 
                 // Add message to messages (that is not from current user)
-                guard uid != self.service.currentUser?.uid else { return }
+                guard uid != self.service.uid else { return }
                 let message = Message(uid: uid, name: name, message: textMessage, pfpImage: nil)
                 self.messages.append(message)
                 self.delegate?.chatManager(self, didReceiveNewMessage: message)

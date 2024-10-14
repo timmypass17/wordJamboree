@@ -254,7 +254,7 @@ class GameViewController: UIViewController {
             
             do {
                 Task {
-                    try await self.gameManager.exit()
+                    try await self.gameManager.leave()
                 }
             } catch {
                 print("Error removing player: \(error)")
@@ -426,8 +426,8 @@ extension GameViewController: UITextFieldDelegate {
     
     func didTapDoneButton(_ textField: UITextField) {
         
-        guard let currentUser = gameManager.service.currentUser,
-              currentUser.uid == gameManager.currentPlayerTurn,
+        guard let uid = gameManager.service.uid,
+              uid == gameManager.currentPlayerTurn,
               let word = textField.text
         else { return }
         
@@ -442,12 +442,12 @@ extension GameViewController: UITextFieldDelegate {
     
     // Prevents text editing
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        guard let currentUser = gameManager.service.currentUser
+        guard let uid = gameManager.service.uid
         else {
             return false
         }
         
-        return currentUser.uid == gameManager.currentPlayerTurn
+        return uid == gameManager.currentPlayerTurn
     }
 
 }
@@ -460,7 +460,7 @@ extension GameViewController: GameManagerDelegate {
     
     func gameManager(_ manager: GameManager, countdownEnded: Bool) {
         // Player 0 starts game
-        guard let uid = manager.service.currentUser?.uid,
+        guard let uid = manager.service.uid,
               let playerInfo = manager.playersInfo[uid] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int,
               position == 0
@@ -576,7 +576,7 @@ extension GameViewController: GameManagerDelegate {
               let position = playerInfo["position"] as? Int
         else { return }
         
-        if playerID != manager.service.currentUser?.uid {
+        if playerID != manager.service.uid {
             soundManager.playKeyboardClickSound()
         }
         
@@ -589,7 +589,7 @@ extension GameViewController: GameManagerDelegate {
                   let updatedWord = playerWords[uid]
             else { continue }
             
-            if manager.currentPlayerTurn != manager.service.currentUser?.uid {
+            if manager.currentPlayerTurn != manager.service.uid {
                 soundManager.playKeyboardClickSound()
             }
             
@@ -627,7 +627,7 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: GameState.Status, winner: [String: AnyObject]?) {
-        guard let uid = manager.service.currentUser?.uid else { return }
+        guard let uid = manager.service.uid else { return }
         switch roomStatus {
         case .notStarted:
             gameManager.turnTimer?.stopTimer()
@@ -708,7 +708,7 @@ extension GameViewController: CountDownViewDelegate {
 
 extension GameViewController: KeyboardViewDelegate {
     func keyboardView(_ sender: KeyboardView, didTapKey letter: String) {
-        guard let uid = gameManager.service.currentUser?.uid,
+        guard let uid = gameManager.service.uid,
               uid == gameManager.currentPlayerTurn,
               let playerInfo = gameManager.playersInfo[uid] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int
@@ -729,7 +729,7 @@ extension GameViewController: KeyboardViewDelegate {
     }
     
     func keyboardView(_ sender: KeyboardView, didTapBackspace: Bool) {
-        guard let uid = gameManager.service.currentUser?.uid,
+        guard let uid = gameManager.service.uid,
               uid == gameManager.currentPlayerTurn,
               let playerInfo = gameManager.playersInfo[uid] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int
@@ -758,7 +758,7 @@ extension GameViewController: KeyboardViewDelegate {
     }
     
     func handleSubmit() {
-        guard let uid = gameManager.service.currentUser?.uid,
+        guard let uid = gameManager.service.uid,
               uid == gameManager.currentPlayerTurn,
               let playerInfo = gameManager.playersInfo[uid] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int

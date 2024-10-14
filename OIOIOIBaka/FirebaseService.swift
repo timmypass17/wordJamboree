@@ -19,10 +19,16 @@ enum AuthenticationState {
     case guest
 }
 
-class FirebaseService {    
+// TODO: I don't need to store user's name in firestore. Just use UserDefault
+// anonymous
+// Cons
+// - anonymous accounts don’t let users have the same account on multiple devices
+// - unrecoverable if the user ever gets signed out or unistalls app
+class FirebaseService {
     
-    var currentUser: MyUser? = nil
+    var name: String = ""
     var pfpImage: UIImage? = nil
+    var uid: String? = nil
     
     var ref = Database.database().reference()   // Realtime Database
     let db = Firestore.firestore()              // Firestore
@@ -32,63 +38,64 @@ class FirebaseService {
     var authState: AuthenticationState = .guest
 
     init() {
-        
+        // No accounts, just use guest accounts and store user's name and pfp
+        // anon user counts as user
+        // signing out will recreate anonymous user id
         authListener = auth.addStateDidChangeListener { auth, user in
             print("Auth state changed: \(user?.uid ?? "nil")")
-            guard let user else {
-                print("User not logged in")
-                self.currentUser = nil
-                self.pfpImage = nil
-                NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
-                return
-            }
-            
-            if user.isAnonymous {
-                self.authState = .guest
-            } else {
-                self.authState = .permanent
-            }
             
             Task {
-                do {
-                    if let fetchedUser = try await self.getUser(uid: user.uid) {
-                        self.currentUser = fetchedUser
-                        self.pfpImage = try? await self.getProfilePicture(uid: user.uid) ?? nil
+                if let user {
+                    // Fetch current existing user
+                    do {
+                        if let existingUser = try await self.getUser(uid: user.uid) {
+                            print("Got existing user!")
+                            self.name = existingUser.name
+                            self.uid = user.uid
+                            self.pfpImage = try? await self.getProfilePicture(uid: user.uid) ?? nil
+                        } else {
+                            print("Creating new user!")
+                            let newUser = try await self.createUser(uid: user.uid)
+                            self.name = newUser.name
+                            self.uid = user.uid
+                            self.pfpImage = nil
+                        }
+                        self.authState = user.isAnonymous ? .guest : .permanent
+                        NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                        print("User is \(self.authState)")
+                    } catch {
+                        print("Error getting user: \(error)")
                     }
-                    print("Got user information!")
-                } catch {
-                    print("Error getting user or pfp: \(error)")
-                    self.currentUser = nil
-                    self.pfpImage = nil
+                } else {
+                    // Create guest user
+                    try await auth.signInAnonymously() // triggers auth state again
                 }
-
-                NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
             }
         }
-        
-        Task {
-            await signIn()
-        }
+                
+//        try? auth.signOut()
+//        
+//        Task {
+//            if auth.currentUser == nil {
+//                print("Sign in anonymously")
+//                try await auth.signInAnonymously()  // triggers state change
+//            } else {
+//                
+//            }
+//        }
     }
     
-    func signIn() async {
-        if let user = auth.currentUser {
-            // If user signed in, do nothing
-            return
-        } else {
-            // If user is not signed in, create "guest" account if needed
-            do {
-                let result = try await auth.signInAnonymously()
-                if let existingUser = try await getUser(uid: result.user.uid) {
-                    self.currentUser = existingUser
-                } else {
-                    self.currentUser = try await createUser(uid: result.user.uid)
-                }
-                print("Signed in anonymously")
-            } catch {
-                print("Error signing in: \(error)")
-            }
-        }
+    func clearUserData() async throws {
+//        Settings.shared.name = generateRandomUsername()
+        try await deleteProfilePicture()
+        NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+    }
+    
+    private func deleteProfilePicture() async throws {
+        guard let currentUser = auth.currentUser else { return }
+        let pfpRef = storage.child("pfps/\(currentUser.uid).jpg")
+        try await pfpRef.delete()
+        self.pfpImage = nil
     }
     
     func signInWithGoogle(_ viewControlller: UIViewController) async throws -> AuthDataResult? {
@@ -97,7 +104,6 @@ class FirebaseService {
         let config = GIDConfiguration(clientID: clientID)
         GIDSignIn.sharedInstance.configuration = config
         
-        // Start the Google sign-in flow!
         let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.main.async {
                 GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller) { userResult, error in
@@ -113,16 +119,43 @@ class FirebaseService {
         let user: GIDGoogleUser = result.user
         guard let idToken = user.idToken?.tokenString else { return nil }
         
+        // Have to attemp to link and then sign in because in my app, there is always a anon account being used.
+        // Ex. User signs in and link account to google successfully, user later sign outs -> generates new anon user/uid, user attempts to sign in again using new anon uid but fails link because there is already a uid associated with that google account
         let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
         if let guestUser = auth.currentUser, guestUser.isAnonymous {
-            // note: Doesn't trigger auth state listener
-            let res = try await guestUser.link(with: credential)
-            print("Link guest account to google account!")
-            self.authState = .permanent
-            return res
+            do {
+                let res = try await guestUser.link(with: credential)
+                self.authState = .permanent
+                NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                print("Successfully linked guest account to Google account!")
+                return res
+            } catch let error as NSError {
+                if error.code == AuthErrorCode.credentialAlreadyInUse.rawValue {
+                    print("This Google account is already linked to another account.")
+                }
+                
+                // Fallback to sign in directly
+                do {
+                    let res = try await auth.signIn(with: credential)
+                    print("Signed in to Google account!")
+                    
+//                    // Get new user's information
+//                    if let existingUser = try await self.getUser(uid: res.user.uid) {
+//                        print("Got existing user!")
+//                        self.name = existingUser.name
+//                        self.uid = res.user.uid
+//                        self.pfpImage = try? await self.getProfilePicture(uid: res.user.uid) ?? nil
+//                    }
+//                    
+                    self.authState = .permanent
+                    NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                    return res
+                } catch {
+                    print("Error signing into Google account: \(error.localizedDescription)")
+                }
+            }
+            NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
         }
-        
-        // let res = try await Auth.auth().signIn(with: credential)
         
         return nil
     }
@@ -149,7 +182,7 @@ class FirebaseService {
     
     // can upload images either Data or URL
     func uploadProfilePicture(imageData: Data) async throws {
-        guard let uid = currentUser?.uid else { return }
+        guard let uid else { return }
         let pfpRef = storage.child("pfps/\(uid).jpg")
 
         let _ = try await pfpRef.putDataAsync(imageData)
@@ -157,7 +190,7 @@ class FirebaseService {
 
     }
     
-    private func getUser(uid: String) async throws -> MyUser? {
+    func getUser(uid: String) async throws -> MyUser? {
         let userRef = db.collection("users").document(uid)
         let userDocument = try await userRef.getDocument()
         if userDocument.exists {
@@ -170,29 +203,25 @@ class FirebaseService {
     }
 
     private func createUser(uid: String) async throws -> MyUser {
-//        // Check if user exists before creating new one
-//        if let existingUser = try await getUser(uid: uid) {
-//            return existingUser
-//        }
-//        
         // Create new user
-        let userToAdd = MyUser(name: generateRandomUsername(), uid: uid)
+        let userToAdd = MyUser(
+            name: generateRandomUsername()
+        )
+        
         try await db.collection("users").document(uid).setData([
             "name": userToAdd.name,
-            "uid": userToAdd.uid,
-            "createdAt": Date()
         ])
         
         print("Created user successfully")
         return userToAdd
     }
     
-    func updateName(newName: String) async throws {
-        guard let uid = currentUser?.uid else { throw FirebaseServiceError.userNotLoggedIn }
-        try await db.collection("users").document(uid).updateData([
-            "name": newName
-        ])
-        currentUser?.name = newName
+    func updateName(name: String) async throws {
+        guard let uid else { return }
+        try await db.collection("users").document(uid).setData([
+            "name": name,
+        ], merge: true)
+        self.name = name
     }
 
     
@@ -240,13 +269,13 @@ class FirebaseService {
     
     
     func createRoom(title: String) async throws -> (String, Room) {
-        guard let currentUser else { throw FirebaseServiceError.userNotLoggedIn }
+        guard let uid else { throw FirebaseServiceError.userNotLoggedIn }
 
         let roomRef = ref.childByAutoId()
         let roomID = roomRef.key!
         
         let room = Room(
-            creatorID: currentUser.uid,
+            creatorID: uid,
             title: title,
             currentPlayerCount: 1
         )
@@ -266,12 +295,12 @@ class FirebaseService {
             secondsPerTurn: Int.random(in: 10...30) + 3,
             rounds: 1,
             playersInfo: [
-                currentUser.uid:
+                uid:
                     PlayerInfo(
                         hearts: 3,
                         position: 0,
                         additionalInfo: AdditionalPlayerInfo(
-                            name: currentUser.name
+                            name: name
                         )
                     ),
 //                // TODO: Remove later
@@ -309,10 +338,10 @@ class FirebaseService {
 //                    ),
             ],
             shake: [
-                currentUser.uid: false
+                uid: false
             ],
             playersWord: [
-                currentUser.uid: ""
+                uid: ""
             ]
         )
 

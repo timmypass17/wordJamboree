@@ -55,7 +55,7 @@ class HomeViewController: UIViewController {
         
         setupLoginButton()
         setupSignOutButton()
-        navigationItem.rightBarButtonItems = [settingsButton, signInButton, signOutButton]
+        navigationItem.rightBarButtonItems = [settingsButton/*, signInButton, signOutButton*/]
         
         setupCollectionView()
         
@@ -265,9 +265,7 @@ extension HomeViewController: UICollectionViewDelegate {
     }
     
     func didTapRoom(at indexPath: IndexPath) {
-        guard let item = dataSource.itemIdentifier(for: indexPath),
-              let user = service.currentUser
-        else {
+        guard let item = dataSource.itemIdentifier(for: indexPath) else {
             print("User not found")
             return
         }
@@ -284,14 +282,10 @@ extension HomeViewController: UICollectionViewDelegate {
 
 extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
     func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapCreateRoom: Bool) {
-        guard let user = service.currentUser else {
-            print("User not found")
-            return
-        }
         let createRoomViewController = CreateRoomViewController()
         createRoomViewController.service = service
         createRoomViewController.delegate = self
-        createRoomViewController.navigationItem.title = "\(user.name)'s room"
+        createRoomViewController.navigationItem.title = "\(Settings.shared.name)'s room"
         present(UINavigationController(rootViewController: createRoomViewController), animated: true)
     }
     
@@ -303,7 +297,6 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
 }
 extension HomeViewController: CreateRoomViewControllerDelegate {
     func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String) {
-        guard let uid = service.currentUser?.uid else { return }
         let gameManager = GameManager(roomID: roomID, service: service)
         let gameViewController = GameViewController(gameManager: gameManager, chatManager: ChatManager(roomID: roomID, service: service))
         gameViewController.leaveButton.isHidden = false

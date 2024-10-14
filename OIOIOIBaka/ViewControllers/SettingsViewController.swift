@@ -26,6 +26,7 @@ class SettingsViewController: UIViewController {
         case settings(Model)
         case signInOut
         case deleteAccount
+        case clearData
         
         var settings: Model? {
             if case .settings(let model) = self {
@@ -52,9 +53,10 @@ class SettingsViewController: UIViewController {
             self.backgroundColor = backgroundColor
         }
     }
+    
     var sections: [Section] = [
         Section(
-            title: "General",
+            title: "Profile Info",
             data: [
                 Item.settings(Model(image: UIImage(systemName: "pencil")!, text: "Change Nickname", backgroundColor: .systemBlue)),
                 Item.settings(Model(image: UIImage(systemName: "camera.fill")!, text: "Change Profile Picture", backgroundColor: .systemOrange)),
@@ -68,7 +70,7 @@ class SettingsViewController: UIViewController {
             ]
         ),
         Section(
-            title: nil,
+            title: "Privacy",
             data: [
                 Item.settings(Model(image: UIImage(systemName: "globe")!, text: "Acknowledgements", backgroundColor: .systemBlue)),
                 Item.settings(Model(image: UIImage(systemName: "hand.raised.fill")!, text: "Privacy Policy", backgroundColor: .systemGray))
@@ -77,11 +79,6 @@ class SettingsViewController: UIViewController {
         Section(
             data: [
                 Item.signInOut
-            ]
-        ),
-        Section(
-            data: [
-                Item.deleteAccount
             ]
         )
     ]
@@ -96,6 +93,7 @@ class SettingsViewController: UIViewController {
     var privacyIndexPath = IndexPath(row: 1, section: 2)
     var signInOutIndexPath = IndexPath(row: 0, section: 3)
     var deleteAccountIndexPath = IndexPath(row: 0, section: 4)
+//    var clearUserDataIndexPath = IndexPath(row: 0, section: 4)
 
     var appleAuthCrendentials: AuthCredential? = nil
     
@@ -128,20 +126,15 @@ class SettingsViewController: UIViewController {
         ])
         
         headerView = SettingsHeaderView(frame: CGRect(x: 0, y: 0, width: tableView.frame.width, height: 150))
-        headerView.playerView.nameLabel.text = service.currentUser?.name ?? "guest"
+        headerView.playerView.nameLabel.text = service.name
         headerView.playerView.profileImageView.update(image: service.pfpImage)
         tableView.tableHeaderView = headerView
         
+        if service.authState == .permanent {
+            sections.append(Section(data: [Item.clearData]))
+        }
+        
         NotificationCenter.default.addObserver(self, selector: #selector(handleUserStateChanged), name: .userStateChangedNotification, object: nil)
-
-        
-//        // Gets called whenever user logs in or out
-//        authListener = Auth.auth().addStateDidChangeListener { [self] auth, user in
-//            if user
-//            
-//            tableView.reloadSections(IndexSet([signInOutIndexPath, deleteAccountIndexPath].map { $0.section }), with: .automatic)
-//        }
-        
     }
     
     deinit {
@@ -150,10 +143,30 @@ class SettingsViewController: UIViewController {
     }
     
     @objc func handleUserStateChanged() {
+        print("handleUserStateChanged")
         DispatchQueue.main.async { [self] in
-            headerView.playerView.nameLabel.text = service.currentUser?.name ?? "guest"
+            headerView.playerView.nameLabel.text = service.name
             headerView.playerView.profileImageView.update(image: service.pfpImage)
-            tableView.reloadSections(IndexSet([signInOutIndexPath, deleteAccountIndexPath].map { $0.section }), with: .automatic)
+            
+            let containsDeleteAccountCell = sections.contains { section in
+                section.data.contains { item in
+                    if case .deleteAccount = item {
+                        return true
+                    }
+                    return false
+                }
+            }
+            
+            if service.authState == .permanent && !containsDeleteAccountCell {
+                print("Insert")
+                sections.insert(Section(data: [.deleteAccount]), at: deleteAccountIndexPath.section)
+                tableView.insertSections(IndexSet(integer: deleteAccountIndexPath.section), with: .automatic)
+            } else if service.authState == .guest && containsDeleteAccountCell {
+                print("Remove")
+                sections.remove(at: deleteAccountIndexPath.section)
+                tableView.deleteSections(IndexSet(integer: deleteAccountIndexPath.section), with: .automatic)
+            }
+            tableView.reloadSections(IndexSet(integer: signInOutIndexPath.section), with: .automatic)
         }
     }
     
@@ -175,11 +188,12 @@ class SettingsViewController: UIViewController {
                 guard let self else { return }
                 do {
                     try Auth.auth().signOut()
+                    service.authState = .guest
+                    tableView.reloadSections(IndexSet([signInOutIndexPath.section]), with: .automatic)
                     print("User signed out")
                 } catch{
                     print("Error signing out: \(error)")
                 }
-                tableView.reloadSections(IndexSet(integer: signInOutIndexPath.section), with: .automatic)
             })
             alert.addAction(UIAlertAction(title: "Nevermind", style: .default))
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -209,28 +223,55 @@ class SettingsViewController: UIViewController {
     }
     
     private func deleteUser() async {
-        // Note: Doesn't delete user's data. Deleting document does not delete subcollection. (Used Firebase Cloud Functions)
         guard let user = Auth.auth().currentUser else { return }
 
         do {
-            try await user.delete()
+            // Deleting account requires user to sign in recently, re-authenticate the user to perform security sensitive actions
+            var credentials: AuthCredential? = nil
+            let providerID = user.providerData[0].providerID
+            if providerID == "google.com" {
+                credentials = try await reauthenticateWithGoogle()
+            } else if providerID == "apple.com" {
+                service.signInWithApple(self)
+            }
+            
+            if let credentials {
+                var result = try await user.reauthenticate(with: credentials)
+                try await user.delete()
+            }
+            // TODO: Delete user document
             print("Deleted user successfully")
         }
         catch {
-            // Deleting account requires user to sign in recently, re-authenticate the user to perform security sensitive actions
             print("Error deleting account: \(error)")
-            if let user = Auth.auth().currentUser {
-                // Figure out which auth provider the user used to log in
-                let providerID = user.providerData[0].providerID
-                if providerID == "google.com" {
-                    let _: AuthDataResult? = try? await service.signInWithGoogle(self) ?? nil
-                    await deleteUser()
-                } else if providerID == "apple.com" {
-//                    startSignInWithAppleFlow(self)
+        }
+    }
+    
+    func reauthenticateWithGoogle() async throws -> AuthCredential? {
+        guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
+        
+        let config = GIDConfiguration(clientID: clientID)
+        GIDSignIn.sharedInstance.configuration = config
+        
+        let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.main.async {
+                GIDSignIn.sharedInstance.signIn(withPresenting: self) { userResult, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else if let userResult = userResult {
+                        continuation.resume(returning: userResult)
+                    }
                 }
             }
         }
+        
+        let user: GIDGoogleUser = result.user
+        guard let idToken = user.idToken?.tokenString else { return nil }
+
+        let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
+        return credential
     }
+    
     
     func didTapChangeProfilePicture() {
         presentPicker(filter: .images)
@@ -257,9 +298,9 @@ class SettingsViewController: UIViewController {
     
     func didTapChangeNameRow() {
         let alert = UIAlertController(title: "Change Display Name", message: "Name must be 20 characters or fewer.", preferredStyle: .alert)
-
+        
         alert.addTextField { textField in
-            textField.text = self.service.currentUser?.name ?? ""
+            textField.text = self.service.name
             textField.placeholder = "Enter your name"
             
             let textFieldChangedAction = UIAction { _ in
@@ -279,8 +320,8 @@ class SettingsViewController: UIViewController {
             }
             Task {
                 do {
-                    try await self.service.updateName(newName: name)
                     self.headerView.playerView.nameLabel.text = name
+                    try await self.service.updateName(name: name)
                 } catch {
                     print("Error updating name: \(error)")
                 }
@@ -304,6 +345,14 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
+        if indexPath == deleteAccountIndexPath {
+            let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
+            cell.label.text = "Delete Account"
+            cell.label.textColor = .red
+            cell.selectionStyle = service.uid != nil ? .default : .none
+            return cell
+        }
+        
         if indexPath == signInOutIndexPath {
             let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
             let isLoggedIn = service.authState == .permanent
@@ -317,16 +366,16 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             cell.selectionStyle = .default
             return cell
         }
-        
-        if indexPath == deleteAccountIndexPath {
-            let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
-            let isLoggedIn = service.authState == .permanent
-            cell.label.text = "Delete Account"
-            cell.label.textColor = .red
-            cell.label.isEnabled = isLoggedIn
-            cell.selectionStyle = isLoggedIn ? .default : .none
-            return cell
-        }
+//        
+//        if indexPath == deleteAccountIndexPath {
+//            let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
+//            let isLoggedIn = service.authState == .permanent
+//            cell.label.text = "Delete Account"
+//            cell.label.textColor = .red
+//            cell.label.isEnabled = isLoggedIn
+//            cell.selectionStyle = isLoggedIn ? .default : .none
+//            return cell
+//        }
 
         let cell = tableView.dequeueReusableCell(withIdentifier: SettingsTableViewCell.reuseIdentifier, for: indexPath) as! SettingsTableViewCell
         let model = sections[indexPath.section].data[indexPath.row]
@@ -383,13 +432,18 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         } else if indexPath == deleteAccountIndexPath {
             didTapDeleteAccountButton()
         }
+//        else if indexPath == signInOutIndexPath {
+//            didTapSignInOutButton()
+//        } else if indexPath == deleteAccountIndexPath {
+//            didTapDeleteAccountButton()
+//        }
     }
+
     
     // Disable cell selection (does not remove highlight, use cell.selectionStyle = .none)
     func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
         if indexPath == deleteAccountIndexPath {
-            let isLoggedIn = service.authState == .permanent
-            return isLoggedIn ? indexPath : nil
+            return service.uid != nil ? indexPath : nil
         }
         
         return indexPath
@@ -475,34 +529,30 @@ extension SettingsViewController: PHPickerViewControllerDelegate {
 extension SettingsViewController: ASAuthorizationControllerDelegate {
     
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-//        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-//            guard let nonce = Settings.shared.nonce else {
-//                fatalError("Invalid state: A login callback was received, but no login request was sent.")
-//            }
-//            guard let appleIDToken = appleIDCredential.identityToken else {
-//                print("Unable to fetch identity token")
-//                return
-//            }
-//            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
-//                print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
-//                return
-//            }
-//            // Initialize a Firebase credential, including the user's full name.
-//            let credential = OAuthProvider.appleCredential(withIDToken: idTokenString,
-//                                                           rawNonce: nonce,
-//                                                           fullName: appleIDCredential.fullName)
-//            
-//            // Sign in with Firebase
-//            Task {
-//                do {
-//                    let result = try await Auth.auth().signIn(with: credential)
-//                    await deleteUser()
-//                } catch {
-//                    print("Error signing with in Apple: \(error)")
-//                    appleAuthCrendentials = nil
-//                }
-//            }
-//        }
+        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            guard let appleIDToken = appleIDCredential.identityToken else {
+                print("Unable to fetch identity token")
+                return
+            }
+            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+                print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
+                return
+            }
+
+            let credential = OAuthProvider.appleCredential(withIDToken: idTokenString,
+                                                           rawNonce: nil,
+                                                           fullName: appleIDCredential.fullName)
+            
+            Task {
+                if let guestUser = service.auth.currentUser, guestUser.isAnonymous {
+                    let res = try await guestUser.link(with: credential)
+                    print("Link guest account to apple account!")
+//                    service.authState = .permanent
+                    NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                }
+            }
+            
+        }
     }
     
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {

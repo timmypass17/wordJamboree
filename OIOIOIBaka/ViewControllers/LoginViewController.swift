@@ -9,6 +9,7 @@ import UIKit
 import AuthenticationServices
 import GoogleSignIn
 import FirebaseAuth
+import FirebaseCore
 
 protocol LoginViewControllerDelegate: AnyObject {
     func loginViewController(_ viewController: LoginViewController, didTapSignUpButton: Bool)
@@ -204,9 +205,36 @@ extension LoginViewController: ASAuthorizationControllerDelegate {
             
             Task {
                 if let guestUser = service.auth.currentUser, guestUser.isAnonymous {
-                    let res = try await guestUser.link(with: credential)
-                    print("Link guest account to apple account!")
-                    service.authState = .permanent
+                    do {
+                        try await guestUser.link(with: credential)
+                        print("Successfully linked guest account to Apple account!")
+                        service.authState = .permanent
+                        NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                    } catch let error as NSError {
+                        if error.code == AuthErrorCode.credentialAlreadyInUse.rawValue {
+                            print("This Apple account is already linked to another account.")
+                        }
+                        
+                        // Fallback to sign in directly
+                        do {
+                            let res = try await service.auth.signIn(with: credential)
+                            
+//                            // Get new user's information
+//                            if let existingUser = try await service.getUser(uid: res.user.uid) {
+//                                print("Got existing user!")
+//                                service.name = existingUser.name
+//                                service.uid = res.user.uid
+//                                service.pfpImage = try? await service.getProfilePicture(uid: res.user.uid) ?? nil
+//                            }
+                            
+                            print("Signed in to Apple account!")
+                            service.authState = .permanent
+                            NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+                        } catch {
+                            print("Error signing into Apple account: \(error.localizedDescription)")
+                        }
+                    }
+                    NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
                 }
             }
             
