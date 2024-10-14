@@ -262,19 +262,8 @@ class GameViewController: UIViewController {
         }
     }
     
-    @objc func willTeriminate() {
-        print("wilLTeriminate")
-        exitTask?.cancel()
-        exitTask = Task {
-            do {
-                try await self.gameManager.exit()
-            } catch {
-                print("Error removing player: \(error)")
-            }
-        }
-    }
-    
-    
+    // To clean up afk players.
+    // TODO: Bug, If user swipes to delete, game is frozen
     @objc func didEnterBackground() {
         print("didEnterBackground")
         exitTask?.cancel()
@@ -291,11 +280,13 @@ class GameViewController: UIViewController {
         print("willEnterForeground")
         let alert = UIAlertController(
             title: "Inactive Warning",
-            message: "Leaving the app will result in being kicked from this session. Please stay active to continue playing!",
+            message: "Leaving the app will result in being kicked from the session. Please stay active to continue playing!",
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            self.navigationController?.popViewController(animated: true)
+        })
 
         self.present(alert, animated: true, completion: nil)
     }

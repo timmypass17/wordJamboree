@@ -52,18 +52,33 @@ class CreateRoomViewController: UIViewController, UITableViewDelegate {
         ])
     }
     
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nil, bundle: nil)
+        print("init createRoomViewControlller")
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        print("deinit createRoomViewControlller")
+    }
+    
     func didTapCancelButton() -> UIAction {
-        return UIAction { _ in
+        return UIAction { [weak self] _ in
+            guard let self else { return }
             self.dismiss(animated: true)
         }
     }
     
     func didTapCreateButton() -> UIAction {
-        return UIAction { _ in
-            // Create Room document in Firebase
+        return UIAction { [weak self] _ in
+            guard let self else { return }
+            guard let uid = self.service.uid else { return }
             Task {
                 do {
-                    let (roomID, room) = try await self.service.createRoom(title: "timmy's room")
+                    let (roomID, room) = try await self.service.createRoom(title: "\(self.service.name)'s room")
                     self.delegate?.createRoomViewController(self, didCreateRoom: room, roomID: roomID)
                 } catch let error as FirebaseServiceError {
                     print("Failed to create room: \(error.localizedDescription)")

@@ -823,21 +823,30 @@ class GameManager {
         }, withLocalEvents: false)
     }
 
-    
     func exit() async throws {
         turnTimer?.stopTimer()
     
         // Check if user was in game
-        guard let uid = self.service.uid else { return }
-        let userSnapshot = try await ref.child("games/\(roomID)/playersInfo/\(uid)").getData()
-        guard userSnapshot.exists() else { return }
+//        guard let uid = self.service.uid else { return }
+//        let userSnapshot = try await ref.child("games/\(roomID)/playersInfo/\(uid)").getData()
+//        guard userSnapshot.exists() else { return }
 
         service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
-            if var game = currentData.value as? [String: AnyObject],
-               let uid = self.service.uid,
-               var playersInfo = game["playersInfo"] as? [String: AnyObject],
-               var playerInfo = playersInfo[uid] as? [String: AnyObject],
+            guard var game = currentData.value as? [String: AnyObject],
+               let uid = self.service.uid else {
+                return .success(withValue: currentData)
+            }
+            
+            // If room is empty, delete it
+            var playersInfo = game["playersInfo"] as? [String: AnyObject] ?? [:]
+            if playersInfo.count <= 0 {
+                currentData.value = NSNull()
+                return .success(withValue: currentData)
+            }
+            
+            // If player is in lobby, remove them
+            if var playerInfo = playersInfo[uid] as? [String: AnyObject],
                let currentPosition = playerInfo["position"] as? Int,
                let hearts = playerInfo["hearts"] as? Int,
                var playersWord = game["playersWord"] as? [String: AnyObject],
@@ -854,7 +863,7 @@ class GameManager {
                     playersInfo[uid] = nil
                     
                     if playersInfo.count <= 0 {
-                        // Delete game
+                        // If last player remaining, delete game & room
                         currentData.value = NSNull()
                         return .success(withValue: currentData)
                     }
@@ -957,6 +966,141 @@ class GameManager {
             
         }, withLocalEvents: false)
     }
+    
+    
+//    func exit() async throws {
+//        turnTimer?.stopTimer()
+//    
+//        // Check if user was in game
+//        guard let uid = self.service.uid else { return }
+//        let userSnapshot = try await ref.child("games/\(roomID)/playersInfo/\(uid)").getData()
+//        guard userSnapshot.exists() else { return }
+//
+//        service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+//            guard let self else { return .abort() }
+//            if var game = currentData.value as? [String: AnyObject],
+//               let uid = self.service.uid,
+//               var playersInfo = game["playersInfo"] as? [String: AnyObject],
+//               var playerInfo = playersInfo[uid] as? [String: AnyObject],
+//               let currentPosition = playerInfo["position"] as? Int,
+//               let hearts = playerInfo["hearts"] as? Int,
+//               var playersWord = game["playersWord"] as? [String: AnyObject],
+//               var shake = game["shake"] as? [String: Bool],
+//               var rounds = game["rounds"] as? Int,
+//               var secondsPerTurn = game["secondsPerTurn"] as? Int,
+//               var state = game["state"] as? [String: AnyObject],
+//               let statusString = state["roomStatus"] as? String,
+//               let status = GameState.Status(rawValue: statusString)
+//            {
+//                switch status {
+//                case .notStarted:
+//                    // Remove player completely
+//                    playersInfo[uid] = nil
+//                    
+//                    if playersInfo.count <= 0 {
+//                        // Delete game
+//                        currentData.value = NSNull()
+//                        return .success(withValue: currentData)
+//                    }
+//                    
+//                    playersWord[uid] = nil
+//                    shake[uid] = nil
+//                    
+//                    // Update positions after removal of player
+//                    let playerIDs: [String] = playersInfo.sorted { playerInfo1, playerInfo2 in
+//                        let position1 = (playerInfo1.value as? [String: AnyObject])?["position"] as? Int ?? .max
+//                        let position2 = (playerInfo2.value as? [String: AnyObject])?["position"] as? Int ?? .max
+//                        return position1 < position2
+//                    }.map { $0.key }
+//                    
+//                    for (newPosition, uid) in playerIDs.enumerated() {
+//                        guard var playerInfo = playersInfo[uid] as? [String: AnyObject] else { continue }
+//                        playerInfo["position"] = newPosition as AnyObject
+//                        playersInfo[uid] = playerInfo as AnyObject
+//                    }
+//                    
+//                    if playersInfo.count < 2 {
+//                        // Stop countdown
+//                        game["countdownStartTime"] = nil
+//                    }
+//                    
+//                    game["playersInfo"] = playersInfo as AnyObject
+//                    game["playersWord"] = playersWord as AnyObject
+//                    game["shake"] = shake as AnyObject
+//                case .inProgress:
+//                    guard let currentPlayerTurn = game["currentPlayerTurn"] as? String else { return .success(withValue: currentData) }
+//                    // Kill player
+//                    if hearts > 0 {
+//                        shake[uid]?.toggle()
+//                        game["shake"] = shake as AnyObject
+//                    }
+//                    playerInfo["hearts"] = 0 as AnyObject
+//                    playersInfo[uid] = playerInfo as AnyObject
+//                    game["playersInfo"] = playersInfo as AnyObject
+//                                        
+//                    if let winnerID = self.checkForWinner(game: game) {
+//                        guard let winnerInfo = playersInfo[winnerID] as? [String: AnyObject],
+//                              let additionalWinnerInfo = winnerInfo["additionalInfo"] as? [String: AnyObject],
+//                              let name = additionalWinnerInfo["name"] as? String
+//                        else { return .success(withValue: currentData) }
+//                        var winner = state["winner"] as? [String: AnyObject] ?? [:]
+//                        winner["playerID"] = winnerID as AnyObject
+//                        winner["name"] = name as AnyObject
+//                        state["winner"] = winner as AnyObject
+//                        state["roomStatus"] = GameState.Status.notStarted.rawValue as AnyObject
+//                        game["state"] = state as AnyObject
+//                        game["currentPlayerTurn"] = NSNull() as AnyObject
+//                        game["secondsPerTurn"] = Int.random(in: 10...30) as AnyObject
+//                        game["playersInfo"] = NSNull() as AnyObject
+//                        game["playersWord"] = NSNull() as AnyObject
+//                        game["rounds"] = 1 as AnyObject
+//                        game["shake"] = NSNull() as AnyObject
+//                        game["wordsUsed"] = NSNull() as AnyObject
+//                    } else {
+//                        // Player exited while it was their turn, get next player turn
+//                        if currentPlayerTurn == uid,
+//                           let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo) {
+//                            playersWord[nextPlayerID] = "" as AnyObject
+//                            
+//                            game["currentPlayerTurn"] = nextPlayerID as AnyObject
+//                            game["playersWord"] = playersWord as AnyObject
+//                            
+//                            let isLastTurn = currentPosition == playersInfo.count - 1
+//                            if isLastTurn {
+//                                rounds += 1
+//                                secondsPerTurn -= 1
+//                                game["rounds"] = rounds as AnyObject
+//                                game["secondsPerTurn"] = secondsPerTurn as AnyObject
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                currentData.value = game
+//                return .success(withValue: currentData)
+//            }
+//            return .success(withValue: currentData)
+//        }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
+//            guard let self else { return }
+//            if let error {
+//                print(error.localizedDescription)
+//                return
+//            }
+//            
+//            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else {
+//                // Game was deleted, delete corresponding room
+//                ref.updateChildValues([
+//                    "rooms/\(roomID)": NSNull()
+//                ])
+//                return
+//            }
+//            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
+//            ref.updateChildValues([
+//                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
+//            ])
+//            
+//        }, withLocalEvents: false)
+//    }
 
     
     func detachObservers() {

@@ -282,10 +282,11 @@ extension HomeViewController: UICollectionViewDelegate {
 
 extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
     func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapCreateRoom: Bool) {
+        guard let uid = service.uid else { return }
         let createRoomViewController = CreateRoomViewController()
         createRoomViewController.service = service
         createRoomViewController.delegate = self
-        createRoomViewController.navigationItem.title = "\(Settings.shared.name)'s room"
+        createRoomViewController.navigationItem.title = "\(service.name)'s room"
         present(UINavigationController(rootViewController: createRoomViewController), animated: true)
     }
     
