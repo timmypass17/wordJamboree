@@ -77,6 +77,8 @@ class PlayerView: UIView {
     var bottomConstraint: NSLayoutConstraint!
     var leadingConstraint: NSLayoutConstraint!
     var trailingConstraint: NSLayoutConstraint!
+    
+    var soundManager: SoundManager!
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -188,6 +190,44 @@ class PlayerView: UIView {
                     // Reset the position after the animation finishes
                     self.center = CGPoint(x: self.center.x - 5, y: self.center.y)
                 }
+        }
+    }
+    
+    func playerSuccessAnimation() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // First, add the expanding green circle animation
+            let circleView = UIView()
+            circleView.backgroundColor = .green
+            circleView.frame = CGRect(x: 0, y: 0, width: 50, height: 50)
+            circleView.layer.cornerRadius = 25
+            circleView.center = self.center // Align the circle with the view's center
+            circleView.alpha = 0.5
+            self.superview?.addSubview(circleView) // Add circle to the same superview as the main view
+            
+            UIView.animate(
+                withDuration: 0.2,
+                animations: {
+                    // Rotate the view slightly to the left
+                    self.profileImageView.transform = CGAffineTransform(rotationAngle: -.pi / 8)
+                        .scaledBy(x: 1.1, y: 1.1) // Expand by 10%
+                }) { _ in
+                    // Rotate back to original position
+                    UIView.animate(withDuration: 0.2) {
+                        self.profileImageView.transform = .identity
+                    }
+                }
+            
+            // Animate the circle expanding and disappearing
+            UIView.animate(withDuration: 0.6, animations: {
+                circleView.transform = CGAffineTransform(scaleX: 5.0, y: 5.0)   // grow circle
+                circleView.alpha = 0.0  // fade out
+            }) { _ in
+                circleView.removeFromSuperview() // Remove the circle after animation
+            }
+            
+            soundManager.playSnipSound()
         }
     }
     

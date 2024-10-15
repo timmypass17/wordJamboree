@@ -15,10 +15,11 @@ class SoundManager {
         prepareSound(named: "ding", withExtension: "mp3")
         prepareSound(named: "bonk", withExtension: "mp3")
         prepareSound(named: "ticking", withExtension: "wav")
+        prepareSound(named: "snip", withExtension: "wav")
     }
     
     deinit {
-        print("deinit soundManager")
+        print("")
     }
     
     func playCountdownSound() {
@@ -35,6 +36,10 @@ class SoundManager {
     
     func stopTickingSound() {
         stopSound(players["ticking"])
+    }
+    
+    func playSnipSound() {
+        playSound(players["snip"])
     }
     
     func playKeyboardClickSound() {

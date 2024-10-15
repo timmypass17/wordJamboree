@@ -340,6 +340,9 @@ class FirebaseService {
             shake: [
                 uid: false
             ],
+            success: [
+                uid: false
+            ],
             playersWord: [
                 uid: ""
             ]

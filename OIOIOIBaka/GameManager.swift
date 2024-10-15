@@ -28,6 +28,7 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: GameState.Status, winner: [String: AnyObject]?)
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String: Bool])
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int)
+    func gameManager(_ manager: GameManager, playSuccessAnimationAt position: Int)
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String)
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String)
     func gameManager(_ manager: GameManager, player playerID: String, updatedWord: String)
@@ -99,6 +100,7 @@ class GameManager {
                 observeCountdown()
                 observeRoomStatus()
                 observeShakes()
+                observeSuccess()
                 observeCurrentLetters()
                 observePlayersWord()
                 observeRounds()
@@ -427,51 +429,29 @@ class GameManager {
         ])
     }
     
+    // TODO: Fix submit()
     func submit(_ word: String) async throws  {
-        let wordIsValid = word.isWord && word.contains(currentLetters)
-        
-        if wordIsValid {
-            handleSubmitSuccess(word: word)
-        } else {
-            handleSubmitFail()
-        }
-    }
-    
-    private func getNextPlayersTurn(currentPosition: Int, playersInfo: [String: AnyObject]) -> String? {
-        let sortedPlayersByPosition: [(String, Int)] = playersInfo.compactMap { item in
-            guard let playerInfo = item.value as? [String: AnyObject],
-                  let position = playerInfo["position"] as? Int
-            else { return nil }
-            
-            return (item.key, position)
-        }.sorted(by: { $0.1 < $1.1 })
-        
-        let sortedPlayerIDs = sortedPlayersByPosition.map { $0.0 }
-        let playerCount = playersInfo.count
-        var nextPosition = (currentPosition + 1) % playerCount
-        
-        for _ in 0..<playerCount {
-            let uid = sortedPlayerIDs[nextPosition]
-            if let playerInfo = playersInfo[uid] as? [String: AnyObject],
-               let hearts = playerInfo["hearts"] as? Int,
-               hearts > 0 {
-                print("(damage) next player id: \(uid)")
-                return uid
-            }
-            nextPosition = (nextPosition + 1) % playerCount
-        }
-        
-        print("(damage) fail to get next player id")
-        return nil
-    }
-    
-    private func handleSubmitSuccess(word: String) {
-        guard let uid = service.uid else { return }
-        
         var localLettersUsed = lettersUsed
+        
+        let wordIsValid = word.isWord && word.contains(currentLetters)
         ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
+            
+            // Fail: Word is not real or word does not contain correct letters
+            if !wordIsValid {
+                if var game = currentData.value as? [String: AnyObject],
+                   var shake = game["shake"] as? [String: Bool],
+                   let uid = self.service.uid {
+                    shake[uid]?.toggle()
+                    game["shake"] = shake as AnyObject
+                    currentData.value = game
+                    return .success(withValue: currentData)
+                }
+                return .success(withValue: currentData)
+            }
+            
             guard var game = currentData.value as? [String: AnyObject],
+                  let uid = service.uid,
                   var playersInfo = game["playersInfo"] as? [String: AnyObject],
                   var currentPlayerInfo = playersInfo[uid] as? [String: AnyObject],
                   let currentPosition = currentPlayerInfo["position"] as? Int,
@@ -536,7 +516,115 @@ class GameManager {
             self.lettersUsed = localLettersUsed
             self.delegate?.gameManager(self, lettersUsedUpdated: self.lettersUsed)
         }, withLocalEvents: false)
+        
+//        if wordIsValid {
+//            handleSubmitSuccess(word: word)
+//        } else {
+//            handleSubmitFail()
+//        }
     }
+    
+    private func getNextPlayersTurn(currentPosition: Int, playersInfo: [String: AnyObject]) -> String? {
+        let sortedPlayersByPosition: [(String, Int)] = playersInfo.compactMap { item in
+            guard let playerInfo = item.value as? [String: AnyObject],
+                  let position = playerInfo["position"] as? Int
+            else { return nil }
+            
+            return (item.key, position)
+        }.sorted(by: { $0.1 < $1.1 })
+        
+        let sortedPlayerIDs = sortedPlayersByPosition.map { $0.0 }
+        let playerCount = playersInfo.count
+        var nextPosition = (currentPosition + 1) % playerCount
+        
+        for _ in 0..<playerCount {
+            let uid = sortedPlayerIDs[nextPosition]
+            if let playerInfo = playersInfo[uid] as? [String: AnyObject],
+               let hearts = playerInfo["hearts"] as? Int,
+               hearts > 0 {
+                print("(damage) next player id: \(uid)")
+                return uid
+            }
+            nextPosition = (nextPosition + 1) % playerCount
+        }
+        
+        print("(damage) fail to get next player id")
+        return nil
+    }
+    
+//    private func handleSubmitSuccess(word: String) {
+//        guard let uid = service.uid else { return }
+//        
+//        var localLettersUsed = lettersUsed
+//        ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+//            guard let self else { return .abort() }
+//            
+//            guard var game = currentData.value as? [String: AnyObject],
+//                  var playersInfo = game["playersInfo"] as? [String: AnyObject],
+//                  var currentPlayerInfo = playersInfo[uid] as? [String: AnyObject],
+//                  let currentPosition = currentPlayerInfo["position"] as? Int,
+//                  var hearts = currentPlayerInfo["hearts"] as? Int,
+//                  var currentLetters = game["currentLetters"] as? String,
+//                  var playersWord = game["playersWord"] as? [String: String],
+//                  var rounds = game["rounds"] as? Int,
+//                  var secondsPerTurn = game["secondsPerTurn"] as? Int,
+//                  var shake = game["shake"] as? [String: Bool],
+//                  let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo)
+////                  currentPlayerTurn == uid
+//            else {
+//                return .success(withValue: currentData)
+//            }
+//            
+//            var wordsUsed = game["wordsUsed"] as? [String: Bool] ?? [:]
+//            guard wordsUsed[word] == nil else {
+//                print("Word used already")
+//                shake[uid]?.toggle()
+//                game["shake"] = shake as AnyObject
+//                currentData.value = game
+//                return .success(withValue: currentData)
+//            }
+//            
+//            wordsUsed[word] = true
+//            game["currentPlayerTurn"] = nextPlayerID as AnyObject
+//            currentLetters = GameManager.generateRandomLetters()
+//            playersWord[nextPlayerID] = ""
+//            
+//            if currentPosition == playersInfo.count - 1 {
+//                rounds += 1
+//                secondsPerTurn -= 1
+//            }
+//            
+//            for letter in word {
+//                localLettersUsed.insert(letter)
+//            }
+//            
+//            if localLettersUsed.count == 26 {
+//                hearts += 1
+//                currentPlayerInfo["hearts"] = hearts as AnyObject
+//                playersInfo[uid] = currentPlayerInfo as AnyObject
+//                localLettersUsed = Set("XZ")
+//            }
+//            
+//            game["wordsUsed"] = wordsUsed as AnyObject
+//            game["currentPlayerTurn"] = nextPlayerID as AnyObject
+//            game["currentLetters"] = currentLetters as AnyObject
+//            game["playersWord"] = playersWord as AnyObject
+//            game["rounds"] = rounds as AnyObject
+//            game["playersInfo"] = playersInfo as AnyObject
+//            game["secondsPerTurn"] = secondsPerTurn as AnyObject
+//            currentData.value = game
+//            
+//            return .success(withValue: currentData)
+//        }, andCompletionBlock: { [weak self] error, committed, snapshot in
+//            guard let self else { return }
+//            if let error = error {
+//                print(error.localizedDescription)
+//                return
+//            }
+//            self.lettersUsed = localLettersUsed
+//            self.delegate?.gameManager(self, lettersUsedUpdated: self.lettersUsed)
+//        }, withLocalEvents: false)
+//    }
     
     // TODO: Remove this, shouldn't rely on client's version?
     func isAlive(_ playerID: String) -> Bool {
@@ -568,9 +656,7 @@ class GameManager {
             guard let self else { return }
             print("ref.child('games/\(roomID)/shake').observe(.childChanged)")
             let playerID = snapshot.key
-            guard let shouldShake = snapshot.value as? Bool,
-//                  shouldShake,
-                  let playerInfo = playersInfo[playerID] as? [String: AnyObject],
+            guard let playerInfo = playersInfo[playerID] as? [String: AnyObject],
                   let position = playerInfo["position"] as? Int
             else {
                 // TODO: not sure why this fails initially
@@ -578,6 +664,19 @@ class GameManager {
                 return
             }
             delegate?.gameManager(self, willShakePlayerAt: position)
+        }
+    }
+    
+    func observeSuccess() {
+        handles["success"] = ref.child("games/\(roomID)/success").observe(.childChanged) { [weak self] snapshot in
+            guard let self else { return }
+            let playerID = snapshot.key
+            guard let playerInfo = playersInfo[playerID] as? [String: AnyObject],
+                  let position = playerInfo["position"] as? Int
+            else {
+                return
+            }
+            delegate?.gameManager(self, playSuccessAnimationAt: position)
         }
     }
 

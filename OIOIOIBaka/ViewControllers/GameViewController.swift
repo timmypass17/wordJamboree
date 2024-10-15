@@ -178,7 +178,10 @@ class GameViewController: UIViewController {
             container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
         ])
         
-        playerViews.forEach { container.addSubview($0) }
+        playerViews.forEach { 
+            container.addSubview($0)
+            $0.soundManager = soundManager
+        }
 //        container.addSubview(countDownView)
         container.addSubview(joinButton)
         container.addSubview(leaveButton)
@@ -682,6 +685,10 @@ extension GameViewController: GameManagerDelegate {
 
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int) {
         playerViews[position].shake()
+    }
+    
+    func gameManager(_ manager: GameManager, playSuccessAnimationAt position: Int) {
+        playerViews[position].playerSuccessAnimation()
     }
 }
 
