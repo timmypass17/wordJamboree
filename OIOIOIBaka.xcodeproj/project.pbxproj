@@ -15,6 +15,7 @@
 		3213983E2CBB08DE00A636A7 /* DividerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3213983D2CBB08DD00A636A7 /* DividerView.swift */; };
 		321398412CBCD89E00A636A7 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398402CBCD89D00A636A7 /* Settings.swift */; };
 		321398452CBDFB6500A636A7 /* snip.wav in Resources */ = {isa = PBXBuildFile; fileRef = 321398442CBDFB6400A636A7 /* snip.wav */; };
+		321398472CC04F2500A636A7 /* thud.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 321398462CC04F2500A636A7 /* thud.mp3 */; };
 		32610AEC2C98C9440011946E /* ArrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AEB2C98C9440011946E /* ArrowView.swift */; };
 		32610AF12C9929390011946E /* ding.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF02C9929390011946E /* ding.mp3 */; };
 		32610AF32C992D2B0011946E /* bonk.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF22C992D2B0011946E /* bonk.mp3 */; };
@@ -74,6 +75,7 @@
 		3213983F2CBC6B0200A636A7 /* OIOIOIBaka.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OIOIOIBaka.entitlements; sourceTree = "<group>"; };
 		321398402CBCD89D00A636A7 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		321398442CBDFB6400A636A7 /* snip.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = snip.wav; sourceTree = "<group>"; };
+		321398462CC04F2500A636A7 /* thud.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = thud.mp3; sourceTree = "<group>"; };
 		32610AEB2C98C9440011946E /* ArrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrowView.swift; sourceTree = "<group>"; };
 		32610AF02C9929390011946E /* ding.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = ding.mp3; sourceTree = "<group>"; };
 		32610AF22C992D2B0011946E /* bonk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bonk.mp3; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 		32610AEF2C99291F0011946E /* SoundEffects */ = {
 			isa = PBXGroup;
 			children = (
+				321398462CC04F2500A636A7 /* thud.mp3 */,
 				321398442CBDFB6400A636A7 /* snip.wav */,
 				32F64FED2C9B6C6B0046C20E /* ticking.wav */,
 				32610AF02C9929390011946E /* ding.mp3 */,
@@ -331,6 +334,7 @@
 				32F64FEE2C9B6C6B0046C20E /* ticking.wav in Resources */,
 				32610AF12C9929390011946E /* ding.mp3 in Resources */,
 				32610AF32C992D2B0011946E /* bonk.mp3 in Resources */,
+				321398472CC04F2500A636A7 /* thud.mp3 in Resources */,
 				326F93BA2C8B928F00B28F04 /* Assets.xcassets in Resources */,
 				326F93E12C8CE9C600B28F04 /* GoogleService-Info.plist in Resources */,
 				326F93BD2C8B928F00B28F04 /* Base in Resources */,

@@ -141,23 +141,17 @@ class KeyboardView: UIView {
         return stackView
     }
     
-    func update(letters: String, lettersUsed: Set<Character>) {
+    func update(word: String, lettersUsed: Set<Character>) {
         DispatchQueue.main.async { [weak self] in  // ensure ui updates are on main thread
             guard let self else { return }
-            print(
-            """
-            update(
-                letters: \(letters)
-                lettersUsed: \(lettersUsed)
-            )
-            """)
+
             for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
                 let letter = "\(char)"
                 guard let keyButton = self.alphabetButtons.first(where: { $0.title(for: .normal) == letter }) else { continue }
                 
                 if lettersUsed.contains(Character(letter)) {
                     keyButton.backgroundColor = .systemFill
-                } else if letters.contains(letter) {
+                } else if word.contains(letter) {
                     keyButton.backgroundColor = .accent
                 } else {
                     keyButton.backgroundColor = .systemGray
@@ -165,7 +159,7 @@ class KeyboardView: UIView {
             }
         }
     }
-    
+        
     func didTapKey(_ letter: String) -> UIAction {
         return UIAction { [weak self] _ in
             guard let self else { return }

@@ -45,7 +45,8 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, playerLeft playerInfo: [String: AnyObject], playerID: String)
 }
 
-
+// TODO: When game ends, everyone is kicked out and room is seen as "empty". Because room is "empty", when any player leaves, the room is destroyed. To fix this bug, add "spectators" to move users in room but not in lobby.
+// - (Better) Or just not let users delete room, and instead show rooms that have atleast 1 player to "hide" empty rooms
 class GameManager {
     var roomID: String
     var currentLetters: String = ""
@@ -302,9 +303,11 @@ class GameManager {
                let roomStatusString = state["roomStatus"] as? String,
                let roomStatus = GameState.Status(rawValue: roomStatusString) {
                 
+                // Room could be empty
                 var playersInfo = game["playersInfo"] as? [String: AnyObject] ?? [:]
                 var playersWord = game["playersWord"] as? [String: AnyObject] ?? [:]
                 var shake = game["shake"] as? [String: Bool] ?? [:]
+                var success = game["success"] as? [String: Bool] ?? [:]
 
                 let currentPlayerCount = playersInfo.count
                 guard currentPlayerCount < 4,
@@ -324,8 +327,8 @@ class GameManager {
                 ] as AnyObject
                 
                 playersWord[uid] = "" as AnyObject
-                
                 shake[uid] = false
+                success[uid] = false
                 
                 if playersInfo.count == 2 {
                     game["countdownStartTime"] = ServerValue.timestamp() as AnyObject
@@ -335,6 +338,7 @@ class GameManager {
                 game["playersInfo"] = playersInfo as AnyObject
                 game["playersWord"] = playersWord as AnyObject
                 game["shake"] = shake as AnyObject
+                game["success"] = success as AnyObject
                 currentData.value = game
                 print("(join game) success")
                 return .success(withValue: currentData)
@@ -431,25 +435,11 @@ class GameManager {
     
     // TODO: Fix submit()
     func submit(_ word: String) async throws  {
-        var localLettersUsed = lettersUsed
-        
+        var updatedLettersUsed = lettersUsed
         let wordIsValid = word.isWord && word.contains(currentLetters)
+        
         ref.child("/games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
-            
-            // Fail: Word is not real or word does not contain correct letters
-            if !wordIsValid {
-                if var game = currentData.value as? [String: AnyObject],
-                   var shake = game["shake"] as? [String: Bool],
-                   let uid = self.service.uid {
-                    shake[uid]?.toggle()
-                    game["shake"] = shake as AnyObject
-                    currentData.value = game
-                    return .success(withValue: currentData)
-                }
-                return .success(withValue: currentData)
-            }
-            
             guard var game = currentData.value as? [String: AnyObject],
                   let uid = service.uid,
                   var playersInfo = game["playersInfo"] as? [String: AnyObject],
@@ -461,15 +451,17 @@ class GameManager {
                   var rounds = game["rounds"] as? Int,
                   var secondsPerTurn = game["secondsPerTurn"] as? Int,
                   var shake = game["shake"] as? [String: Bool],
-                  let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo)
-//                  currentPlayerTurn == uid
+                  var success = game["success"] as? [String: Bool],
+                  let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo),
+                  var currentPlayerTurn = game["currentPlayerTurn"] as? String,
+                  currentPlayerTurn == uid
             else {
                 return .success(withValue: currentData)
             }
             
             var wordsUsed = game["wordsUsed"] as? [String: Bool] ?? [:]
-            guard wordsUsed[word] == nil else {
-                print("Word used already")
+            guard wordIsValid,
+                  wordsUsed[word] == nil else {
                 shake[uid]?.toggle()
                 game["shake"] = shake as AnyObject
                 currentData.value = game
@@ -477,9 +469,9 @@ class GameManager {
             }
             
             wordsUsed[word] = true
-            game["currentPlayerTurn"] = nextPlayerID as AnyObject
             currentLetters = GameManager.generateRandomLetters()
             playersWord[nextPlayerID] = ""
+            success[uid]?.toggle()
             
             if currentPosition == playersInfo.count - 1 {
                 rounds += 1
@@ -487,14 +479,14 @@ class GameManager {
             }
             
             for letter in word {
-                localLettersUsed.insert(letter)
+                updatedLettersUsed.insert(letter)
             }
             
-            if localLettersUsed.count == 26 {
+            if updatedLettersUsed.count == 26 {
                 hearts += 1
                 currentPlayerInfo["hearts"] = hearts as AnyObject
                 playersInfo[uid] = currentPlayerInfo as AnyObject
-                localLettersUsed = Set("XZ")
+                updatedLettersUsed = Set("XZ")
             }
             
             game["wordsUsed"] = wordsUsed as AnyObject
@@ -504,6 +496,7 @@ class GameManager {
             game["rounds"] = rounds as AnyObject
             game["playersInfo"] = playersInfo as AnyObject
             game["secondsPerTurn"] = secondsPerTurn as AnyObject
+            game["success"] = success as AnyObject
             currentData.value = game
             
             return .success(withValue: currentData)
@@ -513,15 +506,21 @@ class GameManager {
                 print(error.localizedDescription)
                 return
             }
-            self.lettersUsed = localLettersUsed
-            self.delegate?.gameManager(self, lettersUsedUpdated: self.lettersUsed)
+            
+            guard var game = snapshot?.value as? [String: AnyObject],
+                  let currentPlayerTurn = game["currentPlayerTurn"] as? String,
+                  let uid = service.uid
+            else {
+                return
+            }
+            
+            let submitSuccess = currentPlayerTurn != uid
+            if submitSuccess {
+                // Update keyboard with updated letters
+                self.lettersUsed = updatedLettersUsed
+                self.delegate?.gameManager(self, lettersUsedUpdated: updatedLettersUsed)
+            }
         }, withLocalEvents: false)
-        
-//        if wordIsValid {
-//            handleSubmitSuccess(word: word)
-//        } else {
-//            handleSubmitFail()
-//        }
     }
     
     private func getNextPlayersTurn(currentPosition: Int, playersInfo: [String: AnyObject]) -> String? {

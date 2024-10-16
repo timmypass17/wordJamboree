@@ -190,6 +190,7 @@ class PlayerView: UIView {
                     // Reset the position after the animation finishes
                     self.center = CGPoint(x: self.center.x - 5, y: self.center.y)
                 }
+            soundManager.playThudSound()
         }
     }
     

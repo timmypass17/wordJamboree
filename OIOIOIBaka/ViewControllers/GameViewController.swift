@@ -147,7 +147,7 @@ class GameViewController: UIViewController {
 
         keyboardView.delegate = self
         keyboardView.soundManager = soundManager
-        keyboardView.update(letters: "XZ", lettersUsed: gameManager.lettersUsed)
+        keyboardView.update(word: "", lettersUsed: gameManager.lettersUsed)
         
         NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
 
@@ -530,11 +530,11 @@ extension GameViewController: GameManagerDelegate {
     }
     
     func gameManager(_ manager: GameManager, lettersUsedUpdated: Set<Character>) {
-        keyboardView.update(letters: "", lettersUsed: lettersUsedUpdated)
+        keyboardView.update(word: "", lettersUsed: lettersUsedUpdated)
     }
     
     func gameManager(_ manager: GameManager, timeRanOut: Bool) {
-        keyboardView.update(letters: "", lettersUsed: manager.lettersUsed)
+        keyboardView.update(word: "", lettersUsed: manager.lettersUsed)
     }
     
     // TODO: After game ends and new game begins.
@@ -667,7 +667,7 @@ extension GameViewController: GameManagerDelegate {
             leaveButton.isHidden = true
             joinButton.isHidden = true
             gameManager.lettersUsed = Set("XZ")
-            keyboardView.update(letters: "", lettersUsed: gameManager.lettersUsed)
+            keyboardView.update(word: "", lettersUsed: gameManager.lettersUsed)
             updatePlayerStatus()
             winnerPlayerView.isHidden = true
         }
@@ -715,7 +715,7 @@ extension GameViewController: KeyboardViewDelegate {
         
         let updatedWord = partialWord + letter
         playerViews[position].updateUserWordTextColor(word: updatedWord, matching: gameManager.currentLetters)
-        keyboardView.update(letters: updatedWord, lettersUsed: gameManager.lettersUsed)
+        keyboardView.update(word: updatedWord, lettersUsed: gameManager.lettersUsed)
         
         Task {
             do {
@@ -740,7 +740,7 @@ extension GameViewController: KeyboardViewDelegate {
         }
         
         playerViews[position].updateUserWordTextColor(word: word, matching: gameManager.currentLetters)
-        keyboardView.update(letters: word, lettersUsed: gameManager.lettersUsed)
+        keyboardView.update(word: word, lettersUsed: gameManager.lettersUsed)
 
         Task {
             do {
