@@ -343,6 +343,12 @@ class FirebaseService {
             success: [
                 uid: false
             ],
+            explode: [
+                uid: false
+            ],
+            death: [
+                uid: false
+            ],
             playersWord: [
                 uid: ""
             ]

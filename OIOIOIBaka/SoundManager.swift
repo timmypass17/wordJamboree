@@ -17,6 +17,8 @@ class SoundManager {
         prepareSound(named: "ticking", withExtension: "wav")
         prepareSound(named: "snip", withExtension: "wav")
         prepareSound(named: "thud", withExtension: "mp3")
+        prepareSound(named: "explosion", withExtension: "wav")
+
     }
     
     func playCountdownSound() {
@@ -41,6 +43,10 @@ class SoundManager {
     
     func playThudSound() {
         playSound(players["thud"])
+    }
+    
+    func playExplosionSound() {
+        playSound(players["explosion"])
     }
     
     func playKeyboardClickSound() {

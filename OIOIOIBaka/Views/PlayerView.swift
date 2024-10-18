@@ -73,6 +73,55 @@ class PlayerView: UIView {
         return heartsView.container.arrangedSubviews.count
     }
     
+    let explodeCircle: UIView = {
+        let circleView = UIView()
+        circleView.backgroundColor = .yellow
+        circleView.layer.cornerRadius = 25
+        circleView.alpha = 0.0
+        circleView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            circleView.heightAnchor.constraint(equalToConstant: 50),
+            circleView.widthAnchor.constraint(equalToConstant: 50)
+        ])
+        return circleView
+    }()
+    
+    let deathCircle: UIView = {
+        let circleView = UIView()
+        circleView.backgroundColor = .black
+        circleView.layer.cornerRadius = 25
+        circleView.alpha = 0.0
+        circleView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            circleView.heightAnchor.constraint(equalToConstant: 50),
+            circleView.widthAnchor.constraint(equalToConstant: 50)
+        ])
+        return circleView
+    }()
+    
+    let successCircle: UIView = {
+        let circleView = UIView()
+        circleView.backgroundColor = .green
+        circleView.layer.cornerRadius = 25
+        circleView.alpha = 0.0
+        circleView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            circleView.heightAnchor.constraint(equalToConstant: 50),
+            circleView.widthAnchor.constraint(equalToConstant: 50)
+        ])
+        return circleView
+    }()
+    
+    let deathView: UIView = {
+        let skullLabel = UILabel()
+        skullLabel.text = "☠️"
+        skullLabel.font = UIFont.systemFont(ofSize: 40)  // Adjust size as needed
+        skullLabel.alpha = 0
+        skullLabel.textAlignment = .center
+        skullLabel.translatesAutoresizingMaskIntoConstraints = false
+        return skullLabel
+    }()
+    
     var topConstraint: NSLayoutConstraint!
     var bottomConstraint: NSLayoutConstraint!
     var leadingConstraint: NSLayoutConstraint!
@@ -103,6 +152,10 @@ class PlayerView: UIView {
         addSubview(heartsView)
         addSubview(skullView)
         addSubview(crownView)
+        addSubview(explodeCircle)
+        addSubview(successCircle)
+        addSubview(deathCircle)
+        addSubview(deathView)
         
         NSLayoutConstraint.activate([
             topSpacer.heightAnchor.constraint(equalTo: bottomSpacer.heightAnchor), // Equal height for centering
@@ -121,10 +174,17 @@ class PlayerView: UIView {
             crownView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             crownView.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: -10),
             
-//            profileImageView.heightAnchor.constraint(equalTo: profileImageView.widthAnchor), // Square ratio
-//            profileImageView.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: 0.3), // 30% of the container width
-//
+            explodeCircle.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor),
+            explodeCircle.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor),
             
+            successCircle.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor),
+            successCircle.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor),
+
+            deathCircle.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor),
+            deathCircle.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor),
+            
+            deathView.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor),
+            deathView.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor)
         ])
     }
     
@@ -181,51 +241,113 @@ class PlayerView: UIView {
     func shake() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            UIView.animate(
-                withDuration: 0.07, delay: 0, options: [.autoreverse, .repeat], animations: {
-                    UIView.modifyAnimations(withRepeatCount: 4, autoreverses: true) {
-                        self.center = CGPoint(x: self.center.x + 5, y: self.center.y)
-                    }
-                }) { _ in
-                    // Reset the position after the animation finishes
-                    self.center = CGPoint(x: self.center.x - 5, y: self.center.y)
+            
+            UIView.animate(withDuration: 0.07, delay: 0, options: [.autoreverse, .repeat], animations: {
+                UIView.modifyAnimations(withRepeatCount: 4, autoreverses: true) {
+                    self.profileImageView.transform = CGAffineTransform(translationX: -4, y: 0)
+                    self.profileImageView.transform = CGAffineTransform(translationX: 4, y: 0)
                 }
+            }) { _ in
+                UIView.animate(withDuration: 0.07, animations: {
+                    self.profileImageView.transform = .identity
+                })
+            }
             soundManager.playThudSound()
+        }
+    }
+    
+    func explode() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            
+            UIView.animate(withDuration: 0.07, delay: 0, options: [.autoreverse, .repeat], animations: {
+                UIView.modifyAnimations(withRepeatCount: 4, autoreverses: true) {
+                    self.profileImageView.transform = CGAffineTransform(translationX: -4, y: 0)
+                    self.profileImageView.transform = CGAffineTransform(translationX: 4, y: 0)
+                }
+            }) { _ in
+                UIView.animate(withDuration: 0.07, animations: {
+                    self.profileImageView.transform = .identity
+                })
+            }
+
+            // Animate the circle expanding and disappearing
+            self.explodeCircle.alpha = 1
+            self.explodeCircle.backgroundColor = .yellow
+            UIView.animate(withDuration: 0.6, animations: {
+                self.explodeCircle.transform = CGAffineTransform(scaleX: 5.0, y: 5.0)   // grow circle
+                self.explodeCircle.backgroundColor = .red
+                self.explodeCircle.alpha = 0.0  // fade out
+            }) { _ in
+                // Reset
+                self.explodeCircle.transform = .identity  // reset transformation
+            }
+            
+            soundManager.playExplosionSound()
+        }
+    }
+    
+    func death() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            
+            UIView.animate(withDuration: 0.07, delay: 0, options: [.autoreverse, .repeat], animations: {
+                UIView.modifyAnimations(withRepeatCount: 4, autoreverses: true) {
+                    self.profileImageView.transform = CGAffineTransform(translationX: -4, y: 0)
+                    self.profileImageView.transform = CGAffineTransform(translationX: 4, y: 0)
+                }
+            }) { _ in
+                UIView.animate(withDuration: 0.07, animations: {
+                    self.profileImageView.transform = .identity
+                })
+            }
+
+            // Animate the circle expanding and disappearing
+            self.deathCircle.alpha = 1
+            UIView.animate(withDuration: 0.6, animations: {
+                self.deathCircle.transform = CGAffineTransform(scaleX: 5.0, y: 5.0)   // grow circle
+                self.deathCircle.alpha = 0.0  // fade out
+            }) { _ in
+                // Reset
+                self.deathCircle.transform = .identity  // reset transformation
+            }
+
+            // Animate skull
+            self.deathView.alpha = 0.8
+            UIView.animate(withDuration: 1, animations: {
+                self.deathView.transform = CGAffineTransform(scaleX: 5.0, y: 5.0)  // grow skull with circle
+                self.deathView.alpha = 0.0  // fade out skull
+            }) { _ in
+                // Remove the skull from the view after the animation
+                self.deathView.transform = .identity
+            }
+            
+            soundManager.playExplosionSound()
         }
     }
     
     func playerSuccessAnimation() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
-            // First, add the expanding green circle animation
-            let circleView = UIView()
-            circleView.backgroundColor = .green
-            circleView.frame = CGRect(x: 0, y: 0, width: 50, height: 50)
-            circleView.layer.cornerRadius = 25
-            circleView.center = self.center // Align the circle with the view's center
-            circleView.alpha = 0.5
-            self.superview?.addSubview(circleView) // Add circle to the same superview as the main view
-            
-            UIView.animate(
-                withDuration: 0.2,
-                animations: {
-                    // Rotate the view slightly to the left
-                    self.profileImageView.transform = CGAffineTransform(rotationAngle: -.pi / 8)
-                        .scaledBy(x: 1.1, y: 1.1) // Expand by 10%
-                }) { _ in
-                    // Rotate back to original position
-                    UIView.animate(withDuration: 0.2) {
-                        self.profileImageView.transform = .identity
-                    }
+    
+            UIView.animate(withDuration: 0.2, animations: {
+                // Rotate the view slightly to the left
+                self.profileImageView.transform = CGAffineTransform(rotationAngle: -.pi / 8)
+                    .scaledBy(x: 1.1, y: 1.1) // Expand by 10%
+            }) { _ in
+                // Rotate back to original position
+                UIView.animate(withDuration: 0.2) {
+                    self.profileImageView.transform = .identity
                 }
+            }
             
             // Animate the circle expanding and disappearing
+            self.successCircle.alpha = 0.5
             UIView.animate(withDuration: 0.6, animations: {
-                circleView.transform = CGAffineTransform(scaleX: 5.0, y: 5.0)   // grow circle
-                circleView.alpha = 0.0  // fade out
+                self.successCircle.transform = CGAffineTransform(scaleX: 5.0, y: 5.0)   // grow circle
+                self.successCircle.alpha = 0.0  // fade out
             }) { _ in
-                circleView.removeFromSuperview() // Remove the circle after animation
+                self.successCircle.transform = .identity  // reset transformation
             }
             
             soundManager.playSnipSound()
@@ -234,7 +356,6 @@ class PlayerView: UIView {
     
     func updatePosition(position: Int, currentPlayerCount: Int) {
         guard let superview else { return }
-        
         
         // IMPORTANT: Before assigning new constraints, deactivate the old ones to prevent conflicts.
         if let topConstraint, let bottomConstraint, let leadingConstraint, let trailingConstraint {
@@ -275,7 +396,6 @@ class PlayerView: UIView {
                 leadingConstraint = leadingAnchor.constraint(equalTo: superview.leadingAnchor)
                 trailingConstraint = trailingAnchor.constraint(equalTo: superview.trailingAnchor)
             } else if currentPlayerCount == 3 {
-                print("P1 triggered")
                 topConstraint = topAnchor.constraint(equalTo: superview.centerYAnchor)
                 bottomConstraint = bottomAnchor.constraint(equalTo: superview.bottomAnchor)
                 leadingConstraint = leadingAnchor.constraint(equalTo: superview.centerXAnchor)

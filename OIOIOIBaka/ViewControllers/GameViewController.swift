@@ -141,7 +141,6 @@ class GameViewController: UIViewController {
         navigationItem.rightBarButtonItem = messageButton
 
         gameManager.delegate = self
-//        countDownView.delegate = self
         joinButton.addAction(didTapJoinButton(), for: .touchUpInside)
         leaveButton.addAction(didTapLeaveButton(), for: .touchUpInside)
 
@@ -182,7 +181,7 @@ class GameViewController: UIViewController {
             container.addSubview($0)
             $0.soundManager = soundManager
         }
-//        container.addSubview(countDownView)
+
         container.addSubview(joinButton)
         container.addSubview(leaveButton)
         container.addSubview(winnerPlayerView)
@@ -544,27 +543,6 @@ extension GameViewController: GameManagerDelegate {
         showWinner(userID: playerID)
     }
     
-//    func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String : Int]) {
-//        playerViews.forEach { $0.isHidden = true }
-//        
-//        let playersInfo = manager.playersInfo
-//        for (uid, position) in positions {
-//            guard let playerInfo = playersInfo[uid] else { continue }
-//            playerViews[position].nameLabel.text = playerInfo["name"] as? String
-//            playerViews[position].isHidden = false
-//            
-//            if uid == manager.winnerID {
-//                playerViews[position].crownView.isHidden = false
-//                playerViews[position].heartsView.isHidden = true
-//                playerViews[position].skullView.isHidden = true
-//            } else {
-//                playerViews[position].crownView.isHidden = true
-//                playerViews[position].heartsView.isHidden = false
-//                playerViews[position].skullView.isHidden = true
-//            }
-//        }
-//    }
-    
     func gameManager(_ manager: GameManager, player playerID: String, updatedWord: String) {
         guard let playerInfo = manager.playersInfo[playerID] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int
@@ -641,21 +619,16 @@ extension GameViewController: GameManagerDelegate {
                let winnerName = winner?["name"] as? String,
                let winnerPfp = manager.pfps[winnerID]
             {
-//                winnerPlayerView.crownView.isHidden = false
-//                winnerPlayerView.heartsView.isHidden = true
-//                winnerPlayerView.wordLabel.text = "WINNER"
                 winnerPlayerView.nameLabel.text = winnerName
                 winnerPlayerView.profileImageView.update(image: winnerPfp)
                 winnerPlayerView.isHidden = false
+                
                 // update join button to be under
-//                joinButton.titleLabel?.text = "Play Again"
                 joinButtonCenterYConstraint.isActive = false
                 joinButtonTopConstraint.isActive = true
-//                joinButton.topAnchor.constraint(equalTo: winnerPlayerView.bottomAnchor, constant: 8).isActive = true
                 joinButton.isHidden = false
                 playerViews.forEach { $0.wordLabel.text = "" }
             } else {
-//                joinButton.titleLabel?.text = "Join Game"
                 joinButtonCenterYConstraint.isActive = true
                 joinButtonTopConstraint.isActive = false
             }
@@ -690,17 +663,13 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, playSuccessAnimationAt position: Int) {
         playerViews[position].playerSuccessAnimation()
     }
-}
-
-extension GameViewController: CountDownViewDelegate {
-    func countDownView(_ sender: CountDownView, didStartCountDown: Bool) {
-//        countDownView.isHidden = false
-//        joinButton.isHidden = true
+    
+    func gameManager(_ manager: GameManager, willExplodePlayerAt position: Int) {
+        playerViews[position].explode()
     }
     
-    func countDownView(_ sender: CountDownView, didEndCountDown: Bool) {
-//        currentWordView.isHidden = false
-//        countDownView.isHidden = true
+    func gameManager(_ manager: GameManager, willDeathPlayerAt position: Int) {
+        playerViews[position].death()
     }
 }
 

@@ -15,8 +15,10 @@ struct Game: Codable {
     var currentPlayerTurn: String? = nil
     var playersInfo: [String: PlayerInfo]? // Updated to use a PlayerInfo struct
     var winner: String?
-    var shake: [String: Bool]?
+    var shake: [String: Bool]?  // submit fail -> shake player
     var success: [String: Bool]?
+    var explode: [String: Bool]?   // time ran out -> explode player
+    var death: [String: Bool]?
     var state: GameState = GameState(roomStatus: .notStarted)
     var countdownStartTime: TimeInterval? = nil
     var playersWord: [String: String]?
