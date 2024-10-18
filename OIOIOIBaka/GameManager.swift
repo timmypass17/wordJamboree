@@ -238,7 +238,7 @@ class GameManager {
                 state["roomStatus"] = GameState.Status.inProgress.rawValue as AnyObject
                 game["state"] = state as AnyObject
                 
-                // 
+                //
                 
                 currentData.value = game
                 print("(start game) success")

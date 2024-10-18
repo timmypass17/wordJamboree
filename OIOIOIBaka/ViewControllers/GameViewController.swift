@@ -12,11 +12,6 @@ import AVFAudio
 
 let darkBackground = UIColor(named: "background")
 
-//let darkBackground = UIColor(red: 28/255.0, green: 29/255.0, blue: 34/255.0, alpha: 1.0)
-
-
-// TODO: Player not shake if used same word
-// - fix bug where if user leaves and rejoins, there will be duplicate observres causing double damage. make sure observers are detached when use exists
 class GameViewController: UIViewController {
     
     let playerViews: [PlayerView] = (0..<6).map { _ in
@@ -104,6 +99,8 @@ class GameViewController: UIViewController {
     var exitTask: Task<Void, Error>? = nil
     var joinButtonCenterYConstraint: NSLayoutConstraint!
     var joinButtonTopConstraint: NSLayoutConstraint!
+    var leaveButtonCenterYConstraint: NSLayoutConstraint!
+    var leaveButtonTopConstraint: NSLayoutConstraint!
     
     init(gameManager: GameManager, chatManager: ChatManager) {
         self.gameManager = gameManager
@@ -130,12 +127,9 @@ class GameViewController: UIViewController {
         view.backgroundColor = darkBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.setHidesBackButton(true, animated: true)
-//        exitBarButton = UIBarButtonItem(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), primaryAction: didTapExitButton())
         settingsButton = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: settingsMenu())
-//        settingsButton.tintColor = .secondaryLabel
         settingsButton.tintColor = .label
         messageButton = UIBarButtonItem(image: UIImage(systemName: "message"), primaryAction: didTapMessageButton())
-//        messageButton.tintColor = .secondaryLabel
         messageButton.tintColor = .label
         navigationItem.leftBarButtonItem = settingsButton
         navigationItem.rightBarButtonItem = messageButton
@@ -189,6 +183,8 @@ class GameViewController: UIViewController {
         joinButtonCenterYConstraint = joinButton.centerYAnchor.constraint(equalTo: container.centerYAnchor)
         joinButtonTopConstraint = joinButton.topAnchor.constraint(equalTo: winnerPlayerView.bottomAnchor, constant: 8)
         
+        leaveButtonCenterYConstraint = leaveButton.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        leaveButtonTopConstraint = leaveButton.topAnchor.constraint(equalTo: winnerPlayerView.bottomAnchor, constant: 8)
         
         NSLayoutConstraint.activate([
             dummyPlayerView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
@@ -199,7 +195,7 @@ class GameViewController: UIViewController {
             joinButtonCenterYConstraint,
             
             leaveButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            leaveButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            leaveButtonCenterYConstraint,
             
             winnerPlayerView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             winnerPlayerView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
@@ -231,7 +227,6 @@ class GameViewController: UIViewController {
             if let sheet = nav.sheetPresentationController {
                 sheet.detents = [.medium(), .large()]
                 sheet.prefersGrabberVisible = true
-//                sheet.prefersScrollingExpandsWhenScrolledToEdge = false
             }
             self.present(nav, animated: true)
         }
@@ -240,8 +235,12 @@ class GameViewController: UIViewController {
     func didTapJoinButton() -> UIAction {
         return UIAction { [weak self] _ in
             guard let self else { return }
-            joinButton.isHidden.toggle()
-            leaveButton.isHidden.toggle()
+            joinButton.isHidden = true
+            leaveButton.isHidden = false
+            
+//            leaveButtonCenterYConstraint.isActive = true
+//            leaveButtonTopConstraint.isActive = false
+            
             gameManager.joinGame()
         }
     }
@@ -249,10 +248,10 @@ class GameViewController: UIViewController {
     func didTapLeaveButton() -> UIAction {
         return UIAction { [weak self] _ in
             guard let self else { return }
-            joinButton.isHidden.toggle()
-            leaveButton.isHidden.toggle()
-            joinButtonCenterYConstraint.isActive = true
-            joinButtonTopConstraint.isActive = false
+            joinButton.isHidden = false
+            leaveButton.isHidden = true
+//            joinButtonCenterYConstraint.isActive = true
+//            joinButtonTopConstraint.isActive = false
             
             do {
                 Task {
@@ -292,69 +291,6 @@ class GameViewController: UIViewController {
 
         self.present(alert, animated: true, completion: nil)
     }
-    
-//    // Give players X seconds till kick to clean up afk players
-//    @objc func appMovedToBackground() {
-//        currentCountdownValue = 3
-//        afkTimer?.invalidate()
-//        afkTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-//            guard let self else {
-//                timer.invalidate()
-//                return
-//            }
-//            if currentCountdownValue == 0 {
-//                afkTimer?.invalidate()
-//                
-//                let alert = UIAlertController(
-//                    title: "Session Timeout",
-//                    message: "You were away from the game for too long and have been removed from the session. Please join again to continue playing!",
-//                    preferredStyle: .alert
-//                )
-//                
-//                alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-//                    self.navigationController?.popViewController(animated: true)
-//                })
-//                
-//                self.present(alert, animated: true, completion: nil)
-//                
-//                exitTask?.cancel()
-//                exitTask = Task {
-//                    do {
-//                        try await self.gameManager.exit()
-//                    } catch {
-//                        print("Error removing player: \(error)")
-//                    }
-//                }
-//            } else {
-//                print("Time remaining till kick: \(currentCountdownValue)")
-//            }
-//            
-//            currentCountdownValue -= 1
-//        }
-//    }
-//    
-//    @objc func appDidBecomeActive() {
-//        afkTimer?.invalidate()
-//
-//        if currentCountdownValue <= 1 {
-//            let alert = UIAlertController(
-//                title: "Inactive Warning",
-//                message: "Leaving the app will result in being kicked from this session. Please stay active to continue playing!",
-//                preferredStyle: .alert
-//            )
-//            
-//            alert.addAction(UIAlertAction(title: "OK", style: .default))
-//            
-//            self.present(alert, animated: true, completion: nil)
-//        }
-//        
-//    }
-    
-    // Strong references not allowing gameviewcontroller to be deallocated
-//    deinit {
-//        print("deinit")
-//        gameManager.removeListeners()
-//    }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
@@ -449,6 +385,12 @@ extension GameViewController: GameManagerDelegate {
     
     func gameManager(_ manager: GameManager, countdownStarted: Bool) {
         winnerPlayerView.isHidden = true
+        // Move buttons to center
+        joinButtonCenterYConstraint.isActive = true
+        joinButtonTopConstraint.isActive = false
+        
+        leaveButtonCenterYConstraint.isActive = true
+        leaveButtonTopConstraint.isActive = false
     }
     
     func gameManager(_ manager: GameManager, countdownEnded: Bool) {
@@ -540,7 +482,7 @@ extension GameViewController: GameManagerDelegate {
     //  - Winner is still being shown, should hide
     //  - Hearts are invisblem should be visible
     func gameManager(_ manager: GameManager, winnerUpdated playerID: String) {
-        showWinner(userID: playerID)
+//        showWinner(userID: playerID)
     }
     
     func gameManager(_ manager: GameManager, player playerID: String, updatedWord: String) {
@@ -567,19 +509,6 @@ extension GameViewController: GameManagerDelegate {
             
             playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
         }
-        
-//        for (playerID, updatedWord) in playerWords {
-//            guard let position = manager.positions[playerID],
-//                  let originalWord = playerViews[position].wordLabel.text,
-//                  originalWord != updatedWord
-//            else { continue }
-//            
-//            if manager.currentPlayerTurn != manager.service.currentUser?.uid {
-//                soundManager.playKeyboardClickSound()
-//            }
-//            
-//            playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
-//        }
     }
     
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String) {
@@ -590,7 +519,6 @@ extension GameViewController: GameManagerDelegate {
         guard let playerInfo = manager.playersInfo[playerID] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int
         else { return }
-//        playerViews[position].wordLabel.text = ""
         pointArrow(to: position)
     }
     
@@ -619,18 +547,28 @@ extension GameViewController: GameManagerDelegate {
                let winnerName = winner?["name"] as? String,
                let winnerPfp = manager.pfps[winnerID]
             {
+                print("Show winner")
                 winnerPlayerView.nameLabel.text = winnerName
                 winnerPlayerView.profileImageView.update(image: winnerPfp)
                 winnerPlayerView.isHidden = false
                 
-                // update join button to be under
+                // Move join/leave button to be under winner view
                 joinButtonCenterYConstraint.isActive = false
                 joinButtonTopConstraint.isActive = true
                 joinButton.isHidden = false
+                
+                leaveButtonCenterYConstraint.isActive = false
+                leaveButtonTopConstraint.isActive = true
+//                leaveButton.isHidden = false
                 playerViews.forEach { $0.wordLabel.text = "" }
             } else {
+                print("Not showing winner")
+                // Move join/leave to cente
                 joinButtonCenterYConstraint.isActive = true
                 joinButtonTopConstraint.isActive = false
+                
+                leaveButtonCenterYConstraint.isActive = true
+                leaveButtonTopConstraint.isActive = false
             }
             
             
@@ -649,12 +587,6 @@ extension GameViewController: GameManagerDelegate {
     func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String : Bool]) {
     }
     
-    func showWinner(userID: String) {
-//        guard let position = gameManager.getPosition(userID) else { return }
-//        playerViews[position].crownView.isHidden = false
-//        playerViews[position].heartsView.isHidden = true
-//        playerViews[position].skullView.isHidden = true
-    }
 
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int) {
         playerViews[position].shake()
@@ -742,7 +674,3 @@ extension GameViewController: KeyboardViewDelegate {
         }
     }
 }
-
-//#Preview("GameViewController") {
-//    GameViewController(gameManager: GameManager(roomID: "", service: FirebaseService()))
-//}
