@@ -237,10 +237,7 @@ class GameViewController: UIViewController {
             guard let self else { return }
             joinButton.isHidden = true
             leaveButton.isHidden = false
-            
-//            leaveButtonCenterYConstraint.isActive = true
-//            leaveButtonTopConstraint.isActive = false
-            
+
             gameManager.joinGame()
         }
     }
@@ -250,9 +247,7 @@ class GameViewController: UIViewController {
             guard let self else { return }
             joinButton.isHidden = false
             leaveButton.isHidden = true
-//            joinButtonCenterYConstraint.isActive = true
-//            joinButtonTopConstraint.isActive = false
-            
+
             do {
                 Task {
                     try await self.gameManager.leave()
@@ -264,7 +259,6 @@ class GameViewController: UIViewController {
     }
     
     // To clean up afk players.
-    // TODO: Bug, If user swipes to delete, game is frozen
     @objc func didEnterBackground() {
         print("didEnterBackground")
         exitTask?.cancel()
@@ -559,7 +553,6 @@ extension GameViewController: GameManagerDelegate {
                 
                 leaveButtonCenterYConstraint.isActive = false
                 leaveButtonTopConstraint.isActive = true
-//                leaveButton.isHidden = false
                 playerViews.forEach { $0.wordLabel.text = "" }
             } else {
                 print("Not showing winner")

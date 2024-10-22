@@ -275,6 +275,7 @@ extension HomeViewController: UICollectionViewDelegate {
             gameManager: GameManager(roomID: item.roomID!, service: service),
             chatManager: ChatManager(roomID: item.roomID!, service: service)
         )
+        
         gameViewController.joinButton.isHidden = false
         navigationController?.pushViewController(gameViewController, animated: true)
     }

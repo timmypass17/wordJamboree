@@ -11,7 +11,7 @@ import FirebaseDatabaseInternal
 import FirebaseAuth
 import FirebaseFirestore
 
-// TODO: Clear players after game ends
+// TODO: Don't let users delete rooms, clean inactive rooms, give heartbeat to rooms, fetch only active rooms (<1 minute beat)
 
 // Notes:
 // - Transactions are made to be called multible times and should handle nil (usually nil initally)
@@ -73,6 +73,7 @@ class GameManager {
     var handles: [String: DatabaseHandle] = [:]
     
     var pfps: [String: UIImage?] = [:]  // cache profile pictures
+    var skipTimer: Timer?
 
     // TODO:
     // - Chat message from other player is still being shown afte exiting and re-entering
@@ -111,7 +112,6 @@ class GameManager {
                 observeRounds()
                 observeSecondsPerTurn()
                 observePlayerTurn()
-//                observeWinner()
             } catch {
                 print("Error fetching game: \(error)")
             }
@@ -139,7 +139,6 @@ class GameManager {
                 // Fetch pfp if seen for first time
                 if self.pfps[uid] == nil {
                     print("fetching pfp: \(uid)")
-//                    self.pfps[uid] = (try? await self.service.getProfilePicture(uid: uid))
                     if let pfpImage = try? await self.service.getProfilePicture(uid: uid) {
                         self.pfps[uid] = pfpImage
                     } else {
@@ -369,16 +368,6 @@ class GameManager {
             ])
         }, withLocalEvents: false)
     }
-
-//    func observeWinner() {
-//        handles["winner"] = ref.child("games/\(roomID)/winner").observe(.value) { [weak self] snapshot in
-//            guard let self else { return }
-//            print("ref.child('games/\(roomID)/winner').observe(.value)")
-//            guard let winnerID = snapshot.value as? String else { return }
-//            self.winnerID = winnerID
-//            delegate?.gameManager(self, winnerUpdated: winnerID)
-//        }
-//    }
     
     func observePlayersWord() {
         handles["playersWord"] = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [weak self] snapshot in
@@ -415,6 +404,7 @@ class GameManager {
             self.currentPlayerTurn = playerID
             turnTimer?.startTimer(duration: secondsPerTurn)
             delegate?.gameManager(self, playerTurnChanged: playerID)
+            skipTimer?.invalidate()
         }
     }
     
@@ -684,43 +674,31 @@ class GameManager {
                var hearts = currentPlayerInfo["hearts"] as? Int,
                let currentPosition = currentPlayerInfo["position"] as? Int,
                var explode = game["explode"] as? [String: Bool],
+               var death = game["death"] as? [String: Bool],
                var rounds = game["rounds"] as? Int,
                var secondsPerTurn = game["secondsPerTurn"] as? Int,
                let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo),
                let currentPlayerTurn = game["currentPlayerTurn"] as? String,
-               var state = game["state"] as? [String: AnyObject],
-               let statusString = state["roomStatus"] as? String,
-               let status = GameState.Status(rawValue: statusString),
                playerID == currentPlayerTurn
             {
                 hearts -= 1
                 currentPlayerInfo["hearts"] = hearts as AnyObject
                 playersInfo[playerID] = currentPlayerInfo as AnyObject
-                explode[playerID]?.toggle()
                 game["playersInfo"] = playersInfo as AnyObject
-                game["explode"] = explode as AnyObject
+                
+                if hearts == 0 {
+                    print("Player \(playerID) died.")
+                    death[playerID]?.toggle()
+                    game["death"] = death as AnyObject
+                } else {
+                    print("Player \(playerID) damaged.")
+                    explode[playerID]?.toggle()
+                    game["explode"] = explode as AnyObject
+                }
                 
                 if let winnerID = self.checkForWinner(game: game) {
                     print("Game ended")
                     handleGameEnded(&game, winnerID: winnerID)
-//                    guard let winnerInfo = playersInfo[winnerID] as? [String: AnyObject],
-//                          let additionalWinnerInfo = winnerInfo["additionalInfo"] as? [String: AnyObject],
-//                          let name = additionalWinnerInfo["name"] as? String
-//                    else { return .success(withValue: currentData) }
-//                    print("Game ended")
-//                    var winner = state["winner"] as? [String: AnyObject] ?? [:]
-//                    winner["playerID"] = winnerID as AnyObject
-//                    winner["name"] = name as AnyObject
-//                    state["winner"] = winner as AnyObject
-//                    state["roomStatus"] = GameState.Status.notStarted.rawValue as AnyObject
-//                    game["state"] = state as AnyObject
-//                    game["currentPlayerTurn"] = NSNull() as AnyObject
-//                    game["secondsPerTurn"] = Int.random(in: 10...30) as AnyObject
-//                    game["playersInfo"] = NSNull() as AnyObject
-//                    game["playersWord"] = NSNull() as AnyObject
-//                    game["rounds"] = 1 as AnyObject
-//                    game["explode"] = NSNull() as AnyObject
-//                    game["wordsUsed"] = NSNull() as AnyObject
                 } else {
                     // Keep playing, get next turn
                     game["currentPlayerTurn"] = nextPlayerID as AnyObject
@@ -738,10 +716,8 @@ class GameManager {
                 }
                 
                 currentData.value = game
-                print("(damagePlayer \(playerID)) success")
                 return .success(withValue: currentData)
             }
-            print("(damagePlayer \(playerID)) fail")
             return .success(withValue: currentData)
         }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
             guard let self else { return }
@@ -767,10 +743,8 @@ class GameManager {
               let playersInfo = game["playersInfo"] as? [String: AnyObject],
               let winnerInfo = playersInfo[winnerID] as? [String: AnyObject],
               let additionalWinnerInfo = winnerInfo["additionalInfo"] as? [String: AnyObject],
-              let name = additionalWinnerInfo["name"] as? String,
-              let uid = service.uid
+              let name = additionalWinnerInfo["name"] as? String
         else { return }
-        print("Game ended")
         var winner = state["winner"] as? [String: AnyObject] ?? [:]
         winner["playerID"] = winnerID as AnyObject
         winner["name"] = name as AnyObject
@@ -783,7 +757,7 @@ class GameManager {
         game["playersWord"] = NSNull() as AnyObject
         game["rounds"] = 1 as AnyObject
         game["wordsUsed"] = NSNull() as AnyObject
-        game["death"] = NSNull() as AnyObject
+//        game["death"] = NSNull() as AnyObject
         game["explode"] = NSNull() as AnyObject
         game["shake"] = NSNull() as AnyObject
         game["success"] = NSNull() as AnyObject
@@ -925,11 +899,6 @@ class GameManager {
 
     func exit() async throws {
         turnTimer?.stopTimer()
-    
-        // Check if user was in game
-//        guard let uid = self.service.uid else { return }
-//        let userSnapshot = try await ref.child("games/\(roomID)/playersInfo/\(uid)").getData()
-//        guard userSnapshot.exists() else { return }
 
         service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
@@ -1005,23 +974,6 @@ class GameManager {
                                         
                     if let winnerID = self.checkForWinner(game: game) {
                         handleGameEnded(&game, winnerID: winnerID)
-//                        guard let winnerInfo = playersInfo[winnerID] as? [String: AnyObject],
-//                              let additionalWinnerInfo = winnerInfo["additionalInfo"] as? [String: AnyObject],
-//                              let name = additionalWinnerInfo["name"] as? String
-//                        else { return .success(withValue: currentData) }
-//                        var winner = state["winner"] as? [String: AnyObject] ?? [:]
-//                        winner["playerID"] = winnerID as AnyObject
-//                        winner["name"] = name as AnyObject
-//                        state["winner"] = winner as AnyObject
-//                        state["roomStatus"] = GameState.Status.notStarted.rawValue as AnyObject
-//                        game["state"] = state as AnyObject
-//                        game["currentPlayerTurn"] = NSNull() as AnyObject
-//                        game["secondsPerTurn"] = Int.random(in: 10...30) as AnyObject
-//                        game["playersInfo"] = NSNull() as AnyObject
-//                        game["playersWord"] = NSNull() as AnyObject
-//                        game["rounds"] = 1 as AnyObject
-//                        game["shake"] = NSNull() as AnyObject
-//                        game["wordsUsed"] = NSNull() as AnyObject
                     } else {
                         // Player exited while it was their turn, get next player turn
                         if currentPlayerTurn == uid,
@@ -1069,6 +1021,7 @@ class GameManager {
     }
     
     func detachObservers() {
+        // TODO: detach all observers
         ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childChange"]!)
         ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childAdded"]!)
         ref.child("games/\(roomID)/playersInfo").removeObserver(withHandle: handles["playersInfo.childRemoved"]!)
@@ -1085,17 +1038,90 @@ class GameManager {
 }
 
 extension GameManager: TurnTimerDelegate {
-    // TODO: Game stuck if user force quits and doesn't call exit()
-    // - call exit() when user enters background
-    // - call exit()
     func turnTimer(_ sender: TurnTimer, timeRanOut: Bool) {
-        guard currentPlayerTurn == service.uid else { return }
-        delegate?.gameManager(self, timeRanOut: true)
-        Task {
-            try await damagePlayer(playerID: currentPlayerTurn)
+        turnTimer?.stopTimer()
+//        guard currentPlayerTurn == service.uid else { return }
+        if currentPlayerTurn == service.uid {
+            delegate?.gameManager(self, timeRanOut: true)
+            Task {
+                try await damagePlayer(playerID: currentPlayerTurn)
+            }
+        } else {
+            // If nothing is happening after player's turn ends, then assume player disconnected so have the active players skip tur
+            var timeRemainingBeforeSkip = 5
+            let originalPlayerTurn = currentPlayerTurn
+            
+            skipTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+  
+                if timeRemainingBeforeSkip == 0 {
+                    skipTimer?.invalidate()
+                    print("Skip \(currentPlayerTurn)'s turn")
+                    // Skip current player's turn
+                    skipPlayerTurn(originalPlayerTurn)
+                }
+                
+                print("timeRemainingBeforeSkip: \(timeRemainingBeforeSkip)")
+                timeRemainingBeforeSkip -= 1
+            }
         }
     }
     
+    // TODO: All active players will attempt to skip afk player. Using transaciton so should be fine if multiple people try to skip person?
+    func skipPlayerTurn(_ playerID: String) {
+        service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
+            guard let self else { return .abort() }
+            if var game = currentData.value as? [String: AnyObject],
+               var playersInfo = game["playersInfo"] as? [String: AnyObject],
+               var playersWord = game["playersWord"] as? [String: AnyObject],
+               var currentPlayerInfo = playersInfo[playerID] as? [String: AnyObject],
+               let currentPosition = currentPlayerInfo["position"] as? Int,
+               var death = game["death"] as? [String: Bool],
+               var rounds = game["rounds"] as? Int,
+               var secondsPerTurn = game["secondsPerTurn"] as? Int,
+               let currentPlayerTurn = game["currentPlayerTurn"] as? String,
+               let state = game["state"] as? [String: AnyObject],
+               let statusString = state["roomStatus"] as? String,
+               let status = GameState.Status(rawValue: statusString),
+               status == .inProgress,
+               playerID == currentPlayerTurn,   // kicking correct player
+               rounds == self.currentRound      // make sure this is the exact round
+            {
+                currentPlayerInfo["hearts"] = 0 as AnyObject
+                playersInfo[playerID] = currentPlayerInfo as AnyObject
+                game["playersInfo"] = playersInfo as AnyObject
+                death[playerID]?.toggle()
+                game["death"] = death as AnyObject
+                
+                if let winnerID = self.checkForWinner(game: game) {
+                    handleGameEnded(&game, winnerID: winnerID)
+                } else {
+                    if let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo) {
+                        playersWord[nextPlayerID] = "" as AnyObject
+                        
+                        game["currentPlayerTurn"] = nextPlayerID as AnyObject
+                        game["playersWord"] = playersWord as AnyObject
+                        
+                        let isLastTurn = currentPosition == playersInfo.count - 1
+                        if isLastTurn {
+                            rounds += 1
+                            secondsPerTurn -= 1
+                            game["rounds"] = rounds as AnyObject
+                            game["secondsPerTurn"] = secondsPerTurn as AnyObject
+                        }
+                    }
+                }
+                currentData.value = game
+                return .success(withValue: currentData)
+            }
+            return .success(withValue: currentData)
+        }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
+            
+        }, withLocalEvents: false)
+    }
 }
 
 extension GameManager {
