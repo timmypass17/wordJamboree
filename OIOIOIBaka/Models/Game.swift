@@ -22,7 +22,6 @@ struct Game: Codable {
     var state: GameState = GameState(roomStatus: .notStarted)
     var countdownStartTime: TimeInterval? = nil
     var playersWord: [String: String]?
-    
 }
 
 struct GameState: Codable {

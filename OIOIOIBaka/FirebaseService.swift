@@ -371,17 +371,30 @@ class FirebaseService {
         
     }
     
-    func getRooms(completion: @escaping ([String: Room]) -> ()) {
+//    func getRooms(completion: @escaping ([String: Room]) -> ()) {
         // TODO: Listen to only non-full rooms, consider using .childAdded because we only care about rooms being added
-        ref.child("rooms").observe(.value) { snapshot in
-            guard let rooms = snapshot.toObject([String: Room].self) else {
-                completion([:])
-                return
-            }
-            
-            completion(rooms)
-        }
+//        ref.child("rooms").observe(.value) { snapshot in
+//            guard let rooms = snapshot.toObject([String: Room].self) else {
+//                completion([:])
+//                return
+//            }
+//            
+//            completion(rooms)
+//        }
+//    }
+    
+    
+    func getRooms() async -> [String: Room] {
+        let fiveMinutesAgo = currentTimestamp - (5 * 60 * 1000)
+        
+        let (snapshot, _) = await ref.child("rooms")
+            .queryOrdered(byChild: "createdAt") // heartbeat is updated too quickly
+            .queryStarting(atValue: fiveMinutesAgo)
+            .observeSingleEventAndPreviousSiblingKey(of: .value)
+        
+        return snapshot.toObject([String: Room].self) ?? [:]
     }
+    
     
     func joinRoom(_ roomID: String) async throws -> Bool {
 //        let roomRef = ref.child("rooms").child(roomID)

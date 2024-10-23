@@ -11,6 +11,9 @@ import FirebaseFirestore
 struct Room: Codable, Hashable { // hashable for collection item
     var creatorID: String
     var title: String
-    var createdAt = FirebaseFirestore.Timestamp()
     var currentPlayerCount: Int
+    var createdAt: Int = currentTimestamp
+//    var heartbeat: Int = currentTimestamp
 }
+
+// FirebaseFirestore.Timestamp() -> creates an "createdAt" object that contains "nanoseconds" int field and "seconds" int field

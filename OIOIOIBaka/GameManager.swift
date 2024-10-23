@@ -245,10 +245,17 @@ class GameManager {
             }
             print("(start game) fail")
             return .success(withValue: currentData)
-        }, andCompletionBlock: { error, committed, snapshot in
+        }, andCompletionBlock: { [weak self] error, committed, snapshot in
+            guard let self else { return }
             if let error {
                 print(error.localizedDescription)
             }
+            
+            // Update heartbeat
+            ref.updateChildValues([
+                "/rooms/\(roomID)/createdAt": currentTimestamp
+            ])
+            
         }, withLocalEvents: false)
     }
     
@@ -729,7 +736,8 @@ class GameManager {
             let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
             if playersInfo.isEmpty {
                 ref.updateChildValues([
-                    "rooms/\(roomID)/currentPlayerCount": 0
+                    "rooms/\(roomID)/currentPlayerCount": 0,
+//                    "rooms/\(roomID)/heartbeat": ServerValue.timestamp()
                 ])
             }
             
@@ -821,96 +829,20 @@ class GameManager {
         
         return nil
     }
-    
-    // User in lobby and leaves (doesn't delete room)
-    func leave() async throws {
-        turnTimer?.stopTimer()
-
-        service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
-            guard let self else { return .abort() }
-            if var game = currentData.value as? [String: AnyObject],
-               let uid = service.uid,
-               var playersInfo = game["playersInfo"] as? [String: AnyObject],
-               var playerInfo = playersInfo[uid] as? [String: AnyObject],   // user in lobby
-               let currentPosition = playerInfo["position"] as? Int,
-               let hearts = playerInfo["hearts"] as? Int,
-               var playersWord = game["playersWord"] as? [String: AnyObject],
-               var shake = game["shake"] as? [String: Bool],
-               var explode = game["explode"] as? [String: Bool],
-               var death = game["death"] as? [String: Bool],
-               var success = game["success"] as? [String: Bool],
-               var state = game["state"] as? [String: AnyObject],
-               let statusString = state["roomStatus"] as? String,
-               let status = GameState.Status(rawValue: statusString),
-               status == .notStarted
-            {
-                // Remove player completely
-                playersInfo[uid] = nil
-                playersWord[uid] = nil
-                success[uid] = nil
-                shake[uid] = nil
-                explode[uid] = nil
-                death[uid] = nil
-                
-                // Update positions after removal of player
-                let playerIDs: [String] = playersInfo.sorted { playerInfo1, playerInfo2 in
-                    let position1 = (playerInfo1.value as? [String: AnyObject])?["position"] as? Int ?? .max
-                    let position2 = (playerInfo2.value as? [String: AnyObject])?["position"] as? Int ?? .max
-                    return position1 < position2
-                }.map { $0.key }
-                
-                for (newPosition, uid) in playerIDs.enumerated() {
-                    guard var playerInfo = playersInfo[uid] as? [String: AnyObject] else { continue }
-                    playerInfo["position"] = newPosition as AnyObject
-                    playersInfo[uid] = playerInfo as AnyObject
-                }
-                
-                if playersInfo.count < 2 {
-                    game["countdownStartTime"] = nil
-                }
-                
-                game["playersInfo"] = playersInfo as AnyObject
-                game["playersWord"] = playersWord as AnyObject
-                game["success"] = success as AnyObject
-                game["shake"] = shake as AnyObject
-                game["explode"] = explode as AnyObject
-                game["death"] = death as AnyObject
-
-                currentData.value = game
-                return .success(withValue: currentData)
-            }
-            return .success(withValue: currentData)
-        }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
-            guard let self else { return }
-            if let error {
-                print(error.localizedDescription)
-                return
-            }
-            
-            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
-            
-            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
-            ref.updateChildValues([
-                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-            ])
-            
-        }, withLocalEvents: false)
-    }
 
     func exit() async throws {
         turnTimer?.stopTimer()
+        guard let uid = service.uid else { return }
+        
+        // note: .getData() returns a list of users while observeSingle...() returns a single user?
+        let (playerSnapshot, _) = await service.ref.child("games/\(roomID)/playersInfo/\(uid)").observeSingleEventAndPreviousSiblingKey(of: .value)
+        let userInGame = playerSnapshot.exists()
+        print("User is in game: \(userInGame) \(playerSnapshot)")
 
         service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
             guard var game = currentData.value as? [String: AnyObject],
                let uid = self.service.uid else {
-                return .success(withValue: currentData)
-            }
-            
-            // If room is empty, delete it
-            var playersInfo = game["playersInfo"] as? [String: AnyObject] ?? [:]
-            if playersInfo.count <= 0 {
-                currentData.value = NSNull()
                 return .success(withValue: currentData)
             }
             
@@ -930,13 +862,6 @@ class GameManager {
                 case .notStarted:
                     // Remove player completely
                     playersInfo[uid] = nil
-                    
-                    if playersInfo.count <= 0 {
-                        // If last player remaining, delete game & room
-                        currentData.value = NSNull()
-                        return .success(withValue: currentData)
-                    }
-                    
                     playersWord[uid] = nil
                     shake[uid] = nil
                     
@@ -1005,18 +930,12 @@ class GameManager {
                 return
             }
             
-            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else {
-                // Game was deleted, delete corresponding room
+            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
+            if userInGame {
                 ref.updateChildValues([
-                    "rooms/\(roomID)": NSNull()
+                    "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
                 ])
-                return
             }
-            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
-            ref.updateChildValues([
-                "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-            ])
-            
         }, withLocalEvents: false)
     }
     

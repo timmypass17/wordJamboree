@@ -59,7 +59,9 @@ class HomeViewController: UIViewController {
         
         setupCollectionView()
         
-        loadRooms()
+        Task {
+            await loadRooms()
+        }
     }
     
     // class func is similar to static func but class func is overridable
@@ -246,16 +248,15 @@ class HomeViewController: UIViewController {
         }
     }
     
-    private func loadRooms() {
-        service.getRooms { roomsDict in
-            var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
-            snapshot.appendSections([.header, .rooms])
-            snapshot.appendItems([.buttons], toSection: .header)
-            snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }, toSection: .rooms)
-            self.dataSource.apply(snapshot)
-        }
+    private func loadRooms() async {
+        let roomsDict = await service.getRooms()
+        var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
+        snapshot.appendSections([.header, .rooms])
+        snapshot.appendItems([.buttons], toSection: .header)
+        snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }, toSection: .rooms)
+        await self.dataSource.apply(snapshot)
     }
-
+    
 }
 
 extension HomeViewController: UICollectionViewDelegate {

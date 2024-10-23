@@ -250,7 +250,7 @@ class GameViewController: UIViewController {
 
             do {
                 Task {
-                    try await self.gameManager.leave()
+                    try await self.gameManager.exit()
                 }
             } catch {
                 print("Error removing player: \(error)")
