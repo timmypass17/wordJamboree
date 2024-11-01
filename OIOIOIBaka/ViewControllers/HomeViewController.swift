@@ -19,11 +19,17 @@ class HomeViewController: UIViewController {
     
     var sections: [Section] = []
     var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
-    
     var settingsButton: UIBarButtonItem!
-    var signInButton: UIBarButtonItem!
-    var signOutButton: UIBarButtonItem!
     
+    var activityView: UIActivityIndicatorView = {
+        let view = UIActivityIndicatorView(style: .large)
+        view.hidesWhenStopped = true
+        return view
+    }()
+    
+    let service: FirebaseService
+    var roomTask: Task<Void, Never>? = nil
+
     enum Section: Hashable {
         case header
         case rooms
@@ -32,8 +38,6 @@ class HomeViewController: UIViewController {
     enum SupplementaryViewKind {
         static let bottomLine = "bottomLine"
     }
-    
-    let service: FirebaseService
     
     init(service: FirebaseService) {
         self.service = service
@@ -49,19 +53,17 @@ class HomeViewController: UIViewController {
         title = "🥳 Bomb Party"
         navigationController?.navigationBar.prefersLargeTitles = true
         collectionView.backgroundColor = darkBackground
-        
-        let settingsButton = UIBarButtonItem(primaryAction: didTapSettingsButton())
-        settingsButton.image = UIImage(systemName: "gearshape.fill")
-        
-        setupLoginButton()
-        setupSignOutButton()
-        navigationItem.rightBarButtonItems = [settingsButton/*, signInButton, signOutButton*/]
+        settingsButton = UIBarButtonItem(
+            image: UIImage(systemName: "gearshape.fill"),
+            primaryAction: didTapSettingsButton()
+        )
+        navigationItem.rightBarButtonItem = settingsButton
         
         setupCollectionView()
+        loadRooms()
         
-        Task {
-            await loadRooms()
-        }
+        view.addSubview(activityView)
+        activityView.center = view.center
     }
     
     // class func is similar to static func but class func is overridable
@@ -75,6 +77,8 @@ class HomeViewController: UIViewController {
     
     private func setupCollectionView() {
         collectionView.delegate = self
+        collectionView.refreshControl = UIRefreshControl()
+        collectionView.refreshControl?.addAction(didSwipeToRefresh(), for: .valueChanged)
         
         view.addSubview(collectionView)
 
@@ -84,7 +88,7 @@ class HomeViewController: UIViewController {
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
-
+        
         // MARK: Register cells/supplmentary views
         collectionView.register(HomeHeaderCollectionViewCell.self, forCellWithReuseIdentifier: HomeHeaderCollectionViewCell.reuseIdentifier)
         collectionView.register(RoomCollectionViewCell.self, forCellWithReuseIdentifier: RoomCollectionViewCell.reuseIdentifier)
@@ -182,13 +186,11 @@ class HomeViewController: UIViewController {
     }
     
     private func createDataSource() -> UICollectionViewDiffableDataSource<Section, Item> {
-        // Manages data and provides cells
         let dataSource = UICollectionViewDiffableDataSource<Section, Item>(collectionView: collectionView) { collectionView, indexPath, item in
             let section = self.sections[indexPath.section]
             switch section {
             case .header:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HomeHeaderCollectionViewCell.reuseIdentifier, for: indexPath) as! HomeHeaderCollectionViewCell
-                cell.delegate = self
                 return cell
             case .rooms:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RoomCollectionViewCell.reuseIdentifier, for: indexPath) as! RoomCollectionViewCell
@@ -211,85 +213,107 @@ class HomeViewController: UIViewController {
         return dataSource
     }
     
-    private func setupLoginButton() {
-        signInButton = UIBarButtonItem(
-            image: UIImage(systemName: "person.fill"),
-            primaryAction: didTapSignInButton()
-        )
-    }
-    
-    private func setupSignOutButton() {
-        signOutButton = UIBarButtonItem(
-            image: UIImage(systemName: "xmark"),
-            primaryAction: didTapSignOutButton()
-        )
-    }
-    
-    private func didTapSignInButton() -> UIAction {
-        return UIAction { _ in
-//            Task {
-//                do {
-//                    try await self.service.signInWithGoogle(self)
-//                } catch {
-//                    print("Error signing in user: \(error)")
-//                }
-//            }
+    func didSwipeToRefresh() -> UIAction {
+        return UIAction { [self] _ in
+            loadRooms()
         }
     }
     
-    private func didTapSignOutButton() -> UIAction {
-        return UIAction { _ in
-            do {
-                try Auth.auth().signOut()
-                print("Signed out")
-            } catch let signOutError as NSError {
-                print("Error signing out: %@", signOutError)
-            }
+    private func loadRooms() {
+        roomTask?.cancel()
+        roomTask = Task {
+            collectionView.refreshControl?.beginRefreshing()
+            let roomsDict = await service.getRooms()
+            collectionView.refreshControl?.endRefreshing()
+            var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
+            snapshot.appendSections([.header, .rooms])
+            snapshot.appendItems([.buttons], toSection: .header)
+            snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }, toSection: .rooms)
+            await self.dataSource.apply(snapshot)
+            roomTask = nil
         }
-    }
-    
-    private func loadRooms() async {
-        let roomsDict = await service.getRooms()
-        var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
-        snapshot.appendSections([.header, .rooms])
-        snapshot.appendItems([.buttons], toSection: .header)
-        snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }, toSection: .rooms)
-        await self.dataSource.apply(snapshot)
     }
     
 }
 
 extension HomeViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard indexPath.section != 0 else { return }
-        didTapRoom(at: indexPath)
+        let roomsSection = 1
+        guard indexPath.section == roomsSection,
+              let item = dataSource.itemIdentifier(for: indexPath)
+        else { return }
+        
+        activityView.startAnimating()
+        roomTask?.cancel()
+        roomTask = Task {
+            await joinRoom(item.roomID!)
+            roomTask = nil
+            activityView.stopAnimating()
+        }
     }
     
-    func didTapRoom(at indexPath: IndexPath) {
-        guard let item = dataSource.itemIdentifier(for: indexPath) else {
-            print("User not found")
+    func joinRoom(_ roomID: String) async {
+        guard await roomExists(roomID) else {
+            showRoomDoesNotExistAlert()
             return
         }
         
-        // TODO: Tapping background of top header crashes
         let gameViewController = GameViewController(
-            gameManager: GameManager(roomID: item.roomID!, service: service),
-            chatManager: ChatManager(roomID: item.roomID!, service: service)
+            gameManager: GameManager(roomID: roomID, service: service),
+            chatManager: ChatManager(roomID: roomID, service: service)
         )
         
-        gameViewController.joinButton.isHidden = false
+//        gameViewController.joinButton.isHidden = false
         navigationController?.pushViewController(gameViewController, animated: true)
+    }
+    
+    private func roomExists(_ roomID: String) async -> Bool {
+        let (roomSnapshot, _) = await service.ref
+            .child("rooms")
+            .child(roomID)
+            .observeSingleEventAndPreviousSiblingKey(of: .value)
+        
+        return roomSnapshot.exists()
+    }
+    
+    func showRoomDoesNotExistAlert() {
+        let alert = UIAlertController(
+            title: "Room Not Found",
+            message: "The room you're trying to join doesn't exist or may have been closed. Please swipe down to refresh the room list",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            self.navigationController?.popViewController(animated: true)
+        })
+
+        self.present(alert, animated: true, completion: nil)
     }
 }
 
 extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
     func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapCreateRoom: Bool) {
-        guard let uid = service.uid else { return }
-        let createRoomViewController = CreateRoomViewController()
-        createRoomViewController.service = service
-        createRoomViewController.delegate = self
-        createRoomViewController.navigationItem.title = "\(service.name)'s room"
-        present(UINavigationController(rootViewController: createRoomViewController), animated: true)
+        cell.createButton.isEnabled = false // to prevent button spamming
+        cell.createButton.titleLabel?.isHidden = true
+        cell.createActivityView.startAnimating()
+        
+        roomTask?.cancel()
+        roomTask = Task {
+            do {
+                let (roomID, _) = try await service.createRoom(title: "\(service.name)'s room")
+                let gameManager = GameManager(roomID: roomID, service: service)
+                let gameViewController = GameViewController(gameManager: gameManager, chatManager: ChatManager(roomID: roomID, service: service))
+                gameViewController.leaveButton.isHidden = false
+                
+                navigationController?.pushViewController(gameViewController, animated: true)
+            } catch {
+                print("Failed to create room: \(error)")
+            }
+            cell.createButton.isEnabled = true
+            cell.createButton.titleLabel?.isHidden = false
+            cell.createActivityView.stopAnimating()
+            roomTask = nil
+        }
     }
     
     func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapJoinRoom: Bool) {
@@ -297,15 +321,6 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
         print(#function)
     }
     
-}
-extension HomeViewController: CreateRoomViewControllerDelegate {
-    func createRoomViewController(_ viewController: UIViewController, didCreateRoom room: Room, roomID: String) {
-        let gameManager = GameManager(roomID: roomID, service: service)
-        let gameViewController = GameViewController(gameManager: gameManager, chatManager: ChatManager(roomID: roomID, service: service))
-        gameViewController.leaveButton.isHidden = false
-        
-        navigationController?.pushViewController(gameViewController, animated: true)
-    }
 }
 
 #Preview {

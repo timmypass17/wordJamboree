@@ -58,6 +58,13 @@ class HomeHeaderCollectionViewCell: UICollectionViewCell {
         return stackView
     }()
     
+    var createActivityView: UIActivityIndicatorView = {
+        let view = UIActivityIndicatorView(style: .medium)
+        view.hidesWhenStopped = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
     weak var delegate: HomeHeaderCollectionViewCellDelegate?
     
     override init(frame: CGRect) {
@@ -73,11 +80,18 @@ class HomeHeaderCollectionViewCell: UICollectionViewCell {
         container.addArrangedSubview(buttonsContainer)
         
         addSubview(container)
+        addSubview(createActivityView)
+        
         NSLayoutConstraint.activate([
             container.topAnchor.constraint(equalTo: topAnchor),
             container.bottomAnchor.constraint(equalTo: bottomAnchor),
             container.leadingAnchor.constraint(equalTo: leadingAnchor),
-            container.trailingAnchor.constraint(equalTo: trailingAnchor)
+            container.trailingAnchor.constraint(equalTo: trailingAnchor),
+            
+            createActivityView.topAnchor.constraint(equalTo: createButton.topAnchor),
+            createActivityView.bottomAnchor.constraint(equalTo: createButton.bottomAnchor),
+            createActivityView.leadingAnchor.constraint(equalTo: createButton.leadingAnchor),
+            createActivityView.trailingAnchor.constraint(equalTo: createButton.trailingAnchor)
         ])
     }
     

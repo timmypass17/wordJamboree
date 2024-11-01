@@ -14,6 +14,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
     let titleLabel: UILabel = {
         let label = UILabel()
 //        label.text = "timmypass21's room"
+        label.font = UIFont.preferredFont(forTextStyle: .title3)
         return label
     }()
     
@@ -34,7 +35,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     let playersCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "0 / 4"
+        label.text = "0"
         return label
     }()
     
@@ -99,7 +100,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     func update(room: Room) {
         titleLabel.text = room.title
-        playersCountLabel.text = "\(room.currentPlayerCount) / 4"
+        playersCountLabel.text = "\(room.currentPlayerCount)"
     }
 }
 

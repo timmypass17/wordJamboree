@@ -19,7 +19,12 @@ enum AuthenticationState {
     case guest
 }
 
+// Note: deleting user auth from firebase will not remove user in app. Ex. So if i delete userA in firebase console, userA still exists in my app and I am still signed in even though it's deleted. Need to sign out explicity within app.
+// Enabled anonymous account auto clean up
+// - 30 days anonymous users deleted
+// - Also added "Delete User Data" extension to delete related user data (e.g. name, pfp)
 // TODO: I don't need to store user's name in firestore. Just use UserDefault
+// TODO: Add swipe to refresh to get up-to-date rooms. don't make rooms use observers, wierd if room updates and moves around
 // anonymous
 // Cons
 // - anonymous accounts don’t let users have the same account on multiple devices
@@ -138,15 +143,6 @@ class FirebaseService {
                 do {
                     let res = try await auth.signIn(with: credential)
                     print("Signed in to Google account!")
-                    
-//                    // Get new user's information
-//                    if let existingUser = try await self.getUser(uid: res.user.uid) {
-//                        print("Got existing user!")
-//                        self.name = existingUser.name
-//                        self.uid = res.user.uid
-//                        self.pfpImage = try? await self.getProfilePicture(uid: res.user.uid) ?? nil
-//                    }
-//                    
                     self.authState = .permanent
                     NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
                     return res
@@ -224,50 +220,6 @@ class FirebaseService {
         self.name = name
     }
 
-    
-//    func createRoom(title: String) async throws -> (String, Room) {
-//        guard let currentUser else { throw FirebaseServiceError.userNotLoggedIn }
-//
-//        let room = Room(
-//            creatorID: currentUser.uid,
-//            title: title,
-//            currentPlayerCount: 1
-//        )
-//        
-//        let roomRef = try await db.collection("rooms").addDocument(data: room.toDictionary())
-//        let roomID = roomRef.documentID
-//                
-//        let game = Game(
-//            roomID: roomID,
-//            currentLetters: GameManager.generateRandomLetters(),
-//            secondsPerTurn: Int.random(in: 10...30) + 3,
-//            rounds: 1,
-//            playersInfo: [
-//                currentUser.uid:
-//                    PlayerInfo(
-//                        hearts: 3,
-//                        position: 0,
-//                        additionalInfo: [
-//                            "name": currentUser.name
-//                        ]
-//                    )
-//            ],
-//            shake: [
-//                currentUser.uid: false
-//            ],
-//            playersWord: [
-//                currentUser.uid: ""
-//            ]
-//        )
-//
-//        try await ref.updateChildValues([
-//            "/games/\(roomID)": game.toDictionary()
-//        ])
-//        
-//        return (roomID, room)
-//    }
-    
-    
     func createRoom(title: String) async throws -> (String, Room) {
         guard let uid else { throw FirebaseServiceError.userNotLoggedIn }
 
@@ -279,15 +231,6 @@ class FirebaseService {
             title: title,
             currentPlayerCount: 1
         )
-        
-        let lettersUsed: [String: Bool] = [
-            "A": false, "B": false, "C": false, "D": false, "E": false,
-            "F": false, "G": false, "H": false, "I": false, "J": false,
-            "K": false, "L": false, "M": false, "N": false, "O": false,
-            "P": false, "Q": false, "R": false, "S": false, "T": false,
-            "U": false, "V": false, "W": false, "X": false, "Y": false,
-            "Z": false
-        ]
         
         let game = Game(
             roomID: roomID,
@@ -371,91 +314,18 @@ class FirebaseService {
         
     }
     
-//    func getRooms(completion: @escaping ([String: Room]) -> ()) {
-        // TODO: Listen to only non-full rooms, consider using .childAdded because we only care about rooms being added
-//        ref.child("rooms").observe(.value) { snapshot in
-//            guard let rooms = snapshot.toObject([String: Room].self) else {
-//                completion([:])
-//                return
-//            }
-//            
-//            completion(rooms)
-//        }
-//    }
-    
-    
     func getRooms() async -> [String: Room] {
         let fiveMinutesAgo = currentTimestamp - (5 * 60 * 1000)
         
+        // heartbeat is updated too quickly
         let (snapshot, _) = await ref.child("rooms")
-            .queryOrdered(byChild: "createdAt") // heartbeat is updated too quickly
-            .queryStarting(atValue: fiveMinutesAgo)
+            .queryOrdered(byChild: "createdAt") // sort - can only use 1
+            .queryStarting(atValue: fiveMinutesAgo) // filter - can use multiple
+            .queryLimited(toFirst: 100)
             .observeSingleEventAndPreviousSiblingKey(of: .value)
         
         return snapshot.toObject([String: Room].self) ?? [:]
     }
-    
-    
-    func joinRoom(_ roomID: String) async throws -> Bool {
-//        let roomRef = ref.child("rooms").child(roomID)
-//
-//        // Perform transaction to ensure atomic update
-//        let (result, updatedSnapshot): (Bool, DataSnapshot) = try await roomRef.runTransactionBlock { (currentData: MutableData) -> TransactionResult in
-//            guard var room = currentData.value as? [String: AnyObject],
-//                  var currentPlayerCount = room["currentPlayerCount"] as? Int,
-//                  let statusString = room["status"] as? String,
-//                  let roomStatus = Room.Status(rawValue: statusString)
-//            else {
-//                return .abort()
-//            }
-//
-//            guard currentPlayerCount < 4,
-//                  roomStatus != .inProgress
-//                  // check if player not in list of players
-//                  // TODO: Add players field to Room
-//            else {
-//                return .abort()
-//            }
-//            
-//            // Update value
-//            currentPlayerCount += 1
-//            
-//            // Apply changes
-//            room["currentPlayerCount"] = currentPlayerCount as AnyObject
-//            
-//            currentData.value = room
-//            return .success(withValue: currentData)
-//        }
-//        
-//         User join sucessfully, update other values
-//        if result {
-//            guard let updatedRoom = updatedSnapshot.toObject(Room.self) else { return false }
-//            try await ref.updateChildValues([
-//                "/games/\(roomID)/hearts/\(user.uid)": 3,
-//                "/games/\(roomID)/positions/\(user.uid)": updatedRoom.currentPlayerCount - 1,
-//                "/shake/\(roomID)/players/\(user.uid)": user.uid,
-//                "/rooms/\(roomID)/isReady/\(user.uid)": false,
-//                "/games/\(roomID)/playersInfo/\(user.uid)/name": user.name
-//            ])
-//        
-//        }
-//        
-//        return result
-        return true
-    }
-    
-//    func getGame(roomID: String, completion: @escaping (Game) -> ()) {
-//        ref.child("games").child(roomID).observe(.value) { snapshot in
-//            guard let game = snapshot.toObject(Game.self) else {
-//                completion()
-//                return
-//            }
-//            
-//            completion(game)
-//        }
-//    }
-    
-    
 }
 
 extension FirebaseService {
