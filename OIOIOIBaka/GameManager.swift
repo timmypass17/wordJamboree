@@ -43,8 +43,8 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, countdownStarted: Bool)
     func gameManager(_ manager: GameManager, countdownEnded: Bool)
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String: AnyObject])
-    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String: AnyObject], playerID: String)
-    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String: AnyObject], playerID: String)
+//    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String: AnyObject], playerID: String)
+//    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String: AnyObject], playerID: String)
 }
 
 // TODO: When game ends, everyone is kicked out and room is seen as "empty". Because room is "empty", when any player leaves, the room is destroyed. To fix this bug, add "spectators" to move users in room but not in lobby.
@@ -147,12 +147,12 @@ class GameManager {
                     }
                 }
                 DispatchQueue.main.async {
-                    let newPlayerJoined = joinedAt > joinedRoomTimestamp
-                    if newPlayerJoined {
-                        // Only print "Player Joined" for new child added
-                        print("New player joined!")
-                        self.delegate?.gameManager(self, playerJoined: playerInfo, playerID: snapshot.key)
-                    }
+//                    let newPlayerJoined = joinedAt > joinedRoomTimestamp
+//                    if newPlayerJoined {
+//                        // Only print "Player Joined" for new child added
+//                        print("New player joined!")
+//                        self.delegate?.gameManager(self, playerJoined: playerInfo, playerID: snapshot.key)
+//                    }
                     self.delegate?.gameManager(self, playersInfoUpdated: self.playersInfo)
                 }
             }
@@ -169,7 +169,7 @@ class GameManager {
             }
             let uid = snapshot.key
             playersInfo[uid] = nil
-            self.delegate?.gameManager(self, playerLeft: playerInfo, playerID: snapshot.key)
+//            self.delegate?.gameManager(self, playerLeft: playerInfo, playerID: snapshot.key)
             delegate?.gameManager(self, playersInfoUpdated: playersInfo)
         }
     }
@@ -834,11 +834,6 @@ class GameManager {
         turnTimer?.stopTimer()
         guard let uid = service.uid else { return }
         
-        // note: .getData() returns a list of users while observeSingle...() returns a single user?
-        let (playerSnapshot, _) = await service.ref.child("games/\(roomID)/playersInfo/\(uid)").observeSingleEventAndPreviousSiblingKey(of: .value)
-        let userInGame = playerSnapshot.exists()
-        print("User is in game: \(userInGame) \(playerSnapshot)")
-
         service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }
             guard var game = currentData.value as? [String: AnyObject],
@@ -847,7 +842,8 @@ class GameManager {
             }
             
             // If player is in lobby, remove them
-            if var playerInfo = playersInfo[uid] as? [String: AnyObject],
+            if var playersInfo = game["playersInfo"] as? [String: AnyObject],
+               var playerInfo = playersInfo[uid] as? [String: AnyObject],
                let currentPosition = playerInfo["position"] as? Int,
                let hearts = playerInfo["hearts"] as? Int,
                var playersWord = game["playersWord"] as? [String: AnyObject],
@@ -886,6 +882,7 @@ class GameManager {
                     game["playersInfo"] = playersInfo as AnyObject
                     game["playersWord"] = playersWord as AnyObject
                     game["shake"] = shake as AnyObject
+                    print("Players info after removal: \(playersInfo.count)")
                 case .inProgress:
                     guard let currentPlayerTurn = game["currentPlayerTurn"] as? String else { return .success(withValue: currentData) }
                     // Kill player
@@ -931,11 +928,13 @@ class GameManager {
             }
             
             guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
-            if userInGame {
-                ref.updateChildValues([
-                    "rooms/\(roomID)/currentPlayerCount": ServerValue.increment(-1)
-                ])
-            }
+            
+            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
+            // Just update player count whenever player leaves (better than check if user is in game and left by decrementing 1)
+            ref.updateChildValues([
+                "rooms/\(roomID)/currentPlayerCount": playersInfo.count
+            ])
+            
         }, withLocalEvents: false)
     }
     

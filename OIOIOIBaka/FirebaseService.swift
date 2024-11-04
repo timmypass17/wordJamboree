@@ -48,7 +48,6 @@ class FirebaseService {
         // signing out will recreate anonymous user id
         authListener = auth.addStateDidChangeListener { auth, user in
             print("Auth state changed: \(user?.uid ?? "nil")")
-            
             Task {
                 if let user {
                     // Fetch current existing user
@@ -77,17 +76,6 @@ class FirebaseService {
                 }
             }
         }
-                
-//        try? auth.signOut()
-//        
-//        Task {
-//            if auth.currentUser == nil {
-//                print("Sign in anonymously")
-//                try await auth.signInAnonymously()  // triggers state change
-//            } else {
-//                
-//            }
-//        }
     }
     
     func clearUserData() async throws {
@@ -319,7 +307,7 @@ class FirebaseService {
         
         // heartbeat is updated too quickly
         let (snapshot, _) = await ref.child("rooms")
-            .queryOrdered(byChild: "createdAt") // sort - can only use 1
+            .queryOrdered(byChild: "createdAt")     // sort - can only use 1
             .queryStarting(atValue: fiveMinutesAgo) // filter - can use multiple
             .queryLimited(toFirst: 100)
             .observeSingleEventAndPreviousSiblingKey(of: .value)

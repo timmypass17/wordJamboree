@@ -17,16 +17,15 @@ class HomeViewController: UIViewController {
         return collectionView
     }()
     
-    var sections: [Section] = []
-    var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
     var settingsButton: UIBarButtonItem!
-    
     var activityView: UIActivityIndicatorView = {
         let view = UIActivityIndicatorView(style: .large)
         view.hidesWhenStopped = true
         return view
     }()
     
+    var sections: [Section] = []
+    var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
     let service: FirebaseService
     var roomTask: Task<Void, Never>? = nil
 
@@ -67,7 +66,7 @@ class HomeViewController: UIViewController {
     }
     
     // class func is similar to static func but class func is overridable
-    func didTapSettingsButton() -> UIAction {
+    private func didTapSettingsButton() -> UIAction {
         return UIAction { _ in
             let settingsViewController = SettingsViewController()
             settingsViewController.service = self.service
@@ -191,6 +190,7 @@ class HomeViewController: UIViewController {
             switch section {
             case .header:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HomeHeaderCollectionViewCell.reuseIdentifier, for: indexPath) as! HomeHeaderCollectionViewCell
+                cell.delegate = self
                 return cell
             case .rooms:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RoomCollectionViewCell.reuseIdentifier, for: indexPath) as! RoomCollectionViewCell
@@ -213,12 +213,6 @@ class HomeViewController: UIViewController {
         return dataSource
     }
     
-    func didSwipeToRefresh() -> UIAction {
-        return UIAction { [self] _ in
-            loadRooms()
-        }
-    }
-    
     private func loadRooms() {
         roomTask?.cancel()
         roomTask = Task {
@@ -234,6 +228,51 @@ class HomeViewController: UIViewController {
         }
     }
     
+    
+    private func joinRoom(_ roomID: String) async {
+        guard await roomExists(roomID) else {
+            showRoomDoesNotExistAlert()
+            return
+        }
+        
+        let gameViewController = GameViewController(
+            gameManager: GameManager(roomID: roomID, service: service),
+            chatManager: ChatManager(roomID: roomID, service: service)
+        )
+        
+//        gameViewController.joinButton.isHidden = false
+        navigationController?.pushViewController(gameViewController, animated: true)
+    }
+    
+    
+    private func didSwipeToRefresh() -> UIAction {
+        return UIAction { [self] _ in
+            loadRooms()
+        }
+    }
+    
+    private func roomExists(_ roomID: String) async -> Bool {
+        let (roomSnapshot, _) = await service.ref
+            .child("rooms")
+            .child(roomID)
+            .observeSingleEventAndPreviousSiblingKey(of: .value)
+        
+        return roomSnapshot.exists()
+    }
+    
+    private func showRoomDoesNotExistAlert() {
+        let alert = UIAlertController(
+            title: "Room Not Found",
+            message: "The room you're trying to join doesn't exist or may have been closed. Please swipe down to refresh the room list",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            self.navigationController?.popViewController(animated: true)
+        })
+
+        self.present(alert, animated: true, completion: nil)
+    }
 }
 
 extension HomeViewController: UICollectionViewDelegate {
@@ -250,44 +289,6 @@ extension HomeViewController: UICollectionViewDelegate {
             roomTask = nil
             activityView.stopAnimating()
         }
-    }
-    
-    func joinRoom(_ roomID: String) async {
-        guard await roomExists(roomID) else {
-            showRoomDoesNotExistAlert()
-            return
-        }
-        
-        let gameViewController = GameViewController(
-            gameManager: GameManager(roomID: roomID, service: service),
-            chatManager: ChatManager(roomID: roomID, service: service)
-        )
-        
-//        gameViewController.joinButton.isHidden = false
-        navigationController?.pushViewController(gameViewController, animated: true)
-    }
-    
-    private func roomExists(_ roomID: String) async -> Bool {
-        let (roomSnapshot, _) = await service.ref
-            .child("rooms")
-            .child(roomID)
-            .observeSingleEventAndPreviousSiblingKey(of: .value)
-        
-        return roomSnapshot.exists()
-    }
-    
-    func showRoomDoesNotExistAlert() {
-        let alert = UIAlertController(
-            title: "Room Not Found",
-            message: "The room you're trying to join doesn't exist or may have been closed. Please swipe down to refresh the room list",
-            preferredStyle: .alert
-        )
-
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-            self.navigationController?.popViewController(animated: true)
-        })
-
-        self.present(alert, animated: true, completion: nil)
     }
 }
 
@@ -317,7 +318,6 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
     }
     
     func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapJoinRoom: Bool) {
-        
         print(#function)
     }
     

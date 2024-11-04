@@ -413,27 +413,28 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String : AnyObject], playerID: String) {
-        guard let additionalInfo = playerInfo["additionalInfo"],
-              let name = additionalInfo["name"] as? String,
-              let pfpImage = manager.pfps[playerID]
-        else { return }
-
-        let message = Message(uid: playerID, name: name, message: "Player Joined!", pfpImage: pfpImage, messageType: .system)
-        chatManager.messages.append(message)
-        NotificationCenter.default.post(name: .newMessageNotification, object: nil)
-    }
+//    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String : AnyObject], playerID: String) {
+//        guard let additionalInfo = playerInfo["additionalInfo"],
+//              let name = additionalInfo["name"] as? String,
+//              let pfpImage = manager.pfps[playerID]
+//        else { return }
+//
+//        let message = Message(uid: playerID, name: name, message: "Player Joined!", pfpImage: pfpImage, messageType: .system)
+//        chatManager.messages.append(message)
+//        NotificationCenter.default.post(name: .newMessageNotification, object: nil)
+//    }
     
-    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String : AnyObject], playerID: String) {
-        guard let additionalInfo = playerInfo["additionalInfo"],
-              let name = additionalInfo["name"] as? String,
-              let pfpImage = manager.pfps[playerID]
-        else { return }
-
-        let message = Message(uid: playerID, name: name, message: "Player Left!", pfpImage: pfpImage, messageType: .system)
-        chatManager.messages.append(message)
-        NotificationCenter.default.post(name: .newMessageNotification, object: nil)
-    }
+//    Too buggy, gets called when games ends
+//    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String : AnyObject], playerID: String) {
+//        guard let additionalInfo = playerInfo["additionalInfo"],
+//              let name = additionalInfo["name"] as? String,
+//              let pfpImage = manager.pfps[playerID]
+//        else { return }
+//
+//        let message = Message(uid: playerID, name: name, message: "Player Left!", pfpImage: pfpImage, messageType: .system)
+//        chatManager.messages.append(message)
+//        NotificationCenter.default.post(name: .newMessageNotification, object: nil)
+//    }
     
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : AnyObject]) {
         print(manager.pfps)
