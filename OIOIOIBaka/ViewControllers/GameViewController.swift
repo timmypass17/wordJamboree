@@ -376,7 +376,7 @@ extension GameViewController: UITextFieldDelegate {
 }
 
 extension GameViewController: GameManagerDelegate {
-    
+
     func gameManager(_ manager: GameManager, countdownStarted: Bool) {
         winnerPlayerView.isHidden = true
         // Move buttons to center

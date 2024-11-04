@@ -253,7 +253,8 @@ class GameManager {
             
             // Update heartbeat
             ref.updateChildValues([
-                "/rooms/\(roomID)/createdAt": currentTimestamp
+                "/rooms/\(roomID)/createdAt": currentTimestamp,
+                "/games/\(roomID)/heartbeat": currentTimestamp
             ])
             
         }, withLocalEvents: false)
@@ -364,15 +365,20 @@ class GameManager {
             print("(join game) fail 2") // note: we update game
             print(currentData.value) // entire game is null initally, causes playersInfo .childRemove to be trigged (and other values in game)
             return .success(withValue: currentData)
-        }, andCompletionBlock: { [weak self] error, committed, snapshot in
+        }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
             guard let self else { return }
             if let error {
                 print(error.localizedDescription)
                 return
             }
-            ref.updateChildValues([
-                "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1)
-            ])
+            
+            // Make sure game actual exists (incase user stays in room after room is deleted), to avoid orphan rooms
+            if let updatedSnapshot, updatedSnapshot.exists() {
+                ref.updateChildValues([
+                    "/rooms/\(roomID)/currentPlayerCount": ServerValue.increment(1)
+                ])
+            }
+            
         }, withLocalEvents: false)
     }
     
