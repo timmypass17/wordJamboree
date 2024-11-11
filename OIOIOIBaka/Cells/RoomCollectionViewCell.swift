@@ -13,7 +13,6 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     let titleLabel: UILabel = {
         let label = UILabel()
-//        label.text = "timmypass21's room"
         label.font = UIFont.preferredFont(forTextStyle: .title3)
         return label
     }()
@@ -25,7 +24,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
         return label
     }()
     
-    let playerImage: UIImageView = {
+    let playerCountImage: UIImageView = {
         let imageView = UIImageView()
         imageView.image = UIImage(systemName: "person.fill")
         imageView.contentMode = .scaleAspectFit
@@ -49,48 +48,39 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     let container: UIStackView = {
         let stackView = UIStackView()
-        stackView.axis = .horizontal
+        stackView.axis = .vertical
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
     
-    let lineView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .secondaryLabel
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
+    let playerCountContainer: UIStackView = {
+        let stackView = UIStackView()
+        stackView.axis = .horizontal
+        return stackView
     }()
-    
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         
+        backgroundColor = .secondarySystemFill
+        layer.cornerRadius = 8
+        
+        playerCountContainer.addArrangedSubview(UIView())
+        playerCountContainer.addArrangedSubview(playerCountImage)
+        playerCountContainer.addArrangedSubview(playersCountLabel)
+
         container.addArrangedSubview(titleLabel)
         container.addArrangedSubview(codeLabel)
         container.addArrangedSubview(UIView())
-        container.addArrangedSubview(playerImage)
-        container.addArrangedSubview(playersCountLabel)
-        container.addArrangedSubview(chevronImage)
-        
-        container.setCustomSpacing(8, after: titleLabel)
-        container.setCustomSpacing(4, after: playerImage)
-        container.setCustomSpacing(8, after: playersCountLabel)
+        container.addArrangedSubview(playerCountContainer)
 
         addSubview(container)
-        addSubview(lineView)
         
         NSLayoutConstraint.activate([
             container.topAnchor.constraint(equalTo: topAnchor, constant: 8),
             container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
             container.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             container.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8)
-        ])
-        
-        
-        NSLayoutConstraint.activate([
-            lineView.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
-            lineView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            lineView.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            lineView.trailingAnchor.constraint(equalTo: chevronImage.trailingAnchor)
         ])
     }
     

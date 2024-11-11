@@ -303,8 +303,10 @@ class FirebaseService {
     }
     
     func getRooms() async -> [String: Room] {
-        let fiveMinutesAgo = currentTimestamp - (5 * 60 * 1000)
-        
+//        let fiveMinutesAgo = currentTimestamp - (5 * 60 * 1000)
+        // TODO: For debugging
+        let fiveMinutesAgo = currentTimestamp - (100 * 60 * 1000)
+
         // heartbeat is updated too quickly
         let (snapshot, _) = await ref.child("rooms")
             .queryOrdered(byChild: "createdAt")     // sort - can only use 1

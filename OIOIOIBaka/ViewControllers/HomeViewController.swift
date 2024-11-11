@@ -18,24 +18,25 @@ class HomeViewController: UIViewController {
     }()
     
     var settingsButton: UIBarButtonItem!
+    
     var activityView: UIActivityIndicatorView = {
         let view = UIActivityIndicatorView(style: .large)
         view.hidesWhenStopped = true
         return view
     }()
     
-    var sections: [Section] = []
+    var sections: [Section] = [.rooms]
     var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
     let service: FirebaseService
     var roomTask: Task<Void, Never>? = nil
 
     enum Section: Hashable {
-        case header
         case rooms
     }
     
-    enum SupplementaryViewKind {
-        static let bottomLine = "bottomLine"
+    enum SupplementaryViewKind: String {
+        case header
+        case bottomLine
     }
     
     init(service: FirebaseService) {
@@ -89,70 +90,46 @@ class HomeViewController: UIViewController {
         ])
         
         // MARK: Register cells/supplmentary views
-        collectionView.register(HomeHeaderCollectionViewCell.self, forCellWithReuseIdentifier: HomeHeaderCollectionViewCell.reuseIdentifier)
         collectionView.register(RoomCollectionViewCell.self, forCellWithReuseIdentifier: RoomCollectionViewCell.reuseIdentifier)
-        collectionView.register(LineView.self, forSupplementaryViewOfKind: SupplementaryViewKind.bottomLine, withReuseIdentifier: LineView.reuseIdentifier)
+        
+        collectionView.register(HomeHeaderView.self, forSupplementaryViewOfKind: SupplementaryViewKind.header.rawValue, withReuseIdentifier: HomeHeaderView.reuseIdentifier)
+        collectionView.register(LineView.self, forSupplementaryViewOfKind: SupplementaryViewKind.bottomLine.rawValue, withReuseIdentifier: LineView.reuseIdentifier)
         
         // MARK: Collection View Setup
         collectionView.collectionViewLayout = createLayout()
         dataSource = createDataSource()
-        
-        sections.append(.header)
-        sections.append(.rooms)
-        
+                
         var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
-        snapshot.appendSections([.header, .rooms])
-        snapshot.appendItems([.buttons], toSection: .header)
+        snapshot.appendSections([.rooms])
         dataSource.apply(snapshot)
     }
     
     private func createLayout() -> UICollectionViewLayout {
+        // 2 Types of layouts
+        // - Flow: grid layout
+        // - Compositional: custom layout (sections, groups, items)
         let layout = UICollectionViewCompositionalLayout { sectionIndex, layoutEnvironment in
 
-            let lineItemHeight = 1 / layoutEnvironment.traitCollection.displayScale // single pixel
-            let bottomLineItem = NSCollectionLayoutBoundarySupplementaryItem(
-                layoutSize: NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(0.92),
-                    heightDimension: .absolute(lineItemHeight)
-                ),
-                elementKind: SupplementaryViewKind.bottomLine,
-                alignment: .bottom
-            )
+            let availableLayoutWidth = layoutEnvironment.container.effectiveContentSize.width
+            let groupWidth = availableLayoutWidth * 0.92
+            let remainingWidth = availableLayoutWidth - groupWidth
+            let halfOfRemainingWidth = remainingWidth / 2.0
+            let itemLeadingAndTrailingInset = halfOfRemainingWidth
 
-            let supplementaryItemContentInsets = NSDirectionalEdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4)
+            let headerItem = NSCollectionLayoutBoundarySupplementaryItem(
+                layoutSize: NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1), // diff, was .92
+                    heightDimension: .estimated(200)
+                ),
+                elementKind: SupplementaryViewKind.header.rawValue,
+                alignment: .top
+            )
             
-            bottomLineItem.contentInsets = supplementaryItemContentInsets
-            
+            headerItem.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4)  // align with 4 extra padding
+
             let section = self.sections[sectionIndex]
             switch section {
-            case .header:
-                let item = NSCollectionLayoutItem(
-                    layoutSize: NSCollectionLayoutSize(
-                        widthDimension: .fractionalWidth(1),
-                        heightDimension: .fractionalHeight(1)
-                    )
-                )
-                
-                let group = NSCollectionLayoutGroup.vertical(
-                    layoutSize: NSCollectionLayoutSize(
-                        widthDimension: .fractionalWidth(0.92),
-                        heightDimension: .fractionalHeight(0.1)),
-                    subitems: [item]
-                )
-                
-                let section = NSCollectionLayoutSection(group: group)
-                section.orthogonalScrollingBehavior = .groupPagingCentered
-                section.boundarySupplementaryItems = [bottomLineItem]
-                section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 16, trailing: 0)
-
-                return section
             case .rooms:
-                let availableLayoutWidth = layoutEnvironment.container.effectiveContentSize.width
-                let groupWidth = availableLayoutWidth * 0.92
-                let remainingWidth = availableLayoutWidth - groupWidth
-                let halfOfRemainingWidth = remainingWidth / 2.0
-                let itemLeadingAndTrailingInset = halfOfRemainingWidth
-                
                 let item = NSCollectionLayoutItem(
                     layoutSize: NSCollectionLayoutSize(
                         widthDimension: .fractionalWidth(1),
@@ -160,22 +137,24 @@ class HomeViewController: UIViewController {
                     )
                 )
                 
-                item.contentInsets = NSDirectionalEdgeInsets(
-                    top: 0,
-                    leading: itemLeadingAndTrailingInset,
-                    bottom: 0,
-                    trailing: itemLeadingAndTrailingInset
+                item.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4)    // horizontal spacing, 4 extra outside, 8 padding inner
+                
+                let group = NSCollectionLayoutGroup.horizontal(
+                    layoutSize: NSCollectionLayoutSize(
+                        widthDimension: .fractionalWidth(1/2),
+                        heightDimension: .fractionalHeight(1/8)),
+                    repeatingSubitem: item,
+                    count: 2
                 )
                 
-                let group = NSCollectionLayoutGroup.vertical(
-                    layoutSize: NSCollectionLayoutSize(
-                        widthDimension: .fractionalWidth(1),
-                        heightDimension: .estimated(42)),
-                    subitems: [item]
-                )
+                group.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0)
                 
                 let section = NSCollectionLayoutSection(group: group)
-//                section.orthogonalScrollingBehavior = .groupPagingCentered
+                
+                section.boundarySupplementaryItems = [headerItem]
+                
+                section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: itemLeadingAndTrailingInset, bottom: 0, trailing: itemLeadingAndTrailingInset) // affects header
+                
 
                 return section
             }
@@ -188,10 +167,6 @@ class HomeViewController: UIViewController {
         let dataSource = UICollectionViewDiffableDataSource<Section, Item>(collectionView: collectionView) { collectionView, indexPath, item in
             let section = self.sections[indexPath.section]
             switch section {
-            case .header:
-                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HomeHeaderCollectionViewCell.reuseIdentifier, for: indexPath) as! HomeHeaderCollectionViewCell
-                cell.delegate = self
-                return cell
             case .rooms:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RoomCollectionViewCell.reuseIdentifier, for: indexPath) as! RoomCollectionViewCell
                 cell.update(room: item.room!)
@@ -201,14 +176,20 @@ class HomeViewController: UIViewController {
         
         // MARK: Supplementary View Provider
         dataSource.supplementaryViewProvider = { collectionView, kind, indexPath -> UICollectionReusableView? in
-            switch kind {
-            case SupplementaryViewKind.bottomLine:
+            let viewKind = SupplementaryViewKind(rawValue: kind) ?? nil
+            switch viewKind {
+            case .header:
+                let headerView = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: HomeHeaderView.reuseIdentifier, for: indexPath) as! HomeHeaderView
+                headerView.delegate = self
+                return headerView
+            case .bottomLine:
                 let lineView = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: LineView.reuseIdentifier, for: indexPath) as! LineView
                 return lineView
-            default:
+            case .none:
                 return nil
             }
         }
+        
         
         return dataSource
     }
@@ -220,10 +201,9 @@ class HomeViewController: UIViewController {
             let roomsDict = await service.getRooms()
             collectionView.refreshControl?.endRefreshing()
             var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
-            snapshot.appendSections([.header, .rooms])
-            snapshot.appendItems([.buttons], toSection: .header)
+            snapshot.appendSections([.rooms])
             snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }, toSection: .rooms)
-            await self.dataSource.apply(snapshot)
+            await self.dataSource.apply(snapshot, animatingDifferences: false)  // wierd to see rooms move around
             roomTask = nil
         }
     }
@@ -231,7 +211,7 @@ class HomeViewController: UIViewController {
     
     private func joinRoom(_ roomID: String) async {
         guard await roomExists(roomID) else {
-            showRoomDoesNotExistAlert()
+            invalidRoomAlert()
             return
         }
         
@@ -240,7 +220,6 @@ class HomeViewController: UIViewController {
             chatManager: ChatManager(roomID: roomID, service: service)
         )
         
-//        gameViewController.joinButton.isHidden = false
         navigationController?.pushViewController(gameViewController, animated: true)
     }
     
@@ -260,7 +239,7 @@ class HomeViewController: UIViewController {
         return roomSnapshot.exists()
     }
     
-    private func showRoomDoesNotExistAlert() {
+    private func invalidRoomAlert() {
         let alert = UIAlertController(
             title: "Room Not Found",
             message: "The room you're trying to join doesn't exist or may have been closed. Please swipe down to refresh the room list",
@@ -277,10 +256,7 @@ class HomeViewController: UIViewController {
 
 extension HomeViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let roomsSection = 1
-        guard indexPath.section == roomsSection,
-              let item = dataSource.itemIdentifier(for: indexPath)
-        else { return }
+        guard let item = dataSource.itemIdentifier(for: indexPath) else { return }
         
         activityView.startAnimating()
         roomTask?.cancel()
@@ -292,11 +268,11 @@ extension HomeViewController: UICollectionViewDelegate {
     }
 }
 
-extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
-    func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapCreateRoom: Bool) {
-        cell.createButton.isEnabled = false // to prevent button spamming
-        cell.createButton.titleLabel?.isHidden = true
-        cell.createActivityView.startAnimating()
+extension HomeViewController: HomeHeaderViewDelegate {
+    func homeHeaderView(_ sender: HomeHeaderView, didTapCreateRoom: Bool) {
+        sender.createButton.isEnabled = false // to prevent button spamming
+        sender.createButton.titleLabel?.isHidden = true
+        sender.createActivityView.startAnimating()
         
         roomTask?.cancel()
         roomTask = Task {
@@ -310,15 +286,16 @@ extension HomeViewController: HomeHeaderCollectionViewCellDelegate {
             } catch {
                 print("Failed to create room: \(error)")
             }
-            cell.createButton.isEnabled = true
-            cell.createButton.titleLabel?.isHidden = false
-            cell.createActivityView.stopAnimating()
+            sender.createButton.isEnabled = true
+            sender.createButton.titleLabel?.isHidden = false
+            sender.createActivityView.stopAnimating()
             roomTask = nil
         }
     }
     
-    func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapJoinRoom: Bool) {
-        print(#function)
+    func homeHeaderView(_ sender: HomeHeaderView, didTapHowToPlay: Bool) {
+        let howToPlayViewController = HowToPlayViewController()
+        navigationController?.present(UINavigationController(rootViewController: howToPlayViewController), animated: true)
     }
     
 }

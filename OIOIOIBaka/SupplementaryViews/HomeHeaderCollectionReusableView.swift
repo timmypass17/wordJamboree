@@ -1,19 +1,20 @@
 //
-//  HomeHeaderView.swift
+//  HomeHeaderCollectionReusableView.swift
 //  OIOIOIBaka
 //
-//  Created by Timmy Nguyen on 9/6/24.
+//  Created by Timmy Nguyen on 11/9/24.
 //
 
 import UIKit
 
-protocol HomeHeaderCollectionViewCellDelegate: AnyObject {
-    func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapCreateRoom: Bool)
-    func homeHeaderCollectionViewCell(_ cell: HomeHeaderCollectionViewCell, didTapHowToPlay: Bool)
+protocol HomeHeaderViewDelegate: AnyObject {
+    func homeHeaderView(_ sender: HomeHeaderView, didTapCreateRoom: Bool)
+    func homeHeaderView(_ sender: HomeHeaderView, didTapHowToPlay: Bool)
 }
 
-class HomeHeaderCollectionViewCell: UICollectionViewCell {
-    static let reuseIdentifier = "HomeHeaderCollectionViewCell"
+class HomeHeaderView: UICollectionReusableView {
+        
+    static let reuseIdentifier = "HomeHeaderCollectionReusableView"
     
     let titleLabel: UILabel = {
         let label = UILabel()
@@ -65,7 +66,15 @@ class HomeHeaderCollectionViewCell: UICollectionViewCell {
         return view
     }()
     
-    weak var delegate: HomeHeaderCollectionViewCellDelegate?
+    var lineView: UIView = {
+        let lineView = LineView()
+        NSLayoutConstraint.activate([
+            lineView.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale)
+        ])
+        return lineView
+    }()
+    
+    weak var delegate: HomeHeaderViewDelegate?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -78,6 +87,9 @@ class HomeHeaderCollectionViewCell: UICollectionViewCell {
         
         container.addArrangedSubview(titleLabel)
         container.addArrangedSubview(buttonsContainer)
+        container.addArrangedSubview(lineView)
+        
+        container.setCustomSpacing(16, after: buttonsContainer)
         
         addSubview(container)
         addSubview(createActivityView)
@@ -101,17 +113,13 @@ class HomeHeaderCollectionViewCell: UICollectionViewCell {
     
     func didTapCreateRoom() -> UIAction {
         return UIAction { _ in
-            self.delegate?.homeHeaderCollectionViewCell(self, didTapCreateRoom: true)
+            self.delegate?.homeHeaderView(self, didTapCreateRoom: true)
         }
     }
     
     func didTapJoinRoom() -> UIAction {
         return UIAction { _ in
-            self.delegate?.homeHeaderCollectionViewCell(self, didTapHowToPlay: true)
+            self.delegate?.homeHeaderView(self, didTapHowToPlay: true)
         }
     }
-}
-
-#Preview {
-    HomeHeaderCollectionViewCell()
 }
