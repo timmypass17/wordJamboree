@@ -57,12 +57,14 @@ class FirebaseService {
                             self.name = existingUser.name
                             self.uid = user.uid
                             self.pfpImage = try? await self.getProfilePicture(uid: user.uid) ?? nil
+                            Settings.shared.name = existingUser.name
                         } else {
                             print("Creating new user!")
                             let newUser = try await self.createUser(uid: user.uid)
                             self.name = newUser.name
                             self.uid = user.uid
                             self.pfpImage = nil
+                            Settings.shared.name = newUser.name
                         }
                         self.authState = user.isAnonymous ? .guest : .permanent
                         NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
@@ -138,7 +140,6 @@ class FirebaseService {
                     print("Error signing into Google account: \(error.localizedDescription)")
                 }
             }
-            NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
         }
         
         return nil
@@ -206,6 +207,7 @@ class FirebaseService {
             "name": name,
         ], merge: true)
         self.name = name
+        Settings.shared.name = name
     }
 
     func createRoom(title: String) async throws -> (String, Room) {

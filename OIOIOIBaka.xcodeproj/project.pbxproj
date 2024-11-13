@@ -40,6 +40,7 @@
 		3291FA642CE04CA4005C490F /* HomeHeaderCollectionReusableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3291FA632CE04CA4005C490F /* HomeHeaderCollectionReusableView.swift */; };
 		32A511BA2CDAE5CC00EC768A /* HowToPlayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A511B92CDAE5CC00EC768A /* HowToPlayViewController.swift */; };
 		32A511BC2CDAE6CA00EC768A /* InstructionTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A511BB2CDAE6C900EC768A /* InstructionTableViewCell.swift */; };
+		32BF02222CE5480C007B3C40 /* ThemeTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32BF02212CE5480C007B3C40 /* ThemeTableViewController.swift */; };
 		32C06C592C90E85200D3676D /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C582C90E85200D3676D /* Item.swift */; };
 		32C06C5B2C90F41900D3676D /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C5A2C90F41900D3676D /* PlayerView.swift */; };
 		32C06C5D2C90F6D800D3676D /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C06C5C2C90F6D800D3676D /* ProfileImageView.swift */; };
@@ -101,6 +102,7 @@
 		3291FA632CE04CA4005C490F /* HomeHeaderCollectionReusableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeaderCollectionReusableView.swift; sourceTree = "<group>"; };
 		32A511B92CDAE5CC00EC768A /* HowToPlayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToPlayViewController.swift; sourceTree = "<group>"; };
 		32A511BB2CDAE6C900EC768A /* InstructionTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstructionTableViewCell.swift; sourceTree = "<group>"; };
+		32BF02212CE5480C007B3C40 /* ThemeTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeTableViewController.swift; sourceTree = "<group>"; };
 		32C06C582C90E85200D3676D /* Item.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Item.swift; sourceTree = "<group>"; };
 		32C06C5A2C90F41900D3676D /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		32C06C5C2C90F6D800D3676D /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 				3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */,
 				32A511B92CDAE5CC00EC768A /* HowToPlayViewController.swift */,
 				32F1447F2CE2F32300AEB35B /* PrivacyViewController.swift */,
+				32BF02212CE5480C007B3C40 /* ThemeTableViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -406,6 +409,7 @@
 				3213983C2CBAFB5400A636A7 /* SignUpViewController.swift in Sources */,
 				32610AF52C9930140011946E /* SoundManager.swift in Sources */,
 				321398302CB4476600A636A7 /* ChatManager.swift in Sources */,
+				32BF02222CE5480C007B3C40 /* ThemeTableViewController.swift in Sources */,
 				3291FA642CE04CA4005C490F /* HomeHeaderCollectionReusableView.swift in Sources */,
 				32C06C612C9106A200D3676D /* CurrentWordView.swift in Sources */,
 				32C06C5F2C9104DB00D3676D /* GameViewController.swift in Sources */,

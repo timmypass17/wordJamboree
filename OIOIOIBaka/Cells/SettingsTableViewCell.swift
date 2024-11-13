@@ -39,6 +39,7 @@ class SettingsTableViewCell: UITableViewCell {
         label.lineBreakMode = .byTruncatingTail
         return label
     }()
+    
 
     var container: UIStackView = {
         let stackView = UIStackView()

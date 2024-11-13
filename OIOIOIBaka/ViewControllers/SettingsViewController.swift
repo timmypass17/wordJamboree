@@ -25,8 +25,6 @@ class SettingsViewController: UIViewController {
     enum Item {
         case settings(Model)
         case signInOut
-        case deleteAccount
-        case clearData
         
         var settings: Model? {
             if case .settings(let model) = self {
@@ -58,9 +56,15 @@ class SettingsViewController: UIViewController {
         Section(
             title: "Profile Info",
             data: [
-                Item.settings(Model(image: UIImage(systemName: "pencil")!, text: "Change Nickname", backgroundColor: .systemBlue)),
+                Item.settings(Model(image: UIImage(systemName: "pencil")!, text: "Change Nickname", secondary: Settings.shared.name, backgroundColor: .systemBlue)),
                 Item.settings(Model(image: UIImage(systemName: "camera.fill")!, text: "Change Profile Picture", backgroundColor: .systemOrange)),
             ]
+        ),
+        Section(
+            title: "Appearance",
+            data: [
+                    Item.settings(Model(image: UIImage(systemName: "moon.stars.fill")!, text: "Theme", secondary:  Settings.shared.theme.description, backgroundColor: .systemIndigo)),
+                ]
         ),
         Section(
             title: "Help & Support",
@@ -86,12 +90,11 @@ class SettingsViewController: UIViewController {
     
     var nameIndexPath = IndexPath(row: 0, section: 0)
     var profilePictureIndexPath = IndexPath(row: 1, section: 0)
-    var contactIndexPath = IndexPath(row: 0, section: 1)
-    var bugIndexPath = IndexPath(row: 1, section: 1)
-    var privacyIndexPath = IndexPath(row: 0, section: 2)
-    var signInOutIndexPath = IndexPath(row: 0, section: 3)
-    var deleteAccountIndexPath = IndexPath(row: 0, section: 4)
-//    var clearUserDataIndexPath = IndexPath(row: 0, section: 4)
+    var themeIndexPath = IndexPath(row: 0, section: 1)
+    var contactIndexPath = IndexPath(row: 0, section: 2)
+    var bugIndexPath = IndexPath(row: 1, section: 2)
+    var privacyIndexPath = IndexPath(row: 0, section: 3)
+    var signInOutIndexPath = IndexPath(row: 0, section: 4)
 
     var appleAuthCrendentials: AuthCredential? = nil
     
@@ -105,6 +108,9 @@ class SettingsViewController: UIViewController {
         super.viewDidLoad()
         navigationItem.title = "Settings"
         navigationItem.largeTitleDisplayMode = .never
+        navigationController?.navigationBar.tintColor = .white  // change back and barbutton colors
+        
+        tableView.backgroundColor = .wjBlack
 
         tableView.dataSource = self
         tableView.delegate = self
@@ -128,10 +134,15 @@ class SettingsViewController: UIViewController {
         headerView.playerView.profileImageView.update(image: service.pfpImage)
         tableView.tableHeaderView = headerView
         
-        if service.authState == .permanent {
-            sections.append(Section(data: [Item.clearData]))
-        }
+        var menuItems: [UIAction] = [
+            UIAction(title: "Delete Account", image: UIImage(systemName: "trash.fill"), attributes: .destructive) { [weak self] _ in
+                self?.didTapDeleteAccountButton()
+            }
+        ]
         
+        let optionsButton = UIBarButtonItem(image: UIImage(systemName: "ellipsis"), menu: UIMenu(children: menuItems))
+        navigationItem.rightBarButtonItem = optionsButton
+
         NotificationCenter.default.addObserver(self, selector: #selector(handleUserStateChanged), name: .userStateChangedNotification, object: nil)
     }
     
@@ -145,27 +156,21 @@ class SettingsViewController: UIViewController {
         DispatchQueue.main.async { [self] in
             headerView.playerView.nameLabel.text = service.name
             headerView.playerView.profileImageView.update(image: service.pfpImage)
-            
-            let containsDeleteAccountCell = sections.contains { section in
-                section.data.contains { item in
-                    if case .deleteAccount = item {
-                        return true
-                    }
-                    return false
-                }
-            }
-            
-            if service.authState == .permanent && !containsDeleteAccountCell {
-                print("Insert")
-                sections.insert(Section(data: [.deleteAccount]), at: deleteAccountIndexPath.section)
-                tableView.insertSections(IndexSet(integer: deleteAccountIndexPath.section), with: .automatic)
-            } else if service.authState == .guest && containsDeleteAccountCell {
-                print("Remove")
-                sections.remove(at: deleteAccountIndexPath.section)
-                tableView.deleteSections(IndexSet(integer: deleteAccountIndexPath.section), with: .automatic)
-            }
+            updateNickNameLabel(name: service.name)
             tableView.reloadSections(IndexSet(integer: signInOutIndexPath.section), with: .automatic)
         }
+    }
+    
+    func updateNickNameLabel(name: String) {
+        self.sections[self.nameIndexPath.section].data[self.nameIndexPath.row] =
+        Item.settings(Model(image: UIImage(systemName: "pencil")!, text: "Change Nickname", secondary: name, backgroundColor: .systemBlue))
+        self.tableView.reloadRows(at: [self.nameIndexPath], with: .automatic)
+    }
+    
+    func updateThemeLabel(theme: UIUserInterfaceStyle) {
+        self.sections[self.themeIndexPath.section].data[self.themeIndexPath.row] =
+        Item.settings(Model(image: UIImage(systemName: "moon.stars.fill")!, text: "Theme", secondary: theme.description, backgroundColor: .systemIndigo))
+        self.tableView.reloadRows(at: [self.themeIndexPath], with: .automatic)
     }
     
     func dismissAction() -> UIAction {
@@ -173,7 +178,6 @@ class SettingsViewController: UIViewController {
             self.dismiss(animated: true)
         }
     }
-    
     
     func didTapSignInOutButton() {
         let isLoggedIn = service.authState == .permanent
@@ -187,7 +191,6 @@ class SettingsViewController: UIViewController {
                 do {
                     try Auth.auth().signOut()
                     service.authState = .guest
-//                    tableView.reloadSections(IndexSet([signInOutIndexPath.section, deleteAccountIndexPath.section]), with: .automatic)
                     print("User signed out")
                 } catch{
                     print("Error signing out: \(error)")
@@ -322,9 +325,12 @@ class SettingsViewController: UIViewController {
             else {
                 return
             }
+            // Update name cell
+            self.headerView.playerView.nameLabel.text = name
+            self.updateNickNameLabel(name: name)
+            
             Task {
                 do {
-                    self.headerView.playerView.nameLabel.text = name
                     try await self.service.updateName(name: name)
                 } catch {
                     print("Error updating name: \(error)")
@@ -349,14 +355,6 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        if indexPath == deleteAccountIndexPath {
-            let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
-            cell.label.text = "Delete Account"
-            cell.label.textColor = .red
-            cell.selectionStyle = service.uid != nil ? .default : .none
-            return cell
-        }
-        
         if indexPath == signInOutIndexPath {
             let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
             let isLoggedIn = service.authState == .permanent
@@ -370,21 +368,17 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             cell.selectionStyle = .default
             return cell
         }
-//        
-//        if indexPath == deleteAccountIndexPath {
-//            let cell = tableView.dequeueReusableCell(withIdentifier: SignOutTableViewCell.reuseIdentifier, for: indexPath) as! SignOutTableViewCell
-//            let isLoggedIn = service.authState == .permanent
-//            cell.label.text = "Delete Account"
-//            cell.label.textColor = .red
-//            cell.label.isEnabled = isLoggedIn
-//            cell.selectionStyle = isLoggedIn ? .default : .none
-//            return cell
-//        }
+        
+        if indexPath == nameIndexPath || indexPath == themeIndexPath {
+            let cell = tableView.dequeueReusableCell(withIdentifier: SettingsSelectionTableViewCell.reuseIdentifier, for: indexPath) as! SettingsSelectionTableViewCell
+            let model = sections[indexPath.section].data[indexPath.row]
+            cell.update(item: model)
+            return cell
+        }
 
         let cell = tableView.dequeueReusableCell(withIdentifier: SettingsTableViewCell.reuseIdentifier, for: indexPath) as! SettingsTableViewCell
         let model = sections[indexPath.section].data[indexPath.row]
         cell.accessoryType = .disclosureIndicator
-        print(model)
         cell.update(item: model)
         return cell
     }
@@ -400,6 +394,10 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             didTapChangeNameRow()
         } else if indexPath == profilePictureIndexPath {
             didTapChangeProfilePicture()
+        } else if indexPath == themeIndexPath {
+            let themeTableViewController = ThemeTableViewController(style: .grouped)
+            themeTableViewController.delegate = self
+            navigationController?.pushViewController(themeTableViewController, animated: true)
         } else if indexPath == contactIndexPath {
             guard MFMailComposeViewController.canSendMail() else {
                 showMailErrorAlert()
@@ -430,19 +428,28 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             navigationController?.pushViewController(privacyViewController, animated: true)
         } else if indexPath == signInOutIndexPath {
             didTapSignInOutButton()
-        } else if indexPath == deleteAccountIndexPath {
-            didTapDeleteAccountButton()
-        }
+        } 
+//        else if indexPath == deleteAccountIndexPath {
+//            didTapDeleteAccountButton()
+//        }
     }
 
     
     // Disable cell selection (does not remove highlight, use cell.selectionStyle = .none)
     func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
-        if indexPath == deleteAccountIndexPath {
-            return service.uid != nil ? indexPath : nil
-        }
+//        if indexPath == deleteAccountIndexPath {
+//            return service.uid != nil ? indexPath : nil
+//        }
         
         return indexPath
+    }
+    
+    func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+        if section == signInOutIndexPath.section {
+            return "Sign up to save your profile data permanently. Guest accounts are automatically deleted after 30 days."
+        }
+        
+        return nil
     }
 }
 
@@ -520,6 +527,12 @@ extension SettingsViewController: PHPickerViewControllerDelegate {
 //        imageView.isHidden = image == nil
     }
 
+}
+
+extension SettingsViewController: ThemeTableViewControllerDelegate {
+    func themeTableViewController(_ controller: ThemeTableViewController, didSelectTheme theme: UIUserInterfaceStyle) {
+        updateThemeLabel(theme: theme)
+    }
 }
 
 extension SettingsViewController: ASAuthorizationControllerDelegate {

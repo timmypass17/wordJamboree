@@ -17,15 +17,6 @@ protocol LoginViewControllerDelegate: AnyObject {
 
 class LoginViewController: UIViewController {
     
-    let signUpButton: UIButton = {
-        let button = UIButton()
-        button.setTitle("Sign up", for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: UIFont.labelFontSize, weight: .semibold)
-        button.setTitleColor(.link, for: .normal)
-        return button
-    }()
-    
-    
     let container: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
@@ -39,7 +30,6 @@ class LoginViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        signUpButton.addAction(didTapSignUpButton(), for: .touchUpInside)
         
         let appleLoginButton = ASAuthorizationAppleIDButton(type: .signIn, style: traitCollection.userInterfaceStyle == .light ? .black : .white)
         appleLoginButton.addAction(didTapAppleLoginButton(), for: .touchUpInside)
@@ -92,18 +82,13 @@ class LoginViewController: UIViewController {
         ])
     }
 
-    func didTapSignUpButton() -> UIAction {
-        return UIAction { [weak self] _ in
-            guard let self else { return }
-            delegate?.loginViewController(self, didTapSignUpButton: true)
-        }
-    }
-    
+
     func didTapGoogleLoginButton() -> UIAction {
         return UIAction { _ in
             Task {
                 do {
                     let res = try await self.service.signInWithGoogle(self)
+                    self.dismiss(animated: true)
                 } catch {
                     print("Error sign in with google: \(error)")
                 }
@@ -150,6 +135,7 @@ extension LoginViewController: ASAuthorizationControllerDelegate {
                         // Fallback to sign in directly
                         do {
                             // TODO: This always fails for apple reauth? "Duplicate credential received. Please try again with a new credential"
+                            
                             let res = try await service.auth.signIn(with: credential)
                             
 ////                            // Get new user's information

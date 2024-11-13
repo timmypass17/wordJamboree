@@ -28,6 +28,7 @@ class KeyboardView: UIView {
         button.backgroundColor = .systemGray
         button.setTitleColor(.label, for: .normal)
         button.layer.cornerRadius = 8
+        button.layer.cornerCurve = .continuous // more round
         button.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: keyWidth),

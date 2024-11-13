@@ -10,7 +10,6 @@ import FirebaseDatabaseInternal
 import SwiftUI
 import AVFAudio
 
-// TODO: CHange colors, use Wordle as inspo, change keys to wordle dark. Yellow keys for "used", green for "new" leters
 class GameViewController: UIViewController {
     
     let playerViews: [PlayerView] = (0..<6).map { _ in

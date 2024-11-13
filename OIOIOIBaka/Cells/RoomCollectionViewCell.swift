@@ -65,6 +65,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
         
         backgroundColor = .wjDarkGray
         layer.cornerRadius = 8
+        layer.cornerCurve = .continuous
         
         playerCountContainer.addArrangedSubview(UIView())
         playerCountContainer.addArrangedSubview(playerCountImage)
