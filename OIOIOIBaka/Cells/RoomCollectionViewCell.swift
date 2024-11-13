@@ -56,13 +56,14 @@ class RoomCollectionViewCell: UICollectionViewCell {
     let playerCountContainer: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .horizontal
+        stackView.spacing = 4
         return stackView
     }()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         
-        backgroundColor = .secondarySystemFill
+        backgroundColor = .wjDarkGray
         layer.cornerRadius = 8
         
         playerCountContainer.addArrangedSubview(UIView())

@@ -101,7 +101,7 @@ class PlayerView: UIView {
     
     let successCircle: UIView = {
         let circleView = UIView()
-        circleView.backgroundColor = .green
+        circleView.backgroundColor = .systemGreen
         circleView.layer.cornerRadius = 25
         circleView.alpha = 0.0
         circleView.translatesAutoresizingMaskIntoConstraints = false
@@ -450,7 +450,7 @@ class PlayerView: UIView {
         }
         
         NSLayoutConstraint.activate([
-            topConstraint,
+             topConstraint,
             bottomConstraint,
             leadingConstraint,
             trailingConstraint

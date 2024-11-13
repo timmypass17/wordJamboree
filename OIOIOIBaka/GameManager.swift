@@ -34,8 +34,6 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, playerTurnChanged playerID: String)
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String)
     func gameManager(_ manager: GameManager, player playerID: String, updatedWord: String)
-//    func gameManager(_ manager: GameManager, heartsUpdated hearts: [String: Int])
-//    func gameManager(_ manager: GameManager, playersPositionUpdated positions: [String: Int])
     func gameManager(_ manager: GameManager, winnerUpdated playerID: String)
     func gameManager(_ manager: GameManager, timeRanOut: Bool)
     func gameManager(_ manager: GameManager, lettersUsedUpdated: Set<Character>)
@@ -43,8 +41,6 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, countdownStarted: Bool)
     func gameManager(_ manager: GameManager, countdownEnded: Bool)
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String: AnyObject])
-//    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String: AnyObject], playerID: String)
-//    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String: AnyObject], playerID: String)
 }
 
 // TODO: When game ends, everyone is kicked out and room is seen as "empty". Because room is "empty", when any player leaves, the room is destroyed. To fix this bug, add "spectators" to move users in room but not in lobby.
@@ -58,9 +54,11 @@ class GameManager {
     var hearts: [String: Int] = [:]
     var secondsPerTurn: Int = -1
     var currentRound: Int = 1
-    let minimumTime = 5
     var winnerID = ""
-    let countdownDuration: Double = 5 // TODO: Change to 15
+    
+    static let countdownDuration: Double = 5   // TODO: Change to 15
+    static let minimumTime = 5
+    static let maxHearts = 5
     
     var service: FirebaseService
     let soundManager = SoundManager()
@@ -275,7 +273,7 @@ class GameManager {
             
             let currentTime = Date().timeIntervalSince1970 * 1000 // Current time in milliseconds
             let timeElapsed = currentTime - countdownStartTime
-            let remainingTime = (countdownDuration * 1000) - timeElapsed
+            let remainingTime = (GameManager.countdownDuration * 1000) - timeElapsed
             
             if remainingTime > 0 {
                 // TODO: Remove
@@ -498,7 +496,7 @@ class GameManager {
             }
             
             if updatedLettersUsed.count == 26 {
-                hearts += 1
+                hearts = max(hearts + 1, GameManager.maxHearts)
                 currentPlayerInfo["hearts"] = hearts as AnyObject
                 playersInfo[uid] = currentPlayerInfo as AnyObject
                 updatedLettersUsed = Set("XZ")
@@ -723,7 +721,7 @@ class GameManager {
                     if isLastTurn {
                         rounds += 1
                         game["rounds"] = rounds as AnyObject
-                        secondsPerTurn = max(self.minimumTime, secondsPerTurn - 1)
+                        secondsPerTurn = max(GameManager.minimumTime, secondsPerTurn - 1)
                         game["secondsPerTurn"] = secondsPerTurn as AnyObject
                     }
                 }
@@ -1043,6 +1041,18 @@ extension GameManager: TurnTimerDelegate {
             }
             return .success(withValue: currentData)
         }, andCompletionBlock: { [weak self] error, committed, updatedSnapshot in
+            guard let self else { return }
+            if let error {
+                print(error.localizedDescription)
+                return
+            }
+            guard let updatedGame = updatedSnapshot?.value as? [String: AnyObject] else { return }
+            let playersInfo = updatedGame["playersInfo"] as? [String: AnyObject] ?? [:]
+            if playersInfo.isEmpty {
+                ref.updateChildValues([
+                    "rooms/\(roomID)/currentPlayerCount": 0
+                ])
+            }
             
         }, withLocalEvents: false)
     }

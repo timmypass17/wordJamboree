@@ -17,57 +17,6 @@ protocol LoginViewControllerDelegate: AnyObject {
 
 class LoginViewController: UIViewController {
     
-    let titleLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Login"
-        label.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize, weight: .bold)
-        return label
-    }()
-    
-    let emailTextField: UITextField = {
-        let textField = UITextField()
-        textField.placeholder = "Email"
-        textField.borderStyle = .roundedRect
-        return textField
-    }()
-    
-    let passwordTextField: UITextField = {
-        let textField = UITextField()
-        textField.placeholder = "Password"
-        textField.borderStyle = .roundedRect
-        return textField
-    }()
-    
-    let loginButton: UIButton = {
-        let button = UIButton()
-        button.layer.cornerRadius = 8
-        var config = UIButton.Configuration.borderedProminent()
-
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: UIFont.buttonFontSize, weight: .medium)
-        ]
-        
-        config.attributedTitle = AttributedString("Login", attributes: AttributeContainer(attributes))
-        button.configuration = config
-        return button
-    }()
-    
-    let container: UIStackView = {
-        let stackView = UIStackView()
-        stackView.axis = .vertical
-        stackView.spacing = 16
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        return stackView
-    }()
-    
-    let divider = DividerView()
-    
-    let signUpLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Don't have an account yet?"
-        return label
-    }()
-    
     let signUpButton: UIButton = {
         let button = UIButton()
         button.setTitle("Sign up", for: .normal)
@@ -77,10 +26,10 @@ class LoginViewController: UIViewController {
     }()
     
     
-    let signUpContainer: UIStackView = {
+    let container: UIStackView = {
         let stackView = UIStackView()
-        stackView.axis = .horizontal
-        stackView.spacing = 8
+        stackView.axis = .vertical
+        stackView.spacing = 16
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -90,7 +39,6 @@ class LoginViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         signUpButton.addAction(didTapSignUpButton(), for: .touchUpInside)
         
         let appleLoginButton = ASAuthorizationAppleIDButton(type: .signIn, style: traitCollection.userInterfaceStyle == .light ? .black : .white)
@@ -129,34 +77,18 @@ class LoginViewController: UIViewController {
 
         googleLoginButton.configuration = config
         
-        container.addArrangedSubview(titleLabel)
-        container.addArrangedSubview(emailTextField)
-        container.addArrangedSubview(passwordTextField)
-        container.addArrangedSubview(loginButton)
-        container.addArrangedSubview(divider)
         container.addArrangedSubview(googleLoginButton)
         container.addArrangedSubview(appleLoginButton)
-        container.addArrangedSubview(UIView())
-        container.setCustomSpacing(32, after: titleLabel)
-        
-        signUpContainer.addArrangedSubview(signUpLabel)
-        signUpContainer.addArrangedSubview(signUpButton)
-        
+
         view.addSubview(container)
-        view.addSubview(signUpContainer)
         
         NSLayoutConstraint.activate([
-            container.topAnchor.constraint(equalTo: view.topAnchor),
-            container.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            container.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             
-            loginButton.heightAnchor.constraint(equalToConstant: 50),
             googleLoginButton.heightAnchor.constraint(equalToConstant: 50),
-            appleLoginButton.heightAnchor.constraint(equalToConstant: 50),
-            
-            signUpContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            signUpContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+            appleLoginButton.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
 
@@ -217,9 +149,10 @@ extension LoginViewController: ASAuthorizationControllerDelegate {
                         
                         // Fallback to sign in directly
                         do {
+                            // TODO: This always fails for apple reauth? "Duplicate credential received. Please try again with a new credential"
                             let res = try await service.auth.signIn(with: credential)
                             
-//                            // Get new user's information
+////                            // Get new user's information
 //                            if let existingUser = try await service.getUser(uid: res.user.uid) {
 //                                print("Got existing user!")
 //                                service.name = existingUser.name

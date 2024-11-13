@@ -26,21 +26,28 @@ class HomeHeaderView: UICollectionReusableView {
     
     let createButton: UIButton = {
         let button = UIButton()
-        var config = UIButton.Configuration.borderedProminent()
+        var config = UIButton.Configuration.plain()
         config.title = "Create Room"
+        config.baseForegroundColor = .white
         config.buttonSize = .large
         button.configuration = config
+        button.layer.cornerRadius = 8
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.white.cgColor
         return button
     }()
     
     let joinButton: UIButton = {
         let button = UIButton()
-        var config = UIButton.Configuration.borderedTinted()
+        var config = UIButton.Configuration.plain()
         config.title = "How to Play"
         config.buttonSize = .large
-        config.baseBackgroundColor = .secondaryLabel
-        config.baseForegroundColor = .label
+        config.baseForegroundColor = .white
+        config.buttonSize = .large
         button.configuration = config
+        button.layer.cornerRadius = 8
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.white.cgColor
         return button
     }()
     
@@ -100,10 +107,13 @@ class HomeHeaderView: UICollectionReusableView {
             container.leadingAnchor.constraint(equalTo: leadingAnchor),
             container.trailingAnchor.constraint(equalTo: trailingAnchor),
             
-            createActivityView.topAnchor.constraint(equalTo: createButton.topAnchor),
-            createActivityView.bottomAnchor.constraint(equalTo: createButton.bottomAnchor),
-            createActivityView.leadingAnchor.constraint(equalTo: createButton.leadingAnchor),
-            createActivityView.trailingAnchor.constraint(equalTo: createButton.trailingAnchor)
+            createActivityView.centerXAnchor.constraint(equalTo: createButton.centerXAnchor),
+            createActivityView.centerYAnchor.constraint(equalTo: createButton.centerYAnchor),
+
+//            createActivityView.topAnchor.constraint(equalTo: createButton.topAnchor),
+//            createActivityView.bottomAnchor.constraint(equalTo: createButton.bottomAnchor),
+//            createActivityView.leadingAnchor.constraint(equalTo: createButton.leadingAnchor),
+//            createActivityView.trailingAnchor.constraint(equalTo: createButton.trailingAnchor)
         ])
     }
     

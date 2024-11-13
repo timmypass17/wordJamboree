@@ -150,11 +150,18 @@ class KeyboardView: UIView {
                 guard let keyButton = self.alphabetButtons.first(where: { $0.title(for: .normal) == letter }) else { continue }
                 
                 if lettersUsed.contains(Character(letter)) {
-                    keyButton.backgroundColor = .systemFill
+                    // Used
+//                    keyButton.backgroundColor = .systemFill
+                    keyButton.backgroundColor = .wjDarkGray
+
                 } else if word.contains(letter) {
-                    keyButton.backgroundColor = .accent
+//                    keyButton.backgroundColor = .accent
+                    // New letter used
+                    keyButton.backgroundColor = .wjGreen
                 } else {
-                    keyButton.backgroundColor = .systemGray
+                    // Unused
+//                    keyButton.backgroundColor = .systemGray
+                    keyButton.backgroundColor = .wjGray
                 }
             }
         }

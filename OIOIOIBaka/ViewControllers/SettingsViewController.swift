@@ -72,7 +72,6 @@ class SettingsViewController: UIViewController {
         Section(
             title: "Privacy",
             data: [
-                Item.settings(Model(image: UIImage(systemName: "globe")!, text: "Acknowledgements", backgroundColor: .systemBlue)),
                 Item.settings(Model(image: UIImage(systemName: "hand.raised.fill")!, text: "Privacy Policy", backgroundColor: .systemGray))
             ]
         ),
@@ -89,8 +88,7 @@ class SettingsViewController: UIViewController {
     var profilePictureIndexPath = IndexPath(row: 1, section: 0)
     var contactIndexPath = IndexPath(row: 0, section: 1)
     var bugIndexPath = IndexPath(row: 1, section: 1)
-    var acknowledgementsIndexPath = IndexPath(row: 0, section: 2)
-    var privacyIndexPath = IndexPath(row: 1, section: 2)
+    var privacyIndexPath = IndexPath(row: 0, section: 2)
     var signInOutIndexPath = IndexPath(row: 0, section: 3)
     var deleteAccountIndexPath = IndexPath(row: 0, section: 4)
 //    var clearUserDataIndexPath = IndexPath(row: 0, section: 4)
@@ -189,7 +187,7 @@ class SettingsViewController: UIViewController {
                 do {
                     try Auth.auth().signOut()
                     service.authState = .guest
-                    tableView.reloadSections(IndexSet([signInOutIndexPath.section]), with: .automatic)
+//                    tableView.reloadSections(IndexSet([signInOutIndexPath.section, deleteAccountIndexPath.section]), with: .automatic)
                     print("User signed out")
                 } catch{
                     print("Error signing out: \(error)")
@@ -201,13 +199,19 @@ class SettingsViewController: UIViewController {
         } else {
             let authViewController = AuthViewController()
             authViewController.service = service
-            present(UINavigationController(rootViewController: authViewController), animated: true)
+            let vc = UINavigationController(rootViewController: authViewController)
+            
+            if let sheet = vc.sheetPresentationController {
+                sheet.detents = [.medium()]
+            }
+            
+            present(vc, animated: true)
         }
     }
     
     func didTapDeleteAccountButton() {
         let title = "Delete Account?"
-        let message = "Are you sure you want to delete your account? This action is permanent and will remove all your wishlist items. You may need to re-login to proceed with this security-sensitive operation. This cannot be undone."
+        let message = "Are you sure you want to delete your account? This action will delete your nickname and profile picture. You may need to re-login to proceed with this security-sensitive operation. This cannot be undone."
         
         let alert = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
         alert.addAction(UIAlertAction(title: "Delete Account", style: .destructive) { [weak self] _ in
@@ -405,7 +409,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             let mailComposer = MFMailComposeViewController()
             mailComposer.mailComposeDelegate = self
             mailComposer.setToRecipients([email])
-            mailComposer.setSubject("[BuiltDiff] Contact Us")
+            mailComposer.setSubject("[Word Jamboree] Contact Us")
             
             present(mailComposer, animated: true)
         } else if indexPath == bugIndexPath {
@@ -418,25 +422,17 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             mailComposer.mailComposeDelegate = self
             
             mailComposer.setToRecipients([email])
-            mailComposer.setSubject("[BuiltDiff] Bug Report")
+            mailComposer.setSubject("[Word Jamboree] Bug Report")
             
             present(mailComposer, animated: true)
-        } else if indexPath == acknowledgementsIndexPath {
-//            let acknowledgementsViewController = AcknowledgementsViewController()
-//            navigationController?.pushViewController(acknowledgementsViewController, animated: true)
         } else if indexPath == privacyIndexPath {
-//            let privacyViewController = PrivacyViewController()
-//            navigationController?.pushViewController(privacyViewController, animated: true)
+            let privacyViewController = PrivacyViewController()
+            navigationController?.pushViewController(privacyViewController, animated: true)
         } else if indexPath == signInOutIndexPath {
             didTapSignInOutButton()
         } else if indexPath == deleteAccountIndexPath {
             didTapDeleteAccountButton()
         }
-//        else if indexPath == signInOutIndexPath {
-//            didTapSignInOutButton()
-//        } else if indexPath == deleteAccountIndexPath {
-//            didTapDeleteAccountButton()
-//        }
     }
 
     

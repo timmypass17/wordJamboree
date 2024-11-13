@@ -10,8 +10,7 @@ import FirebaseDatabaseInternal
 import SwiftUI
 import AVFAudio
 
-let darkBackground = UIColor(named: "background")
-
+// TODO: CHange colors, use Wordle as inspo, change keys to wordle dark. Yellow keys for "used", green for "new" leters
 class GameViewController: UIViewController {
     
     let playerViews: [PlayerView] = (0..<6).map { _ in
@@ -26,7 +25,7 @@ class GameViewController: UIViewController {
     let joinButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Join Game"
-        config.baseBackgroundColor = .accent
+        config.baseBackgroundColor = .systemGreen
         config.cornerStyle = .medium
         
         let button = UIButton(configuration: config)
@@ -124,7 +123,7 @@ class GameViewController: UIViewController {
     }
     
     func setupView() {
-        view.backgroundColor = darkBackground
+        view.backgroundColor = .wjBlack
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.setHidesBackButton(true, animated: true)
         settingsButton = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: settingsMenu())
@@ -258,32 +257,32 @@ class GameViewController: UIViewController {
         }
     }
     
-    // To clean up afk players.
+    // To clean up afk players. *Not needed anymore, will skip players turn if nothing happens
     @objc func didEnterBackground() {
-        print("didEnterBackground")
-        exitTask?.cancel()
-        exitTask = Task {
-            do {
-                try await self.gameManager.exit()
-            } catch {
-                print("Error removing player: \(error)")
-            }
-        }
+//        print("didEnterBackground")
+//        exitTask?.cancel()
+//        exitTask = Task {
+//            do {
+//                try await self.gameManager.exit()
+//            } catch {
+//                print("Error removing player: \(error)")
+//            }
+//        }
     }
     
     @objc func willEnterForeground() {
-        print("willEnterForeground")
-        let alert = UIAlertController(
-            title: "Inactive Warning",
-            message: "Leaving the app will result in being kicked from the session. Please stay active to continue playing!",
-            preferredStyle: .alert
-        )
-
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-            self.navigationController?.popViewController(animated: true)
-        })
-
-        self.present(alert, animated: true, completion: nil)
+//        print("willEnterForeground")
+//        let alert = UIAlertController(
+//            title: "Inactive Warning",
+//            message: "Leaving the app will result in being kicked from the session. Please stay active to continue playing!",
+//            preferredStyle: .alert
+//        )
+//
+//        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+//            self.navigationController?.popViewController(animated: true)
+//        })
+//
+//        self.present(alert, animated: true, completion: nil)
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -657,7 +656,7 @@ extension GameViewController: KeyboardViewDelegate {
               let position = playerInfo["position"] as? Int
         else { return }
         
-        var word = playerViews[position].wordLabel.text ?? ""
+        let word = playerViews[position].wordLabel.text ?? ""
 
         Task {
             do {

@@ -50,13 +50,15 @@ class HomeViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "🥳 Bomb Party"
+        title = "🥳 Word Jamboree"
         navigationController?.navigationBar.prefersLargeTitles = true
-        collectionView.backgroundColor = darkBackground
+        collectionView.backgroundColor = .wjBlack
         settingsButton = UIBarButtonItem(
             image: UIImage(systemName: "gearshape.fill"),
             primaryAction: didTapSettingsButton()
         )
+        settingsButton.tintColor = .white
+        
         navigationItem.rightBarButtonItem = settingsButton
         
         setupCollectionView()
@@ -202,7 +204,9 @@ class HomeViewController: UIViewController {
             collectionView.refreshControl?.endRefreshing()
             var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
             snapshot.appendSections([.rooms])
-            snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }, toSection: .rooms)
+            snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }
+                                          .sorted { $0.room!.createdAt > $1.room!.createdAt },
+                                 toSection: .rooms)
             await self.dataSource.apply(snapshot, animatingDifferences: false)  // wierd to see rooms move around
             roomTask = nil
         }

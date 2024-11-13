@@ -11,8 +11,11 @@ class GotItView: UIView {
         
     let doneButton: UIButton = {
         let button = UIButton()
-        var config = UIButton.Configuration.borderedProminent()
+        var config = UIButton.Configuration.bordered()
         config.title = "Got It!"
+        config.buttonSize = .large
+        config.baseForegroundColor = .wjBlack
+        config.baseBackgroundColor = .white
         config.buttonSize = .large
         button.configuration = config
         button.translatesAutoresizingMaskIntoConstraints = false

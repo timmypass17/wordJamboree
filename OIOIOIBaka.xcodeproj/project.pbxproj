@@ -56,6 +56,7 @@
 		32EF33DC2C8E8E2D000850A5 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33DB2C8E8E2D000850A5 /* Room.swift */; };
 		32EF33DF2C8FAFE8000850A5 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 32EF33DE2C8FAFE8000850A5 /* FirebaseDatabase */; };
 		32F1447E2CE16ECE00AEB35B /* GotItView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F1447D2CE16ECE00AEB35B /* GotItView.swift */; };
+		32F144802CE2F32300AEB35B /* PrivacyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F1447F2CE2F32300AEB35B /* PrivacyViewController.swift */; };
 		32F64FEE2C9B6C6B0046C20E /* ticking.wav in Resources */ = {isa = PBXBuildFile; fileRef = 32F64FED2C9B6C6B0046C20E /* ticking.wav */; };
 		32F64FF02C9B77A50046C20E /* TurnTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F64FEF2C9B77A50046C20E /* TurnTimer.swift */; };
 		32F9565B2CB0620F00DAA6E6 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F9565A2CB0620F00DAA6E6 /* SettingsViewController.swift */; };
@@ -86,7 +87,7 @@
 		32610AF22C992D2B0011946E /* bonk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bonk.mp3; sourceTree = "<group>"; };
 		32610AF42C9930140011946E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		32610AF62C9A28CB0011946E /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
-		326F93AD2C8B928E00B28F04 /* OIOIOIBaka.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OIOIOIBaka.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		326F93AD2C8B928E00B28F04 /* Word Jamboree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Word Jamboree.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		326F93B02C8B928E00B28F04 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		326F93B22C8B928E00B28F04 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		326F93B42C8B928E00B28F04 /* HomeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
@@ -115,6 +116,7 @@
 		32EF33D92C8E801F000850A5 /* RoomTitleTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTitleTableViewCell.swift; sourceTree = "<group>"; };
 		32EF33DB2C8E8E2D000850A5 /* Room.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
 		32F1447D2CE16ECE00AEB35B /* GotItView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GotItView.swift; sourceTree = "<group>"; };
+		32F1447F2CE2F32300AEB35B /* PrivacyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyViewController.swift; sourceTree = "<group>"; };
 		32F64FED2C9B6C6B0046C20E /* ticking.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ticking.wav; sourceTree = "<group>"; };
 		32F64FEF2C9B77A50046C20E /* TurnTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnTimer.swift; sourceTree = "<group>"; };
 		32F9565A2CB0620F00DAA6E6 /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
@@ -171,7 +173,7 @@
 		326F93AE2C8B928E00B28F04 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				326F93AD2C8B928E00B28F04 /* OIOIOIBaka.app */,
+				326F93AD2C8B928E00B28F04 /* Word Jamboree.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -179,16 +181,16 @@
 		326F93AF2C8B928E00B28F04 /* OIOIOIBaka */ = {
 			isa = PBXGroup;
 			children = (
-				3291FA622CE04C97005C490F /* SupplementaryViews */,
 				3213983F2CBC6B0200A636A7 /* OIOIOIBaka.entitlements */,
-				32610AEF2C99291F0011946E /* SoundEffects */,
-				326F93CE2C8BCA0200B28F04 /* Cells */,
+				32EF33D42C8E7229000850A5 /* Models */,
 				326F93C52C8BBAF600B28F04 /* Views */,
 				326F93C42C8BBAEE00B28F04 /* ViewControllers */,
+				326F93CE2C8BCA0200B28F04 /* Cells */,
+				3291FA622CE04C97005C490F /* SupplementaryViews */,
+				32610AEF2C99291F0011946E /* SoundEffects */,
 				326F93B02C8B928E00B28F04 /* AppDelegate.swift */,
 				326F93B22C8B928E00B28F04 /* SceneDelegate.swift */,
 				326F93B92C8B928F00B28F04 /* Assets.xcassets */,
-				32EF33D42C8E7229000850A5 /* Models */,
 				326F93BB2C8B928F00B28F04 /* LaunchScreen.storyboard */,
 				326F93BE2C8B928F00B28F04 /* Info.plist */,
 				326F93E02C8CE9C600B28F04 /* GoogleService-Info.plist */,
@@ -215,6 +217,7 @@
 				321398352CBAF78400A636A7 /* AuthViewController.swift */,
 				3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */,
 				32A511B92CDAE5CC00EC768A /* HowToPlayViewController.swift */,
+				32F1447F2CE2F32300AEB35B /* PrivacyViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -306,7 +309,7 @@
 				32F956662CB1DEB500DAA6E6 /* FirebaseStorage */,
 			);
 			productName = OIOIOIBaka;
-			productReference = 326F93AD2C8B928E00B28F04 /* OIOIOIBaka.app */;
+			productReference = 326F93AD2C8B928E00B28F04 /* Word Jamboree.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -381,6 +384,7 @@
 				32F956652CB0755000DAA6E6 /* SettingsHeaderView.swift in Sources */,
 				32C06C592C90E85200D3676D /* Item.swift in Sources */,
 				32610AEC2C98C9440011946E /* ArrowView.swift in Sources */,
+				32F144802CE2F32300AEB35B /* PrivacyViewController.swift in Sources */,
 				32D23A2E2CA264F6002C4F04 /* KeyboardView.swift in Sources */,
 				326F93D22C8BD95600B28F04 /* LineView.swift in Sources */,
 				3213983A2CBAFA2200A636A7 /* LoginViewController.swift in Sources */,
@@ -570,7 +574,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.timmynguyen.OIOIOIBaka;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Word Jamboree";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -598,7 +602,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.timmynguyen.OIOIOIBaka;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Word Jamboree";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

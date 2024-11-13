@@ -25,6 +25,7 @@ class AuthViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        navigationItem.title = "Sign In Providers"
         view.backgroundColor = .systemBackground
 
         loginViewController.delegate = self
