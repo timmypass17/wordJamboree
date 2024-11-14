@@ -48,7 +48,7 @@ class ThemeTableViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         let theme = UIUserInterfaceStyle.allCases[indexPath.row]
         Settings.shared.theme = theme
-        NotificationCenter.default.post(name: UIUserInterfaceStyle.valueChangedNotification, object: nil)
+        NotificationCenter.default.post(name: Settings.shared.themeChangedNotification, object: nil)
         delegate?.themeTableViewController(self, didSelectTheme: theme)
         tableView.reloadData()
     }

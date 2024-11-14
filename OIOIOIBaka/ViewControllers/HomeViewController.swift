@@ -52,12 +52,12 @@ class HomeViewController: UIViewController {
         super.viewDidLoad()
         title = "🥳 Word Jamboree"
         navigationController?.navigationBar.prefersLargeTitles = true
-        collectionView.backgroundColor = .wjBlack
+        collectionView.backgroundColor = .wjBackground
         settingsButton = UIBarButtonItem(
             image: UIImage(systemName: "gearshape.fill"),
             primaryAction: didTapSettingsButton()
         )
-        settingsButton.tintColor = .white
+//        settingsButton.tintColor = .white
         
         navigationItem.rightBarButtonItem = settingsButton
         

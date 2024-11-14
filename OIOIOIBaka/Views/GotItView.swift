@@ -15,7 +15,7 @@ class GotItView: UIView {
         config.title = "Got It!"
         config.buttonSize = .large
         config.baseForegroundColor = .white
-        config.baseBackgroundColor = .wjDarkGray
+        config.baseBackgroundColor = .wjButtonBackground
         config.buttonSize = .large
         button.configuration = config
         button.translatesAutoresizingMaskIntoConstraints = false

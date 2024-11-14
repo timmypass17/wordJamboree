@@ -63,9 +63,16 @@ class RoomCollectionViewCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         
-        backgroundColor = .wjDarkGray
+        layer.backgroundColor = UIColor.clear.cgColor
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOffset = CGSize(width: 0, height: 1.0)
+        layer.shadowOpacity = 0.2
+        layer.shadowRadius = 2
+        
+        backgroundColor = .wjRoomBg
         layer.cornerRadius = 8
         layer.cornerCurve = .continuous
+        
         
         playerCountContainer.addArrangedSubview(UIView())
         playerCountContainer.addArrangedSubview(playerCountImage)
@@ -98,4 +105,19 @@ class RoomCollectionViewCell: UICollectionViewCell {
 
 #Preview("RoomCollectionViewCell") {
     RoomCollectionViewCell()
+}
+
+extension UIView {
+    // OUTPUT 2
+    func dropShadow(color: UIColor, opacity: Float = 0.5, offSet: CGSize, radius: CGFloat = 1, scale: Bool = true) {
+      layer.masksToBounds = false
+      layer.shadowColor = color.cgColor
+      layer.shadowOpacity = opacity
+      layer.shadowOffset = offSet
+      layer.shadowRadius = radius
+
+      layer.shadowPath = UIBezierPath(rect: self.bounds).cgPath
+      layer.shouldRasterize = true
+      layer.rasterizationScale = scale ? UIScreen.main.scale : 1
+    }
 }

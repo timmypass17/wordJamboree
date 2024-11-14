@@ -16,6 +16,19 @@
       "appearances" : [
         {
           "appearance" : "luminosity",
+          "value" : "light"
+        }
+      ],
+      "color" : {
+        "platform" : "ios",
+        "reference" : "systemGroupedBackgroundColor"
+      },
+      "idiom" : "universal"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
           "value" : "dark"
         }
       ],
@@ -23,9 +36,9 @@
         "color-space" : "display-p3",
         "components" : {
           "alpha" : "1.000",
-          "blue" : "0x4E",
-          "green" : "0x8D",
-          "red" : "0x53"
+          "blue" : "0x13",
+          "green" : "0x12",
+          "red" : "0x12"
         }
       },
       "idiom" : "universal"

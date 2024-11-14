@@ -197,11 +197,10 @@ class PlayerView: UIView {
         
         // Set the entire text color to white
         let fullRange = NSRange(location: 0, length: word.count)
-        attributedString.addAttribute(.foregroundColor, value: UIColor.white, range: fullRange)
+        attributedString.addAttribute(.foregroundColor, value: UIColor.label, range: fullRange)
         
         // Set the color of the matching letters to green
         let lettersRange = (word as NSString).range(of: letters)
-//        attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
         attributedString.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: lettersRange)
 
         wordLabel.attributedText = attributedString

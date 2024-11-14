@@ -55,7 +55,8 @@ class GameViewController: UIViewController {
     let submitButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Submit"
-        config.baseBackgroundColor = .systemFill
+        config.baseBackgroundColor = .wjKeyUsed
+        config.baseForegroundColor = .label
         let button = UIButton(configuration: config)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -122,7 +123,7 @@ class GameViewController: UIViewController {
     }
     
     func setupView() {
-        view.backgroundColor = .wjBlack
+        view.backgroundColor = .wjBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.setHidesBackButton(true, animated: true)
         settingsButton = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: settingsMenu())

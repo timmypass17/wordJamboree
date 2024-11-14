@@ -26,7 +26,7 @@ class KeyboardView: UIView {
         button.setTitle("\(letter)", for: .normal)
         button.titleLabel?.font = UIFont.systemFont(ofSize: 20)
         button.backgroundColor = .systemGray
-        button.setTitleColor(.label, for: .normal)
+//        button.setTitleColor(.label, for: .normal)
         button.layer.cornerRadius = 8
         button.layer.cornerCurve = .continuous // more round
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -43,8 +43,8 @@ class KeyboardView: UIView {
         button.setImage(image, for: .normal)
 //        button.tintColor = .white // Set image tint color to white
 //        button.backgroundColor = .systemBlue // Set button background to blue
-        button.tintColor = .white // Set image tint color to white
-        button.backgroundColor = .systemFill
+//        button.tintColor = .white // Set image tint color to white
+        button.backgroundColor = .wjKeyUsed
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -60,7 +60,7 @@ class KeyboardView: UIView {
         button.setImage(UIImage(systemName: "delete.left.fill"), for: .normal)
         button.tintColor = .label
         button.titleLabel?.font = UIFont.systemFont(ofSize: 20)
-        button.backgroundColor = .systemFill
+        button.backgroundColor = .wjKeyUsed
         button.layer.cornerRadius = 8
         button.setTitleColor(.label, for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -152,17 +152,16 @@ class KeyboardView: UIView {
                 
                 if lettersUsed.contains(Character(letter)) {
                     // Used
-//                    keyButton.backgroundColor = .systemFill
-                    keyButton.backgroundColor = .wjDarkGray
-
+                    keyButton.backgroundColor = .wjKeyUsed
+                    keyButton.setTitleColor(.label, for: .normal)
                 } else if word.contains(letter) {
-//                    keyButton.backgroundColor = .accent
                     // New letter used
-                    keyButton.backgroundColor = .wjGreen
+                    keyButton.backgroundColor = .wjKeyNew
+                    keyButton.setTitleColor(.white, for: .normal)
                 } else {
                     // Unused
-//                    keyButton.backgroundColor = .systemGray
-                    keyButton.backgroundColor = .wjGray
+                    keyButton.backgroundColor = .wjKeyUnused
+                    keyButton.setTitleColor(.label, for: .normal)
                 }
             }
         }

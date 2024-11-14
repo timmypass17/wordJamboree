@@ -108,9 +108,9 @@ class SettingsViewController: UIViewController {
         super.viewDidLoad()
         navigationItem.title = "Settings"
         navigationItem.largeTitleDisplayMode = .never
-        navigationController?.navigationBar.tintColor = .white  // change back and barbutton colors
+//        navigationController?.navigationBar.tintColor = .white  // change back and barbutton colors
         
-        tableView.backgroundColor = .wjBlack
+//        tableView.backgroundColor = .wjBackground
 
         tableView.dataSource = self
         tableView.delegate = self

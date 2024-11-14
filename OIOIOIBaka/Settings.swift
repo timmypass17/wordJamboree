@@ -12,6 +12,8 @@ import UIKit
 struct Settings {
     static var shared = Settings()
     
+    let themeChangedNotification = Notification.Name("Theme.ValueChangedNotification")
+
     var name: String {
         get {
             return unarchiveJSON(key: "name") ?? ""
@@ -58,7 +60,6 @@ extension Settings {
 
 extension UIUserInterfaceStyle: Codable, CaseIterable {
     public static var allCases: [UIUserInterfaceStyle] = [.unspecified, .light, .dark]
-    static let valueChangedNotification = Notification.Name("Theme.ValueChangedNotification")
     
     var description: String {
         switch self {

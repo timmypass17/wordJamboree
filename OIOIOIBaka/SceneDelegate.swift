@@ -18,14 +18,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(updateTheme),
+                                               name: Settings.shared.themeChangedNotification,
+                                               object: nil)
+        
         window = UIWindow(frame: windowScene.coordinateSpace.bounds)
         window?.windowScene = windowScene
+        updateTheme()
         let service = FirebaseService()
         let homeViewController = HomeViewController(service: service)
         window?.rootViewController = UINavigationController(rootViewController: homeViewController)
         window?.makeKeyAndVisible()
     }
 
+    @objc func updateTheme() {
+        window?.overrideUserInterfaceStyle = Settings.shared.theme
+    }
+    
     func sceneDidDisconnect(_ scene: UIScene) {
         // Called as the scene is being released by the system.
         // This occurs shortly after the scene enters the background, or when its session is discarded.

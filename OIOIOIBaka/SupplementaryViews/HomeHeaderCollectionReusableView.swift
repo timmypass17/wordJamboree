@@ -26,28 +26,29 @@ class HomeHeaderView: UICollectionReusableView {
     
     let createButton: UIButton = {
         let button = UIButton()
-        var config = UIButton.Configuration.plain()
+        var config = UIButton.Configuration.bordered()
         config.title = "Create Room"
-        config.baseForegroundColor = .white
+        config.baseForegroundColor = .wjButtonForeground
+        config.baseBackgroundColor = .wjButtonBackground
         config.buttonSize = .large
         button.configuration = config
         button.layer.cornerRadius = 8
         button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.white.cgColor
+//        button.layer.borderColor = UIColor.wjText.cgColor
         return button
     }()
     
-    let joinButton: UIButton = {
+    let howToPlayButton: UIButton = {
         let button = UIButton()
         var config = UIButton.Configuration.plain()
         config.title = "How to Play"
         config.buttonSize = .large
-        config.baseForegroundColor = .white
+        config.baseForegroundColor = .wjText
         config.buttonSize = .large
         button.configuration = config
         button.layer.cornerRadius = 8
         button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.white.cgColor
+        button.layer.borderColor = UIColor.wjText.cgColor
         return button
     }()
     
@@ -87,10 +88,10 @@ class HomeHeaderView: UICollectionReusableView {
         super.init(frame: frame)
         
         createButton.addAction(didTapCreateRoom(), for: .touchUpInside)
-        joinButton.addAction(didTapJoinRoom(), for: .touchUpInside)
+        howToPlayButton.addAction(didTapJoinRoom(), for: .touchUpInside)
         
         buttonsContainer.addArrangedSubview(createButton)
-        buttonsContainer.addArrangedSubview(joinButton)
+        buttonsContainer.addArrangedSubview(howToPlayButton)
         
         container.addArrangedSubview(titleLabel)
         container.addArrangedSubview(buttonsContainer)
@@ -115,6 +116,12 @@ class HomeHeaderView: UICollectionReusableView {
 //            createActivityView.leadingAnchor.constraint(equalTo: createButton.leadingAnchor),
 //            createActivityView.trailingAnchor.constraint(equalTo: createButton.trailingAnchor)
         ])
+    }
+    
+    override func layoutSubviews() {
+        // note: Border colors do not change automatically when changing between light and dark mode
+        createButton.layer.borderColor = UIColor(named: "wjButtonBorder")?.resolvedColor(with: self.traitCollection).cgColor
+        howToPlayButton.layer.borderColor = UIColor(named: "wjText")?.resolvedColor(with: self.traitCollection).cgColor
     }
     
     required init?(coder: NSCoder) {

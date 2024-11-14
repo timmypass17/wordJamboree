@@ -21,7 +21,7 @@ class CurrentWordView: UIView {
     
     let container: UIView = {
         let view = UIView()
-        view.backgroundColor = .wjBlack
+        view.backgroundColor = .wjBackground
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
