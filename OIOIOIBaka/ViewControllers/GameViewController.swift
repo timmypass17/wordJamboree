@@ -69,6 +69,7 @@ class GameViewController: UIViewController {
         playerView.crownView.isHidden = false
         playerView.heartsView.isHidden = true
         playerView.wordLabel.text = "WINNER"
+        playerView.wordLabel.textColor = .systemGreen
         return playerView
     }()
     
@@ -126,7 +127,7 @@ class GameViewController: UIViewController {
         view.backgroundColor = .wjBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.setHidesBackButton(true, animated: true)
-        settingsButton = UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: settingsMenu())
+        settingsButton = UIBarButtonItem(image: UIImage(systemName: "door.left.hand.open"), menu: settingsMenu())
         settingsButton.tintColor = .label
         messageButton = UIBarButtonItem(image: UIImage(systemName: "message"), primaryAction: didTapMessageButton())
         messageButton.tintColor = .label
@@ -316,7 +317,8 @@ class GameViewController: UIViewController {
     }
     
     func exitAction() -> UIAction {
-        return UIAction(title: "Exit Game", image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), attributes: .destructive) { [weak self] _ in
+        
+        return UIAction(title: "Leave Room", image: UIImage(systemName: "figure.walk"), attributes: .destructive) { [weak self] _ in
             guard let self else { return }
             Task {
                 do {

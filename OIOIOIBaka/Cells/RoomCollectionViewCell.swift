@@ -21,6 +21,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
         let label = UILabel()
         label.text = "#ABCD"
         label.textColor = .secondaryLabel
+        label.font = UIFont.preferredFont(forTextStyle: .subheadline)
         return label
     }()
     
@@ -59,19 +60,23 @@ class RoomCollectionViewCell: UICollectionViewCell {
         stackView.spacing = 4
         return stackView
     }()
+    
+    let border = CAShapeLayer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         
-        layer.backgroundColor = UIColor.clear.cgColor
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOffset = CGSize(width: 0, height: 1.0)
-        layer.shadowOpacity = 0.2
-        layer.shadowRadius = 2
-        
         backgroundColor = .wjRoomBg
-        layer.cornerRadius = 8
+        layer.cornerRadius = 12
         layer.cornerCurve = .continuous
+        
+        border.strokeColor = UIColor.wjDashedBorder.cgColor
+        border.fillColor = nil
+        border.lineDashPattern = [12, 5]
+        border.lineWidth = 2
+        border.path = UIBezierPath(roundedRect: bounds, cornerRadius: layer.cornerRadius).cgPath
+        border.frame = bounds;
+        self.layer.addSublayer(border)
         
         
         playerCountContainer.addArrangedSubview(UIView())
@@ -86,11 +91,16 @@ class RoomCollectionViewCell: UICollectionViewCell {
         addSubview(container)
         
         NSLayoutConstraint.activate([
-            container.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-            container.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            container.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8)
+            container.topAnchor.constraint(equalTo: layoutMarginsGuide.topAnchor),
+            container.bottomAnchor.constraint(equalTo: layoutMarginsGuide.bottomAnchor),
+            container.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: layoutMarginsGuide.trailingAnchor)
         ])
+    }
+    
+    override func layoutSubviews() {
+//        howToPlayButton.layer.borderColor = UIColor(named: "wjButtonSecondaryBorder")?.resolvedColor(with: self.traitCollection).cgColor
+        border.strokeColor = UIColor(named: "wjDashedBorder")?.resolvedColor(with: self.traitCollection).cgColor
     }
     
     required init?(coder: NSCoder) {
@@ -105,19 +115,4 @@ class RoomCollectionViewCell: UICollectionViewCell {
 
 #Preview("RoomCollectionViewCell") {
     RoomCollectionViewCell()
-}
-
-extension UIView {
-    // OUTPUT 2
-    func dropShadow(color: UIColor, opacity: Float = 0.5, offSet: CGSize, radius: CGFloat = 1, scale: Bool = true) {
-      layer.masksToBounds = false
-      layer.shadowColor = color.cgColor
-      layer.shadowOpacity = opacity
-      layer.shadowOffset = offSet
-      layer.shadowRadius = radius
-
-      layer.shadowPath = UIBezierPath(rect: self.bounds).cgPath
-      layer.shouldRasterize = true
-      layer.rasterizationScale = scale ? UIScreen.main.scale : 1
-    }
 }

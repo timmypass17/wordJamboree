@@ -13,11 +13,14 @@ class GotItView: UIView {
         let button = UIButton()
         var config = UIButton.Configuration.bordered()
         config.title = "Got It!"
-        config.buttonSize = .large
-        config.baseForegroundColor = .white
+        config.baseForegroundColor = .wjButtonForeground
         config.baseBackgroundColor = .wjButtonBackground
         config.buttonSize = .large
         button.configuration = config
+        button.layer.cornerRadius = 24
+        button.layer.borderWidth = 2
+        button.layer.cornerCurve = .continuous
+        button.layer.masksToBounds = true // clip to rounded layer border
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()

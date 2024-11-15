@@ -32,23 +32,27 @@ class HomeHeaderView: UICollectionReusableView {
         config.baseBackgroundColor = .wjButtonBackground
         config.buttonSize = .large
         button.configuration = config
-        button.layer.cornerRadius = 8
-        button.layer.borderWidth = 1
-//        button.layer.borderColor = UIColor.wjText.cgColor
+        button.layer.cornerRadius = 24
+        button.layer.borderWidth = 2
+        button.layer.cornerCurve = .continuous
+        button.layer.masksToBounds = true // clip to rounded layer border
         return button
     }()
     
     let howToPlayButton: UIButton = {
         let button = UIButton()
-        var config = UIButton.Configuration.plain()
+        var config = UIButton.Configuration.bordered()
         config.title = "How to Play"
         config.buttonSize = .large
-        config.baseForegroundColor = .wjText
+        config.baseForegroundColor = .wjButtonSecondaryForeground
+        config.baseBackgroundColor = .wjButtonSecondaryBackground
         config.buttonSize = .large
         button.configuration = config
-        button.layer.cornerRadius = 8
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.wjText.cgColor
+        button.layer.cornerRadius = 24
+        button.layer.borderWidth = 2
+        button.layer.cornerCurve = .continuous
+        button.layer.masksToBounds = true
+        button.layer.borderColor = UIColor.wjButtonSecondaryBorder.cgColor
         return button
     }()
     
@@ -120,8 +124,8 @@ class HomeHeaderView: UICollectionReusableView {
     
     override func layoutSubviews() {
         // note: Border colors do not change automatically when changing between light and dark mode
-        createButton.layer.borderColor = UIColor(named: "wjButtonBorder")?.resolvedColor(with: self.traitCollection).cgColor
-        howToPlayButton.layer.borderColor = UIColor(named: "wjText")?.resolvedColor(with: self.traitCollection).cgColor
+//        createButton.layer.borderColor = UIColor(named: "wjButtonBorder")?.resolvedColor(with: self.traitCollection).cgColor
+        howToPlayButton.layer.borderColor = UIColor(named: "wjButtonSecondaryBorder")?.resolvedColor(with: self.traitCollection).cgColor
     }
     
     required init?(coder: NSCoder) {

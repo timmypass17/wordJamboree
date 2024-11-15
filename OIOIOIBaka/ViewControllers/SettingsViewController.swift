@@ -363,7 +363,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
                 cell.label.textColor = .red
             } else {
                 cell.label.text = "Sign In"
-                cell.label.textColor = .accent
+                cell.label.textColor = .link
             }
             cell.selectionStyle = .default
             return cell

@@ -62,7 +62,7 @@ class PlayerView: UIView {
     let crownView: UILabel = {
         let label = UILabel()
         label.isHidden = true
-        label.text = "👑"
+        label.text = "👑" // 👑 🥇 🏅
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
