@@ -120,7 +120,7 @@ class GameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
-        gameManager.setup()
+        gameManager.attachObservers()
     }
     
     func setupView() {
@@ -141,10 +141,6 @@ class GameViewController: UIViewController {
         keyboardView.delegate = self
         keyboardView.soundManager = soundManager
         keyboardView.update(word: "", lettersUsed: gameManager.lettersUsed)
-        
-        NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
-
-        NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
 
         submitButton.addAction(didTapSubmit(), for: .touchUpInside)
         
@@ -248,42 +244,14 @@ class GameViewController: UIViewController {
             joinButton.isHidden = false
             leaveButton.isHidden = true
 
-            do {
-                Task {
+            Task {
+                do {
                     try await self.gameManager.exit()
+                } catch {
+                    print("Error removing player: \(error)")
                 }
-            } catch {
-                print("Error removing player: \(error)")
             }
         }
-    }
-    
-    // To clean up afk players. *Not needed anymore, will skip players turn if nothing happens
-    @objc func didEnterBackground() {
-//        print("didEnterBackground")
-//        exitTask?.cancel()
-//        exitTask = Task {
-//            do {
-//                try await self.gameManager.exit()
-//            } catch {
-//                print("Error removing player: \(error)")
-//            }
-//        }
-    }
-    
-    @objc func willEnterForeground() {
-//        print("willEnterForeground")
-//        let alert = UIAlertController(
-//            title: "Inactive Warning",
-//            message: "Leaving the app will result in being kicked from the session. Please stay active to continue playing!",
-//            preferredStyle: .alert
-//        )
-//
-//        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-//            self.navigationController?.popViewController(animated: true)
-//        })
-//
-//        self.present(alert, animated: true, completion: nil)
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -311,9 +279,7 @@ class GameViewController: UIViewController {
     }
 
     func settingsMenu() -> UIMenu {
-        
         UIMenu(children: [exitAction()])
-
     }
     
     func exitAction() -> UIAction {
@@ -339,6 +305,9 @@ class GameViewController: UIViewController {
         }
     }
 
+    private func pointArrow(to position: Int) {
+        self.currentWordView?.pointArrow(at: self.playerViews[position], self)
+    }
 }
 
 extension GameViewController: UITextFieldDelegate {
@@ -395,15 +364,8 @@ extension GameViewController: GameManagerDelegate {
               let position = playerInfo["position"] as? Int,
               position == 0
         else { return }
-        print("2")
 
-        Task {
-            do {
-                try await manager.startGame()
-            } catch {
-                print("Fail to start game: \(error)")
-            }
-        }
+        manager.startGame()
     }
     
     func gameManager(_ manager: GameManager, countdownTimeUpdated timeRemaining: Int) {
@@ -414,28 +376,6 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-//    func gameManager(_ manager: GameManager, playerJoined playerInfo: [String : AnyObject], playerID: String) {
-//        guard let additionalInfo = playerInfo["additionalInfo"],
-//              let name = additionalInfo["name"] as? String,
-//              let pfpImage = manager.pfps[playerID]
-//        else { return }
-//
-//        let message = Message(uid: playerID, name: name, message: "Player Joined!", pfpImage: pfpImage, messageType: .system)
-//        chatManager.messages.append(message)
-//        NotificationCenter.default.post(name: .newMessageNotification, object: nil)
-//    }
-    
-//    Too buggy, gets called when games ends
-//    func gameManager(_ manager: GameManager, playerLeft playerInfo: [String : AnyObject], playerID: String) {
-//        guard let additionalInfo = playerInfo["additionalInfo"],
-//              let name = additionalInfo["name"] as? String,
-//              let pfpImage = manager.pfps[playerID]
-//        else { return }
-//
-//        let message = Message(uid: playerID, name: name, message: "Player Left!", pfpImage: pfpImage, messageType: .system)
-//        chatManager.messages.append(message)
-//        NotificationCenter.default.post(name: .newMessageNotification, object: nil)
-//    }
     
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : AnyObject]) {
         print(manager.pfps)
@@ -474,13 +414,6 @@ extension GameViewController: GameManagerDelegate {
         keyboardView.update(word: "", lettersUsed: manager.lettersUsed)
     }
     
-    // TODO: After game ends and new game begins.
-    //  - Winner is still being shown, should hide
-    //  - Hearts are invisblem should be visible
-    func gameManager(_ manager: GameManager, winnerUpdated playerID: String) {
-//        showWinner(userID: playerID)
-    }
-    
     func gameManager(_ manager: GameManager, player playerID: String, updatedWord: String) {
         guard let playerInfo = manager.playersInfo[playerID] as? [String: AnyObject],
               let position = playerInfo["position"] as? Int
@@ -493,20 +426,6 @@ extension GameViewController: GameManagerDelegate {
         playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
     }
     
-    func gameManager(_ manager: GameManager, playerWordsUpdated playerWords: [String : String]) {
-        for (uid, playerInfo) in manager.playersInfo {
-            guard let position = playerInfo["position"] as? Int,
-                  let updatedWord = playerWords[uid]
-            else { continue }
-            
-            if manager.currentPlayerTurn != manager.service.uid {
-                soundManager.playKeyboardClickSound()
-            }
-            
-            playerViews[position].updateUserWordTextColor(word: updatedWord, matching: manager.currentLetters)
-        }
-    }
-    
     func gameManager(_ manager: GameManager, currentLettersUpdated letters: String) {
         currentWordView?.wordLabel.text = letters
     }
@@ -516,10 +435,6 @@ extension GameViewController: GameManagerDelegate {
               let position = playerInfo["position"] as? Int
         else { return }
         pointArrow(to: position)
-    }
-    
-    private func pointArrow(to position: Int) {
-        self.currentWordView?.pointArrow(at: self.playerViews[position], self)
     }
     
     func gameManager(_ manager: GameManager, gameStatusUpdated roomStatus: GameState.Status, winner: [String: AnyObject]?) {
@@ -579,10 +494,6 @@ extension GameViewController: GameManagerDelegate {
         }
     }
     
-    func gameManager(_ manager: GameManager, playersReadyUpdated isReady: [String : Bool]) {
-    }
-    
-
     func gameManager(_ manager: GameManager, willShakePlayerAt position: Int) {
         playerViews[position].shake()
     }

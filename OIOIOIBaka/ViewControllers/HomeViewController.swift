@@ -22,6 +22,7 @@ class HomeViewController: UIViewController {
     var activityView: UIActivityIndicatorView = {
         let view = UIActivityIndicatorView(style: .large)
         view.hidesWhenStopped = true
+        view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
@@ -30,6 +31,26 @@ class HomeViewController: UIViewController {
     let service: FirebaseService
     var roomTask: Task<Void, Never>? = nil
 
+    enum Item: Hashable {
+        case room(String, Room)
+        
+        var roomID: String? {
+            if case .room(let roomID, _) = self {
+                return roomID
+            } else {
+                return nil
+            }
+        }
+        
+        var room: Room? {
+            if case .room(_, let room) = self {
+                return room
+            } else {
+                return nil
+            }
+        }
+    }
+    
     enum Section: Hashable {
         case rooms
     }
@@ -57,15 +78,17 @@ class HomeViewController: UIViewController {
             image: UIImage(systemName: "gearshape.fill"),
             primaryAction: didTapSettingsButton()
         )
-//        settingsButton.tintColor = .white
-        
         navigationItem.rightBarButtonItem = settingsButton
         
         setupCollectionView()
         loadRooms()
         
         view.addSubview(activityView)
-        activityView.center = view.center
+        
+        NSLayoutConstraint.activate([
+            activityView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            activityView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
     }
     
     // class func is similar to static func but class func is overridable
@@ -196,25 +219,26 @@ class HomeViewController: UIViewController {
         return dataSource
     }
     
+    // Called multple time if hold?
     private func loadRooms() {
         roomTask?.cancel()
         roomTask = Task {
             collectionView.refreshControl?.beginRefreshing()
             let roomsDict = await service.getRooms()
-            collectionView.refreshControl?.endRefreshing()
             var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
             snapshot.appendSections([.rooms])
             snapshot.appendItems(roomsDict.map { Item.room($0.key, $0.value) }
                                           .sorted { $0.room!.createdAt > $1.room!.createdAt },
                                  toSection: .rooms)
             await self.dataSource.apply(snapshot, animatingDifferences: false)  // wierd to see rooms move around
+            collectionView.refreshControl?.endRefreshing()
             roomTask = nil
         }
     }
     
     
     private func joinRoom(_ roomID: String) async {
-        guard await roomExists(roomID) else {
+        guard await service.roomExists(roomID) else {
             invalidRoomAlert()
             return
         }
@@ -234,15 +258,6 @@ class HomeViewController: UIViewController {
         }
     }
     
-    private func roomExists(_ roomID: String) async -> Bool {
-        let (roomSnapshot, _) = await service.ref
-            .child("rooms")
-            .child(roomID)
-            .observeSingleEventAndPreviousSiblingKey(of: .value)
-        
-        return roomSnapshot.exists()
-    }
-    
     private func invalidRoomAlert() {
         let alert = UIAlertController(
             title: "Room Not Found",
@@ -259,15 +274,22 @@ class HomeViewController: UIViewController {
 }
 
 extension HomeViewController: UICollectionViewDelegate {
+    
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let item = dataSource.itemIdentifier(for: indexPath) else { return }
-        
         activityView.startAnimating()
+        
         roomTask?.cancel()
         roomTask = Task {
+//            defer { // called when exiting scope, no matter what. Used for clean up
+//                isJoiningRoom = false // Unlock after task finishes
+//                activityView.stopAnimating()
+//                roomTask = nil
+//            }
+            
             await joinRoom(item.roomID!)
-            roomTask = nil
             activityView.stopAnimating()
+            roomTask = nil
         }
     }
 }
@@ -302,8 +324,4 @@ extension HomeViewController: HomeHeaderViewDelegate {
         navigationController?.present(UINavigationController(rootViewController: howToPlayViewController), animated: true)
     }
     
-}
-
-#Preview {
-    UINavigationController(rootViewController: HomeViewController(service: FirebaseService()))
 }

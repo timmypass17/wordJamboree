@@ -41,6 +41,7 @@ class FirebaseService {
     let auth = Auth.auth()
     var authListener: AuthStateDidChangeListenerHandle?
     var authState: AuthenticationState = .guest
+    var letterSequences: [String] = []
 
     init() {
         // No accounts, just use guest accounts and store user's name and pfp
@@ -77,6 +78,19 @@ class FirebaseService {
                     try await auth.signInAnonymously() // triggers auth state again
                 }
             }
+        }
+        
+        loadLetterSequences()
+    }
+    
+    func loadLetterSequences() {
+        guard let filePath = Bundle.main.path(forResource: "LetterSequences", ofType: "txt") else { return }
+        
+        do {
+            let fileContent = try String(contentsOfFile: filePath)
+            letterSequences = fileContent.components(separatedBy: .newlines).filter { !$0.isEmpty }
+        } catch {
+            print("Error reading file: \(error)")
         }
     }
     
@@ -224,7 +238,7 @@ class FirebaseService {
         
         let game = Game(
             roomID: roomID,
-            currentLetters: GameManager.generateRandomLetters(),
+            currentLetters: LetterSequences.shared.getRandomLetters(),
             secondsPerTurn: Int.random(in: 10...30) + 3,
             rounds: 1,
             playersInfo: [
@@ -317,6 +331,15 @@ class FirebaseService {
             .observeSingleEventAndPreviousSiblingKey(of: .value)
         
         return snapshot.toObject([String: Room].self) ?? [:]
+    }
+    
+    func roomExists(_ roomID: String) async -> Bool {
+        let (roomSnapshot, _) = await ref
+            .child("rooms")
+            .child(roomID)
+            .observeSingleEventAndPreviousSiblingKey(of: .value)
+        
+        return roomSnapshot.exists()
     }
 }
 

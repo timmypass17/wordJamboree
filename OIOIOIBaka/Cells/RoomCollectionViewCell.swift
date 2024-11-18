@@ -108,7 +108,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
     }
     
     func update(room: Room) {
-        titleLabel.text = room.title
+        titleLabel.text = "\(room.title)"
         playersCountLabel.text = "\(room.currentPlayerCount)"
     }
 }
