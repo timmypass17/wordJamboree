@@ -48,14 +48,6 @@ extension Settings {
         
         return try! JSONDecoder().decode(T.self, from: data)
     }
-    
-    private func generateRandomUsername() -> String {
-        var digits: [String] = []
-        for _ in 0..<4 {
-            digits.append(String(Int.random(in: 0...9)))
-        }
-        return "user" + digits.joined()
-    }
 }
 
 extension UIUserInterfaceStyle: Codable, CaseIterable {

@@ -41,7 +41,6 @@ class FirebaseService {
     let auth = Auth.auth()
     var authListener: AuthStateDidChangeListenerHandle?
     var authState: AuthenticationState = .guest
-    var letterSequences: [String] = []
 
     init() {
         // No accounts, just use guest accounts and store user's name and pfp
@@ -80,33 +79,8 @@ class FirebaseService {
             }
         }
         
-        loadLetterSequences()
     }
-    
-    func loadLetterSequences() {
-        guard let filePath = Bundle.main.path(forResource: "LetterSequences", ofType: "txt") else { return }
-        
-        do {
-            let fileContent = try String(contentsOfFile: filePath)
-            letterSequences = fileContent.components(separatedBy: .newlines).filter { !$0.isEmpty }
-        } catch {
-            print("Error reading file: \(error)")
-        }
-    }
-    
-    func clearUserData() async throws {
-//        Settings.shared.name = generateRandomUsername()
-        try await deleteProfilePicture()
-        NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
-    }
-    
-    private func deleteProfilePicture() async throws {
-        guard let currentUser = auth.currentUser else { return }
-        let pfpRef = storage.child("pfps/\(currentUser.uid).jpg")
-        try await pfpRef.delete()
-        self.pfpImage = nil
-    }
-    
+
     func signInWithGoogle(_ viewControlller: UIViewController) async throws -> AuthDataResult? {
         guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
         
@@ -133,6 +107,7 @@ class FirebaseService {
         let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
         if let guestUser = auth.currentUser, guestUser.isAnonymous {
             do {
+                // Convert anonymous account -> Google account
                 let res = try await guestUser.link(with: credential)
                 self.authState = .permanent
                 NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
@@ -143,7 +118,7 @@ class FirebaseService {
                     print("This Google account is already linked to another account.")
                 }
                 
-                // Fallback to sign in directly
+                // Google account exists already, log into it
                 do {
                     let res = try await auth.signIn(with: credential)
                     print("Signed in to Google account!")
@@ -194,18 +169,13 @@ class FirebaseService {
         let userDocument = try await userRef.getDocument()
         if userDocument.exists {
             let user = try userDocument.data(as: MyUser.self)
-            print("Got existing user")
             return user
         }
-        print("User not found")
         return nil
     }
 
     private func createUser(uid: String) async throws -> MyUser {
-        // Create new user
-        let userToAdd = MyUser(
-            name: generateRandomUsername()
-        )
+        let userToAdd = MyUser()
         
         try await db.collection("users").document(uid).setData([
             "name": userToAdd.name,
@@ -301,27 +271,19 @@ class FirebaseService {
             ]
         )
 
-        // TODO: 1. Maybe just create room and add cloud function to detect new room created and create other realted objects from cloud function
-        // TODO: 2. Or let client create "Incoming Room" object and detect new Incoming Room and create full Room object and other objects
-        //          - see doc on incomingMove reference
-        // simultaneous updates (u can observe nodes only, but can update specific fields using path)
         let updates: [String: Any] = [
             "/rooms/\(roomID)": room.toDictionary(),
             "/games/\(roomID)": game.toDictionary()
         ]
         
-        // atomic - either all updates succeed or all updates fail
         try await ref.updateChildValues(updates)
-        print("Created room and game successfully with roomID: \(roomID)")
-        
         return (roomID, room)
-        
     }
     
     func getRooms() async -> [String: Room] {
-//        let fiveMinutesAgo = currentTimestamp - (5 * 60 * 1000)
+        let fiveMinutesAgo = currentTimestamp - (5 * 60 * 1000)
         // TODO: For debugging
-        let fiveMinutesAgo = currentTimestamp - (100 * 60 * 1000)
+//        let fiveMinutesAgo = currentTimestamp - (100 * 60 * 1000)
 
         // heartbeat is updated too quickly
         let (snapshot, _) = await ref.child("rooms")
@@ -374,16 +336,6 @@ enum FirebaseServiceError: Error {
         case .invalidObject:
             return "Failed to convert snapshot to object"
         }
-    }
-}
-
-extension FirebaseService {
-    private func generateRandomUsername() -> String {
-        var digits: [String] = []
-        for _ in 0..<4 {
-            digits.append(String(Int.random(in: 0...9)))
-        }
-        return "user" + digits.joined()
     }
 }
 

@@ -897,7 +897,6 @@ class GameManager {
 extension GameManager: TurnTimerDelegate {
     func turnTimer(_ sender: TurnTimer, timeRanOut: Bool) {
         turnTimer?.stopTimer()
-//        guard currentPlayerTurn == service.uid else { return }
         if currentPlayerTurn == service.uid {
             delegate?.gameManager(self, timeRanOut: true)
             Task {

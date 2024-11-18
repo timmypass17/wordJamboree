@@ -76,8 +76,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
         border.lineWidth = 2
         border.path = UIBezierPath(roundedRect: bounds, cornerRadius: layer.cornerRadius).cgPath
         border.frame = bounds;
-        self.layer.addSublayer(border)
-        
+        layer.addSublayer(border)
         
         playerCountContainer.addArrangedSubview(UIView())
         playerCountContainer.addArrangedSubview(playerCountImage)
@@ -99,7 +98,6 @@ class RoomCollectionViewCell: UICollectionViewCell {
     }
     
     override func layoutSubviews() {
-//        howToPlayButton.layer.borderColor = UIColor(named: "wjButtonSecondaryBorder")?.resolvedColor(with: self.traitCollection).cgColor
         border.strokeColor = UIColor(named: "wjDashedBorder")?.resolvedColor(with: self.traitCollection).cgColor
     }
     

@@ -29,7 +29,6 @@
 		326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B42C8B928E00B28F04 /* HomeViewController.swift */; };
 		326F93BA2C8B928F00B28F04 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 326F93B92C8B928F00B28F04 /* Assets.xcassets */; };
 		326F93BD2C8B928F00B28F04 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = 326F93BC2C8B928F00B28F04 /* Base */; };
-		326F93CD2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93CC2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift */; };
 		326F93D22C8BD95600B28F04 /* LineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93D12C8BD95600B28F04 /* LineView.swift */; };
 		326F93D42C8BE2B200B28F04 /* RoomCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93D32C8BE2B100B28F04 /* RoomCollectionViewCell.swift */; };
 		326F93D92C8CE5E700B28F04 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 326F93D82C8CE5E700B28F04 /* FirebaseAnalytics */; };
@@ -53,7 +52,6 @@
 		32D23A2E2CA264F6002C4F04 /* KeyboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D23A2D2CA264F6002C4F04 /* KeyboardView.swift */; };
 		32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D22C8E70D4000850A5 /* FirebaseService.swift */; };
 		32EF33D62C8E7247000850A5 /* MyUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D52C8E7247000850A5 /* MyUser.swift */; };
-		32EF33DA2C8E801F000850A5 /* RoomTitleTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33D92C8E801F000850A5 /* RoomTitleTableViewCell.swift */; };
 		32EF33DC2C8E8E2D000850A5 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EF33DB2C8E8E2D000850A5 /* Room.swift */; };
 		32EF33DF2C8FAFE8000850A5 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 32EF33DE2C8FAFE8000850A5 /* FirebaseDatabase */; };
 		32F1447E2CE16ECE00AEB35B /* GotItView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F1447D2CE16ECE00AEB35B /* GotItView.swift */; };
@@ -97,7 +95,6 @@
 		326F93B92C8B928F00B28F04 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		326F93BC2C8B928F00B28F04 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		326F93BE2C8B928F00B28F04 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		326F93CC2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeaderCollectionViewCell.swift; sourceTree = "<group>"; };
 		326F93D12C8BD95600B28F04 /* LineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineView.swift; sourceTree = "<group>"; };
 		326F93D32C8BE2B100B28F04 /* RoomCollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCollectionViewCell.swift; sourceTree = "<group>"; };
 		326F93E02C8CE9C600B28F04 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -115,7 +112,6 @@
 		32D23A2D2CA264F6002C4F04 /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
 		32EF33D22C8E70D4000850A5 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
 		32EF33D52C8E7247000850A5 /* MyUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyUser.swift; sourceTree = "<group>"; };
-		32EF33D92C8E801F000850A5 /* RoomTitleTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTitleTableViewCell.swift; sourceTree = "<group>"; };
 		32EF33DB2C8E8E2D000850A5 /* Room.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
 		32F1447D2CE16ECE00AEB35B /* GotItView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GotItView.swift; sourceTree = "<group>"; };
 		32F1447F2CE2F32300AEB35B /* PrivacyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyViewController.swift; sourceTree = "<group>"; };
@@ -150,6 +146,27 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		32367FAB2CEADECC001AF2A5 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				32F1447F2CE2F32300AEB35B /* PrivacyViewController.swift */,
+				32BF02212CE5480C007B3C40 /* ThemeTableViewController.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		32367FAC2CEAEDB2001AF2A5 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				32EF33D22C8E70D4000850A5 /* FirebaseService.swift */,
+				32C06C622C91082200D3676D /* GameManager.swift */,
+				32610AF42C9930140011946E /* SoundManager.swift */,
+				32F64FEF2C9B77A50046C20E /* TurnTimer.swift */,
+				3213982F2CB4476600A636A7 /* ChatManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
 		32610AEF2C99291F0011946E /* SoundEffects */ = {
 			isa = PBXGroup;
 			children = (
@@ -190,17 +207,13 @@
 				326F93CE2C8BCA0200B28F04 /* Cells */,
 				3291FA622CE04C97005C490F /* SupplementaryViews */,
 				32610AEF2C99291F0011946E /* SoundEffects */,
+				32367FAC2CEAEDB2001AF2A5 /* Managers */,
 				326F93B02C8B928E00B28F04 /* AppDelegate.swift */,
 				326F93B22C8B928E00B28F04 /* SceneDelegate.swift */,
 				326F93B92C8B928F00B28F04 /* Assets.xcassets */,
 				326F93BB2C8B928F00B28F04 /* LaunchScreen.storyboard */,
 				326F93BE2C8B928F00B28F04 /* Info.plist */,
 				326F93E02C8CE9C600B28F04 /* GoogleService-Info.plist */,
-				32EF33D22C8E70D4000850A5 /* FirebaseService.swift */,
-				32C06C622C91082200D3676D /* GameManager.swift */,
-				32610AF42C9930140011946E /* SoundManager.swift */,
-				32F64FEF2C9B77A50046C20E /* TurnTimer.swift */,
-				3213982F2CB4476600A636A7 /* ChatManager.swift */,
 				321398402CBCD89D00A636A7 /* Settings.swift */,
 				32367FA72CEABE20001AF2A5 /* LetterSequences.txt */,
 				32367FA92CEADB91001AF2A5 /* LetterSequences.swift */,
@@ -211,6 +224,7 @@
 		326F93C42C8BBAEE00B28F04 /* ViewControllers */ = {
 			isa = PBXGroup;
 			children = (
+				32367FAB2CEADECC001AF2A5 /* Settings */,
 				321398392CBAFA2200A636A7 /* LoginViewController.swift */,
 				326F93B42C8B928E00B28F04 /* HomeViewController.swift */,
 				32C06C5E2C9104DB00D3676D /* GameViewController.swift */,
@@ -219,8 +233,6 @@
 				321398352CBAF78400A636A7 /* AuthViewController.swift */,
 				3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */,
 				32A511B92CDAE5CC00EC768A /* HowToPlayViewController.swift */,
-				32F1447F2CE2F32300AEB35B /* PrivacyViewController.swift */,
-				32BF02212CE5480C007B3C40 /* ThemeTableViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -247,9 +259,7 @@
 		326F93CE2C8BCA0200B28F04 /* Cells */ = {
 			isa = PBXGroup;
 			children = (
-				326F93CC2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift */,
 				326F93D32C8BE2B100B28F04 /* RoomCollectionViewCell.swift */,
-				32EF33D92C8E801F000850A5 /* RoomTitleTableViewCell.swift */,
 				32F9565C2CB0628E00DAA6E6 /* SettingsTableViewCell.swift */,
 				32F9565E2CB0637000DAA6E6 /* SignInTableViewCell.swift */,
 				32F956602CB065C500DAA6E6 /* SignOutTableViewCell.swift */,
@@ -381,7 +391,6 @@
 				32F1447E2CE16ECE00AEB35B /* GotItView.swift in Sources */,
 				32F9566D2CB32AE800DAA6E6 /* Message.swift in Sources */,
 				326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */,
-				32EF33DA2C8E801F000850A5 /* RoomTitleTableViewCell.swift in Sources */,
 				326F93B12C8B928E00B28F04 /* AppDelegate.swift in Sources */,
 				326F93B32C8B928E00B28F04 /* SceneDelegate.swift in Sources */,
 				321398322CB4630A00A636A7 /* AddMessageView.swift in Sources */,
@@ -416,7 +425,6 @@
 				32F9566B2CB3275C00DAA6E6 /* MessageTableViewCell.swift in Sources */,
 				32F956692CB3256A00DAA6E6 /* ChatViewController.swift in Sources */,
 				321398412CBCD89E00A636A7 /* Settings.swift in Sources */,
-				326F93CD2C8BC63000B28F04 /* HomeHeaderCollectionViewCell.swift in Sources */,
 				326F93D42C8BE2B200B28F04 /* RoomCollectionViewCell.swift in Sources */,
 				32EF33D62C8E7247000850A5 /* MyUser.swift in Sources */,
 				32EF33DC2C8E8E2D000850A5 /* Room.swift in Sources */,

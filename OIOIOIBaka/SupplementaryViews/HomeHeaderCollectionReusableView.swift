@@ -113,18 +113,12 @@ class HomeHeaderView: UICollectionReusableView {
             container.trailingAnchor.constraint(equalTo: trailingAnchor),
             
             createActivityView.centerXAnchor.constraint(equalTo: createButton.centerXAnchor),
-            createActivityView.centerYAnchor.constraint(equalTo: createButton.centerYAnchor),
-
-//            createActivityView.topAnchor.constraint(equalTo: createButton.topAnchor),
-//            createActivityView.bottomAnchor.constraint(equalTo: createButton.bottomAnchor),
-//            createActivityView.leadingAnchor.constraint(equalTo: createButton.leadingAnchor),
-//            createActivityView.trailingAnchor.constraint(equalTo: createButton.trailingAnchor)
+            createActivityView.centerYAnchor.constraint(equalTo: createButton.centerYAnchor)
         ])
     }
     
     override func layoutSubviews() {
         // note: Border colors do not change automatically when changing between light and dark mode
-//        createButton.layer.borderColor = UIColor(named: "wjButtonBorder")?.resolvedColor(with: self.traitCollection).cgColor
         howToPlayButton.layer.borderColor = UIColor(named: "wjButtonSecondaryBorder")?.resolvedColor(with: self.traitCollection).cgColor
     }
     

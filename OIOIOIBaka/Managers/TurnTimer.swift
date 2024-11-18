@@ -32,7 +32,6 @@ class TurnTimer {
                 return
             }
             if timeRemaining == 0 {
-                //                    soundManager.playBonkSound()
                 timer.invalidate()
                 delegate?.turnTimer(self, timeRanOut: true)
             } else if !soundManager.isPlayingTickingSound() && timeRemaining <= 10 {
