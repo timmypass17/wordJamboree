@@ -246,7 +246,6 @@ class SettingsViewController: UIViewController {
                 var result = try await user.reauthenticate(with: credentials)
                 try await user.delete()
             }
-            // TODO: Delete user document
             print("Deleted user successfully")
         }
         catch {

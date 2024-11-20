@@ -19,7 +19,6 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     let codeLabel: UILabel = {
         let label = UILabel()
-        label.text = "#ABCD"
         label.textColor = .secondaryLabel
         label.font = UIFont.preferredFont(forTextStyle: .subheadline)
         return label
@@ -107,6 +106,7 @@ class RoomCollectionViewCell: UICollectionViewCell {
     
     func update(room: Room) {
         titleLabel.text = "\(room.title)"
+        codeLabel.text = "#\(room.code)"
         playersCountLabel.text = "\(room.currentPlayerCount)"
     }
 }

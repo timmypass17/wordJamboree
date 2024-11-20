@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3202AD5B2CEBF78100E04A59 /* letters.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3202AD5A2CEBF78000E04A59 /* letters.txt */; };
 		321398302CB4476600A636A7 /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3213982F2CB4476600A636A7 /* ChatManager.swift */; };
 		321398322CB4630A00A636A7 /* AddMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398312CB4630A00A636A7 /* AddMessageView.swift */; };
 		321398362CBAF78400A636A7 /* AuthViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398352CBAF78400A636A7 /* AuthViewController.swift */; };
@@ -16,7 +17,6 @@
 		321398412CBCD89E00A636A7 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398402CBCD89D00A636A7 /* Settings.swift */; };
 		321398452CBDFB6500A636A7 /* snip.wav in Resources */ = {isa = PBXBuildFile; fileRef = 321398442CBDFB6400A636A7 /* snip.wav */; };
 		321398472CC04F2500A636A7 /* thud.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 321398462CC04F2500A636A7 /* thud.mp3 */; };
-		32367FA82CEABE20001AF2A5 /* LetterSequences.txt in Resources */ = {isa = PBXBuildFile; fileRef = 32367FA72CEABE20001AF2A5 /* LetterSequences.txt */; };
 		32367FAA2CEADB91001AF2A5 /* LetterSequences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32367FA92CEADB91001AF2A5 /* LetterSequences.swift */; };
 		32469AA22CC1CCD2002606D7 /* explosion.wav in Resources */ = {isa = PBXBuildFile; fileRef = 32469AA12CC1CCD2002606D7 /* explosion.wav */; };
 		32610AEC2C98C9440011946E /* ArrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AEB2C98C9440011946E /* ArrowView.swift */; };
@@ -70,6 +70,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3202AD5A2CEBF78000E04A59 /* letters.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = letters.txt; sourceTree = "<group>"; };
 		3213982F2CB4476600A636A7 /* ChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatManager.swift; sourceTree = "<group>"; };
 		321398312CB4630A00A636A7 /* AddMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMessageView.swift; sourceTree = "<group>"; };
 		321398352CBAF78400A636A7 /* AuthViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewController.swift; sourceTree = "<group>"; };
@@ -80,7 +81,6 @@
 		321398402CBCD89D00A636A7 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		321398442CBDFB6400A636A7 /* snip.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = snip.wav; sourceTree = "<group>"; };
 		321398462CC04F2500A636A7 /* thud.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = thud.mp3; sourceTree = "<group>"; };
-		32367FA72CEABE20001AF2A5 /* LetterSequences.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LetterSequences.txt; sourceTree = "<group>"; };
 		32367FA92CEADB91001AF2A5 /* LetterSequences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterSequences.swift; sourceTree = "<group>"; };
 		32469AA12CC1CCD2002606D7 /* explosion.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = explosion.wav; sourceTree = "<group>"; };
 		32610AEB2C98C9440011946E /* ArrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrowView.swift; sourceTree = "<group>"; };
@@ -158,6 +158,7 @@
 		32367FAC2CEAEDB2001AF2A5 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				321398402CBCD89D00A636A7 /* Settings.swift */,
 				32EF33D22C8E70D4000850A5 /* FirebaseService.swift */,
 				32C06C622C91082200D3676D /* GameManager.swift */,
 				32610AF42C9930140011946E /* SoundManager.swift */,
@@ -165,6 +166,15 @@
 				3213982F2CB4476600A636A7 /* ChatManager.swift */,
 			);
 			path = Managers;
+			sourceTree = "<group>";
+		};
+		32367FAD2CEAEE48001AF2A5 /* Letters */ = {
+			isa = PBXGroup;
+			children = (
+				3202AD5A2CEBF78000E04A59 /* letters.txt */,
+				32367FA92CEADB91001AF2A5 /* LetterSequences.swift */,
+			);
+			path = Letters;
 			sourceTree = "<group>";
 		};
 		32610AEF2C99291F0011946E /* SoundEffects */ = {
@@ -208,15 +218,13 @@
 				3291FA622CE04C97005C490F /* SupplementaryViews */,
 				32610AEF2C99291F0011946E /* SoundEffects */,
 				32367FAC2CEAEDB2001AF2A5 /* Managers */,
+				32367FAD2CEAEE48001AF2A5 /* Letters */,
 				326F93B02C8B928E00B28F04 /* AppDelegate.swift */,
 				326F93B22C8B928E00B28F04 /* SceneDelegate.swift */,
 				326F93B92C8B928F00B28F04 /* Assets.xcassets */,
 				326F93BB2C8B928F00B28F04 /* LaunchScreen.storyboard */,
 				326F93BE2C8B928F00B28F04 /* Info.plist */,
 				326F93E02C8CE9C600B28F04 /* GoogleService-Info.plist */,
-				321398402CBCD89D00A636A7 /* Settings.swift */,
-				32367FA72CEABE20001AF2A5 /* LetterSequences.txt */,
-				32367FA92CEADB91001AF2A5 /* LetterSequences.swift */,
 			);
 			path = OIOIOIBaka;
 			sourceTree = "<group>";
@@ -368,7 +376,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				32469AA22CC1CCD2002606D7 /* explosion.wav in Resources */,
-				32367FA82CEABE20001AF2A5 /* LetterSequences.txt in Resources */,
 				32F64FEE2C9B6C6B0046C20E /* ticking.wav in Resources */,
 				32610AF12C9929390011946E /* ding.mp3 in Resources */,
 				32610AF32C992D2B0011946E /* bonk.mp3 in Resources */,
@@ -377,6 +384,7 @@
 				326F93E12C8CE9C600B28F04 /* GoogleService-Info.plist in Resources */,
 				326F93BD2C8B928F00B28F04 /* Base in Resources */,
 				321398452CBDFB6500A636A7 /* snip.wav in Resources */,
+				3202AD5B2CEBF78100E04A59 /* letters.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -587,9 +595,13 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.timmynguyen.OIOIOIBaka;
 				PRODUCT_NAME = "Word Jamboree";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -615,9 +627,13 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.timmynguyen.OIOIOIBaka;
 				PRODUCT_NAME = "Word Jamboree";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

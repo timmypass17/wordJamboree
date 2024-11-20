@@ -87,7 +87,7 @@ class GameViewController: UIViewController {
     }()
     
     var afkTimer: Timer?
-    var currentCountdownValue = 5
+//    var currentCountdownValue = 15 // TODO: Change to 15
     
     var settingsButton: UIBarButtonItem!
     var messageButton: UIBarButtonItem!
@@ -458,7 +458,6 @@ extension GameViewController: GameManagerDelegate {
                let winnerName = winner?["name"] as? String,
                let winnerPfp = manager.pfps[winnerID]
             {
-                print("Show winner")
                 winnerPlayerView.nameLabel.text = winnerName
                 winnerPlayerView.profileImageView.update(image: winnerPfp)
                 winnerPlayerView.isHidden = false
@@ -472,7 +471,6 @@ extension GameViewController: GameManagerDelegate {
                 leaveButtonTopConstraint.isActive = true
                 playerViews.forEach { $0.wordLabel.text = "" }
             } else {
-                print("Not showing winner")
                 // Move join/leave to cente
                 joinButtonCenterYConstraint.isActive = true
                 joinButtonTopConstraint.isActive = false
@@ -483,7 +481,6 @@ extension GameViewController: GameManagerDelegate {
             
             
         case .inProgress:
-            print("gameManager - inProgress")
             currentWordView?.isHidden = false
             leaveButton.isHidden = true
             joinButton.isHidden = true

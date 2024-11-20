@@ -50,7 +50,7 @@ class GameManager {
     var currentRound: Int = 1
     var winnerID = ""
     
-    static let countdownDuration: Double = 5   // TODO: Change to 15
+    static let countdownDuration: Double = 15
     static let minimumTime = 5
     static let maxHearts = 5
     
@@ -177,7 +177,6 @@ class GameManager {
                let roomStatusString = state["roomStatus"] as? String,
                let playersInfo = game["playersInfo"] as? [String: AnyObject],
                let roomStatus = GameState.Status(rawValue: roomStatusString),
-               // TODO: Use random player
                let startingPlayerID = playersInfo.randomElement()?.key,
                playersInfo.count >= 2,
                roomStatus == .notStarted {
@@ -221,7 +220,6 @@ class GameManager {
             let remainingTime = (GameManager.countdownDuration * 1000) - timeElapsed
             
             if remainingTime > 0 {
-                // TODO: Remove
                 self.startLocalCountdown(from: remainingTime / 1000) // Convert to seconds
             }
         }
@@ -268,7 +266,7 @@ class GameManager {
                 var death = game["death"] as? [String: Bool] ?? [:]
 
                 let currentPlayerCount = playersInfo.count
-                guard currentPlayerCount < 4,
+                guard currentPlayerCount < 5,
                       roomStatus == .notStarted
                 else {
                     print("(join game) fail 1")
@@ -383,7 +381,6 @@ class GameManager {
         ])
     }
     
-    // TODO: Fix submit()
     func submit(_ word: String) async throws  {
         var updatedLettersUsed = lettersUsed
         let wordIsValid = word.isWord && word.contains(currentLetters)
@@ -926,7 +923,7 @@ extension GameManager: TurnTimerDelegate {
         }
     }
     
-    // TODO: All active players will attempt to skip afk player. Using transaciton so should be fine if multiple people try to skip person?
+    // All active players will attempt to skip afk player. Using transaciton so should be fine if multiple people try to skip person?
     func skipPlayerTurn(_ playerID: String) {
         service.ref.child("games/\(roomID)").runTransactionBlock({ [weak self] currentData in
             guard let self else { return .abort() }

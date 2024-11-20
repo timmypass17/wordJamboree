@@ -48,7 +48,7 @@ extension PrivacyViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "PrivacyCell", for: indexPath)
         var config = cell.defaultContentConfiguration()
-        config.text = "Word Jamboree uses Firebase to securely store your nickname and profile picture. Your data is handled with strict confidentiality and is never shared with third parties. You may delete your account and permanently remove all associated data at any time."
+        config.text = "Word Jamboree uses Firebase to securely store your nickname, profile picture, and in-game chat messages to enhance your gaming experience. Your nickname and profile picture are displayed to other players in-game for identification during matches, creating a social and engaging atmosphere. To keep interactions relevant, only the most recent chat message from each room is stored temporarily, with older messages automatically replaced and not retained in our database.  All data is handled with strict confidentiality and is never shared with third parties. You may delete your account at any time to permanently remove all associated data, including your nickname, profile picture, and chat messages. If you have any questions regarding this privacy policy, you can email timmysappstuff@gmail.com."
         cell.contentConfiguration = config
         return cell
     }
