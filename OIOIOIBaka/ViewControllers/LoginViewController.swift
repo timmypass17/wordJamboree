@@ -10,6 +10,7 @@ import AuthenticationServices
 import GoogleSignIn
 import FirebaseAuth
 import FirebaseCore
+import CryptoKit
 
 protocol LoginViewControllerDelegate: AnyObject {
     func loginViewController(_ viewController: LoginViewController, didTapSignUpButton: Bool)
@@ -107,6 +108,10 @@ extension LoginViewController: ASAuthorizationControllerDelegate {
     
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            guard let nonce = service.currentNonce else {
+                fatalError("Invalid state: A login callback was received, but no login request was sent.")
+            }
+            
             guard let appleIDToken = appleIDCredential.identityToken else {
                 print("Unable to fetch identity token")
                 return
@@ -117,7 +122,7 @@ extension LoginViewController: ASAuthorizationControllerDelegate {
             }
 
             let credential = OAuthProvider.appleCredential(withIDToken: idTokenString,
-                                                           rawNonce: nil,
+                                                           rawNonce: nonce,
                                                            fullName: appleIDCredential.fullName)
             
             Task {
@@ -135,16 +140,7 @@ extension LoginViewController: ASAuthorizationControllerDelegate {
                         // Fallback to sign in directly
                         do {
                             // TODO: This always fails for apple reauth? "Duplicate credential received. Please try again with a new credential"
-                            
                             let res = try await service.auth.signIn(with: credential)
-                            
-////                            // Get new user's information
-//                            if let existingUser = try await service.getUser(uid: res.user.uid) {
-//                                print("Got existing user!")
-//                                service.name = existingUser.name
-//                                service.uid = res.user.uid
-//                                service.pfpImage = try? await service.getProfilePicture(uid: res.user.uid) ?? nil
-//                            }
                             
                             print("Signed in to Apple account!")
                             service.authState = .permanent

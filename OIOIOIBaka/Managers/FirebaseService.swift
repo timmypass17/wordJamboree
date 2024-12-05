@@ -13,6 +13,7 @@ import FirebaseStorage
 import FirebaseCore
 import GoogleSignIn
 import AuthenticationServices
+import CryptoKit
 
 enum AuthenticationState {
     case permanent
@@ -34,7 +35,8 @@ class FirebaseService {
     var name: String = ""
     var pfpImage: UIImage? = nil
     var uid: String? = nil
-    
+    var currentNonce: String?
+
     var ref = Database.database().reference()   // Realtime Database
     let db = Firestore.firestore()              // Firestore
     let storage = Storage.storage().reference() // Storage
@@ -135,6 +137,10 @@ class FirebaseService {
     }
 
     func signInWithApple(_ viewController: UIViewController & ASAuthorizationControllerDelegate & ASAuthorizationControllerPresentationContextProviding) {
+        
+        let nonce = randomNonceString()
+        currentNonce = nonce
+
         let appleIDProvider = ASAuthorizationAppleIDProvider()
         let request = appleIDProvider.createRequest()
         request.requestedScopes = [.fullName, .email]
@@ -144,6 +150,41 @@ class FirebaseService {
         authorizationController.presentationContextProvider = viewController
         authorizationController.performRequests()
     }
+    
+    // 1. For every sign-in request, generate a random string—a "nonce"—which you will use to make sure the ID token you get was granted specifically in response to your app's authentication request. This step is important to prevent replay attacks.
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        if errorCode != errSecSuccess {
+            fatalError(
+                "Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)"
+            )
+        }
+        
+        let charset: [Character] =
+        Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        
+        let nonce = randomBytes.map { byte in
+            // Pick a random character from the set, wrapping around if needed.
+            charset[Int(byte) % charset.count]
+        }
+        
+        return String(nonce)
+    }
+    
+    // 2. You will send the SHA256 hash of the nonce with your sign-in request, which Apple will pass unchanged in the response. Firebase validates the response by hashing the original nonce and comparing it to the value passed by Apple.
+    @available(iOS 13, *)
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        let hashString = hashedData.compactMap {
+            String(format: "%02x", $0)
+        }.joined()
+        
+        return hashString
+    }
+
     
     func getProfilePicture(uid: String) async throws -> UIImage? {
         let pfpRef = storage.child("pfps/\(uid).jpg")
@@ -209,50 +250,16 @@ class FirebaseService {
         let game = Game(
             roomID: roomID,
             currentLetters: LetterSequences.shared.getRandomLetters(),
-            secondsPerTurn: Int.random(in: 10...30) + 3,
+            secondsPerTurn: 5,    // TODO: Int.random(in: 10...30) + 3
             rounds: 1,
             playersInfo: [
                 uid:
                     PlayerInfo(
+                        name: name,
                         hearts: 3,
                         position: 0,
-                        additionalInfo: AdditionalPlayerInfo(
-                            name: name
-                        )
+                        enteredWord: ""
                     ),
-//                // TODO: Remove later
-//                "p1":
-//                    PlayerInfo(
-//                        hearts: 3,
-//                        position: 1,
-//                        additionalInfo: AdditionalPlayerInfo(
-//                            name: "p1"
-//                        )
-//                    ),
-//                "p2":
-//                    PlayerInfo(
-//                        hearts: 3,
-//                        position: 2,
-//                        additionalInfo: AdditionalPlayerInfo(
-//                            name: "p2"
-//                        )
-//                    ),
-//                "p3":
-//                    PlayerInfo(
-//                        hearts: 3,
-//                        position: 3,
-//                        additionalInfo: AdditionalPlayerInfo(
-//                            name: "p3"
-//                        )
-//                    ),
-//                "p4":
-//                    PlayerInfo(
-//                        hearts: 3,
-//                        position: 4,
-//                        additionalInfo: AdditionalPlayerInfo(
-//                            name: "p4"
-//                        )
-//                    ),
             ],
             shake: [
                 uid: false
@@ -265,9 +272,6 @@ class FirebaseService {
             ],
             death: [
                 uid: false
-            ],
-            playersWord: [
-                uid: ""
             ]
         )
 
@@ -354,7 +358,7 @@ extension Encodable {
 
 extension DataSnapshot {
     
-    // Generic function to decode a DataSnapshot into a Codable object
+    // Convert DataSnapshot into a custom object
     func toObject<T: Codable>(_ type: T.Type) -> T? {
         guard let value = self.value else { // no data found
              return nil

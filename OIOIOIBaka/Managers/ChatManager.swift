@@ -33,27 +33,27 @@ class ChatManager {
     }
     
     func sendMessage(message: Message) async throws {
-        try await ref.child("messages").child(roomID).setValue([
+        try await ref.child("games").child(roomID).child("latestMessage").setValue([
             "uid": message.uid,
             "name": message.name,
             "message": message.message,
             "createdAt": message.createdAt
         ])
+        
+//        try await ref.child("messages").child(roomID).setValue([
+//            "uid": message.uid,
+//            "name": message.name,
+//            "message": message.message,
+//            "createdAt": message.createdAt
+//        ])
     }
-    
-    // We only store the latest message
-    // - we don't let users see past messages so no need to store entire chat history
+
     func observeNewMessages() {
-        // .queryLimited(toLast: 1) - only get 1 back
-        // .childAdded being called initally?
-        // Use .queryOrdered(byChild: "createdAt") and .queryStarting(atValue: currentTimestamp) to get "new" child added
-        ref.child("messages")
+        ref.child("games")
             .child(roomID)
-//            .queryOrdered(byChild: "createdAt")
-//            .queryStarting(atValue: currentTimestamp)
+            .child("latestMessage")
             .observe(.value) { [weak self] snapshot in
                 guard let self else { return }
-                print("new message: \(snapshot)")
                 guard let messageDict = snapshot.value as? [String: AnyObject],
                       let uid = messageDict["uid"] as? String,
                       let name = messageDict["name"] as? String,
@@ -62,7 +62,7 @@ class ChatManager {
                 
                 // Add message to messages (that is not from current user)
                 guard uid != self.service.uid else { return }
-                let message = Message(uid: uid, name: name, message: textMessage, pfpImage: nil)
+                let message = Message(uid: uid, name: name, message: textMessage)
                 self.messages.append(message)
                 self.delegate?.chatManager(self, didReceiveNewMessage: message)
             }

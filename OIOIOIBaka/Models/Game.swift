@@ -13,17 +13,17 @@ struct Game: Codable {
     var secondsPerTurn: Int
     var rounds: Int
     var currentPlayerTurn: String? = nil
-    var playersInfo: [String: PlayerInfo]? // Updated to use a PlayerInfo struct
+    var playersInfo: [String: PlayerInfo]?
     var winner: String?
-    var shake: [String: Bool]?  // submit fail -> shake player
+    var shake: [String: Bool]?
     var success: [String: Bool]?
-    var explode: [String: Bool]?   // time ran out -> explode player
+    var explode: [String: Bool]?
     var death: [String: Bool]?
     var state: GameState = GameState(roomStatus: .notStarted)
     var countdownStartTime: TimeInterval? = nil
-    var playersWord: [String: String]?
     var heartbeat: Int = currentTimestamp
- }
+    var latestMessage: Message? = nil
+}
 
 struct GameState: Codable {
     var winner: String? = nil
@@ -35,14 +35,10 @@ struct GameState: Codable {
 }
 
 struct PlayerInfo: Codable {
+    var name: String
     var hearts: Int
     var position: Int
-    var additionalInfo: AdditionalPlayerInfo
-}
-
-struct AdditionalPlayerInfo: Codable {
-    var name: String
-    var joinedAt: Int = currentTimestamp    // put this under playerInfo because we listen to playerInfo and can on see fields directly under playerInfo
+    var enteredWord: String
 }
 
 // does support arrays but using dicitonary is recommended

@@ -378,7 +378,7 @@ extension GameViewController: GameManagerDelegate {
     
     
     func gameManager(_ manager: GameManager, playersInfoUpdated playersInfo: [String : AnyObject]) {
-        print(manager.pfps)
+        // TODO: Don't use 2, use meaningful variable like "minimumPlayersNeeded"
         if 2 - manager.playersInfo.count > 0 {
             navigationItem.title = "Waiting for \(2 - manager.playersInfo.count) more players..."
         } else {
@@ -386,17 +386,15 @@ extension GameViewController: GameManagerDelegate {
         }
         
         playerViews.forEach { $0.isHidden = true }
-                        
+
         for (uid, playerInfo) in playersInfo {
-            guard let additionalInfo = playerInfo["additionalInfo"] as? [String: AnyObject],
-                  let name = additionalInfo["name"] as? String,
+            guard let name = playerInfo["name"] as? String,
                   let position = playerInfo["position"] as? Int,
                   let hearts = playerInfo["hearts"] as? Int
             else {
                 continue
             }
             playerViews[position].isHidden = false
-            print("Updating p\(position). Position: \(position). CurrentPlayerCount: \(playersInfo.count)")
             playerViews[position].updatePosition(position: position, currentPlayerCount: playersInfo.count)
             playerViews[position].nameLabel.text = name
             playerViews[position].setHearts(to: hearts)

@@ -88,7 +88,7 @@ class MessageTableViewCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(message: Message) {
+    func update(message: Message, pfpImage: UIImage?) {
         nameLabel.text = message.name
         messageLabel.text = message.message
         let seconds = TimeInterval(message.createdAt) / 1000
@@ -99,22 +99,16 @@ class MessageTableViewCell: UITableViewCell {
         
         let formattedTime = timeFormatter.string(from: date)
         dateLabel.text = formattedTime
-        profileImageView.update(image: message.pfpImage)
+        profileImageView.update(image: pfpImage)
         
-        switch message.messageType {
-        case .user:
-            messageLabel.textColor = .label
-            messageLabel.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
-        case .system:
-            messageLabel.textColor = .secondaryLabel
-            messageLabel.font = .italicSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
-        }
+        messageLabel.textColor = .label
+        messageLabel.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
     }
 }
 
-#Preview {
-    let cell = MessageTableViewCell()
-    cell.update(message: Message(uid: "", name: "timmy", message: "Hello World", pfpImage: nil))
-    return cell
-}
+//#Preview {
+//    let cell = MessageTableViewCell()
+//    cell.update(message: Message(uid: "", name: "timmy", message: "Hello World", pfpImage: nil))
+//    return cell
+//}
 

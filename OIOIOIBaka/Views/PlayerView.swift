@@ -449,7 +449,7 @@ class PlayerView: UIView {
         }
         
         NSLayoutConstraint.activate([
-             topConstraint,
+            topConstraint,
             bottomConstraint,
             leadingConstraint,
             trailingConstraint

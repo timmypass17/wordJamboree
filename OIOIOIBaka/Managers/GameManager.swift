@@ -39,6 +39,10 @@ protocol GameManagerDelegate: AnyObject {
     func gameManager(_ manager: GameManager, willDeathPlayerAt position: Int)
 }
 
+// TODO: Move animation states to 1 variable
+// - move animation to user info
+// - move word to user info?
+
 class GameManager {
     var roomID: String
     var currentLetters: String = ""
@@ -50,7 +54,7 @@ class GameManager {
     var currentRound: Int = 1
     var winnerID = ""
     
-    static let countdownDuration: Double = 15
+    static let countdownDuration: Double = 5   // TODO: 15
     static let minimumTime = 5
     static let maxHearts = 5
     
@@ -87,12 +91,13 @@ class GameManager {
         ref.child("games/\(roomID)/playersInfo")
             .observe(.childAdded) { [weak self] snapshot in
             guard let self else { return }
-            guard let playerInfo = snapshot.value as? [String: AnyObject],
-                  let additionalInfo = playerInfo["additionalInfo"] as? [String: AnyObject]
+            guard let playerInfo = snapshot.value as? [String: AnyObject]
                 else {
                 print("failed to convert snapshot to playerInfo: \(snapshot)")
                 return
             }
+            print(snapshot)
+                
             let uid = snapshot.key
             playersInfo[uid] = playerInfo as AnyObject
                 
@@ -135,10 +140,13 @@ class GameManager {
         // Be very careful when using unowned. It could be that you’re accessing an instance which is no longer there, causing a crash
         handles["playersInfo.childChange"] = ref.child("games/\(roomID)/playersInfo").observe(.childChanged) { [weak self] snapshot in
             guard let self else { return }
+            print("observePlayersInfo: \(snapshot)")
             let playerInfo = snapshot.value as? [String: AnyObject] ?? [:] // playersInfo could be empty, empty room
+            let enteredWord = (playerInfo["enteredWord"] as? String) ?? ""
             let uid = snapshot.key
             self.playersInfo[uid] = playerInfo as AnyObject
             self.delegate?.gameManager(self, playersInfoUpdated: playersInfo)
+            self.delegate?.gameManager(self, player: uid, updatedWord: enteredWord)
         }
     }
     
@@ -259,7 +267,6 @@ class GameManager {
                 
                 // Room could be empty
                 var playersInfo = game["playersInfo"] as? [String: AnyObject] ?? [:]
-                var playersWord = game["playersWord"] as? [String: AnyObject] ?? [:]
                 var shake = game["shake"] as? [String: Bool] ?? [:]
                 var success = game["success"] as? [String: Bool] ?? [:]
                 var explode = game["explode"] as? [String: Bool] ?? [:]
@@ -274,15 +281,12 @@ class GameManager {
                 }
                 
                 playersInfo[uid] = [
+                    "name": service.name,
                     "hearts": 3,
                     "position": currentPlayerCount,
-                    "additionalInfo": [
-                        "name": service.name,
-                        "joinedAt": currentTimestamp
-                    ]
+                    "enteredWord": ""
                 ] as AnyObject
                 
-                playersWord[uid] = "" as AnyObject
                 shake[uid] = false
                 success[uid] = false
                 explode[uid] = false
@@ -294,7 +298,6 @@ class GameManager {
                 
                 // Apply changes
                 game["playersInfo"] = playersInfo as AnyObject
-                game["playersWord"] = playersWord as AnyObject
                 game["shake"] = shake as AnyObject
                 game["success"] = success as AnyObject
                 game["explode"] = explode as AnyObject
@@ -321,14 +324,13 @@ class GameManager {
     }
     
     func observePlayersWord() {
-        handles["playersWord"] = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [weak self] snapshot in
-            guard let self else { return }
-            guard let word = snapshot.value as? String else { return }
-            let uid = snapshot.key
-            delegate?.gameManager(self, player: uid, updatedWord: word)
-        }
+//        handles["playersWord"] = ref.child("games/\(roomID)/playersWord").observe(.childChanged) { [weak self] snapshot in
+//            guard let self else { return }
+//            guard let word = snapshot.value as? String else { return }
+//            let uid = snapshot.key
+//            delegate?.gameManager(self, player: uid, updatedWord: word)
+//        }
     }
-    
     
     func observeCurrentLetters() {
         handles["currentLetters"] = ref.child("games/\(roomID)/currentLetters").observe(.value) { [weak self] snapshot in
@@ -377,7 +379,7 @@ class GameManager {
     func typing(_ partialWord: String) async throws {
         guard let uid = service.uid else { return }
         try await ref.updateChildValues([
-            "games/\(roomID)/playersWord/\(uid)": partialWord
+            "games/\(roomID)/playersInfo/\(uid)/enteredWord": partialWord
         ])
     }
     
@@ -394,12 +396,12 @@ class GameManager {
                   let currentPosition = currentPlayerInfo["position"] as? Int,
                   var hearts = currentPlayerInfo["hearts"] as? Int,
                   var currentLetters = game["currentLetters"] as? String,
-                  var playersWord = game["playersWord"] as? [String: String],
                   var rounds = game["rounds"] as? Int,
                   var secondsPerTurn = game["secondsPerTurn"] as? Int,
                   var shake = game["shake"] as? [String: Bool],
                   var success = game["success"] as? [String: Bool],
                   let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo),
+                  var nextPlayerInfo = playersInfo[nextPlayerID] as? [String: AnyObject],
                   let currentPlayerTurn = game["currentPlayerTurn"] as? String,
                   currentPlayerTurn == uid
             else {
@@ -417,7 +419,8 @@ class GameManager {
             
             wordsUsed[word] = true
             currentLetters = LetterSequences.shared.getRandomLetters()
-            playersWord[nextPlayerID] = ""
+            nextPlayerInfo["enteredWord"] = "" as AnyObject
+            playersInfo[nextPlayerID] = nextPlayerInfo as AnyObject
             success[uid]?.toggle()
             
             if currentPosition == playersInfo.count - 1 {
@@ -439,7 +442,6 @@ class GameManager {
             game["wordsUsed"] = wordsUsed as AnyObject
             game["currentPlayerTurn"] = nextPlayerID as AnyObject
             game["currentLetters"] = currentLetters as AnyObject
-            game["playersWord"] = playersWord as AnyObject
             game["rounds"] = rounds as AnyObject
             game["playersInfo"] = playersInfo as AnyObject
             game["secondsPerTurn"] = secondsPerTurn as AnyObject
@@ -598,7 +600,6 @@ class GameManager {
             guard let self else { return .abort() }
             if var game = currentData.value as? [String: AnyObject],
                var playersInfo = game["playersInfo"] as? [String: AnyObject],
-               var playersWord = game["playersWord"] as? [String: AnyObject],
                var currentPlayerInfo = playersInfo[playerID] as? [String: AnyObject],
                var hearts = currentPlayerInfo["hearts"] as? Int,
                let currentPosition = currentPlayerInfo["position"] as? Int,
@@ -607,6 +608,7 @@ class GameManager {
                var rounds = game["rounds"] as? Int,
                var secondsPerTurn = game["secondsPerTurn"] as? Int,
                let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo),
+               var nextPlayerInfo = playersInfo[nextPlayerID] as? [String: AnyObject],
                let currentPlayerTurn = game["currentPlayerTurn"] as? String,
                playerID == currentPlayerTurn
             {
@@ -629,8 +631,9 @@ class GameManager {
                     // Keep playing, get next turn
                     game["currentPlayerTurn"] = nextPlayerID as AnyObject
                     
-                    playersWord[nextPlayerID] = "" as AnyObject
-                    game["playersWord"] = playersWord as AnyObject
+                    nextPlayerInfo["enteredWord"] = "" as AnyObject
+                    playersInfo[nextPlayerID] = nextPlayerInfo as AnyObject
+                    game["playersInfo"] = playersInfo as AnyObject
                     
                     let isLastTurn = currentPosition == playersInfo.count - 1
                     if isLastTurn {
@@ -668,8 +671,7 @@ class GameManager {
         guard var state = game["state"] as? [String: AnyObject],
               let playersInfo = game["playersInfo"] as? [String: AnyObject],
               let winnerInfo = playersInfo[winnerID] as? [String: AnyObject],
-              let additionalWinnerInfo = winnerInfo["additionalInfo"] as? [String: AnyObject],
-              let name = additionalWinnerInfo["name"] as? String
+              let name = winnerInfo["name"] as? String
         else { return }
         var winner = state["winner"] as? [String: AnyObject] ?? [:]
         winner["playerID"] = winnerID as AnyObject
@@ -867,7 +869,7 @@ class GameManager {
         observeExplode()
         observeDeath()
         observeCurrentLetters()
-        observePlayersWord()
+//        observePlayersWord()
         observeRounds()
         observeSecondsPerTurn()
         observePlayerTurn()
@@ -884,7 +886,7 @@ class GameManager {
         ref.child("games/\(roomID)/explode").removeObserver(withHandle: handles["explode"]!)
         ref.child("games/\(roomID)/death").removeObserver(withHandle: handles["death"]!)
         ref.child("games/\(roomID)/currentLetters").removeObserver(withHandle: handles["currentLetters"]!)
-        ref.child("games/\(roomID)/playersWord").removeObserver(withHandle: handles["playersWord"]!)
+//        ref.child("games/\(roomID)/playersWord").removeObserver(withHandle: handles["playersWord"]!)
         ref.child("games/\(roomID)/rounds").removeObserver(withHandle: handles["rounds"]!)
         ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: handles["secondsPerTurn"]!)
         ref.child("games/\(roomID)/currentPlayerTurn").removeObserver(withHandle: handles["currentPlayerTurn"]!)

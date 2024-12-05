@@ -159,17 +159,18 @@ extension ChatViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: MessageTableViewCell.reuseIdentifier, for: indexPath) as! MessageTableViewCell
         var message = chatManager.messages[indexPath.row]
-        if let playerInfo = gameManager.playersInfo[message.uid] as? [String: AnyObject],
-           let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
-           let name = additionalInfo["name"] {
-            message.name = name
+//        if let playerInfo = gameManager.playersInfo[message.uid] as? [String: AnyObject],
+//           let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
+//           let name = additionalInfo["name"] {
+//            message.name = name
+//        }
+        
+        var pfpImage: UIImage?
+        if let image = gameManager.pfps[message.uid] {
+            pfpImage = image
         }
         
-        if let pfp = gameManager.pfps[message.uid] {
-            message.pfpImage = pfp
-        }
-        
-        cell.update(message: message)
+        cell.update(message: message, pfpImage: pfpImage)
         return cell
     }
 }
