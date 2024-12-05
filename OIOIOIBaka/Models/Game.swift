@@ -39,6 +39,11 @@ struct PlayerInfo: Codable {
     var hearts: Int
     var position: Int
     var enteredWord: String
+//    var status: Status
+    
+//    enum Status: String, Codable {
+//        case idle, success, fail, explode, dead
+//    }
 }
 
 // does support arrays but using dicitonary is recommended

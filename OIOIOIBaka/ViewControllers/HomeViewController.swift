@@ -26,6 +26,19 @@ class HomeViewController: UIViewController {
         return view
     }()
     
+    // had to make view instead of assigning view.contentUnavailableConfiguration = ... (this doesn't allow scrolling, no swipe to refresh)
+    var contentUnavailableView: UIView = {
+        var configuration = UIContentUnavailableConfiguration.empty()
+        configuration.text = "No rooms available"
+        configuration.secondaryText = "Be the first to create one and get the game started!"
+        configuration.image = UIImage(systemName: "rectangle.stack.fill")
+
+        let view = UIContentUnavailableView(configuration: configuration)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = true
+        return view
+    }()
+    
     var sections: [Section] = [.rooms]
     var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
     let service: FirebaseService
@@ -83,9 +96,12 @@ class HomeViewController: UIViewController {
         setupCollectionView()
         loadRooms()
         
+        view.addSubview(contentUnavailableView)
         view.addSubview(activityView)
         
         NSLayoutConstraint.activate([
+            contentUnavailableView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            contentUnavailableView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             activityView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             activityView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
@@ -233,6 +249,8 @@ class HomeViewController: UIViewController {
             await self.dataSource.apply(snapshot, animatingDifferences: false)  // wierd to see rooms move around
             collectionView.refreshControl?.endRefreshing()
             roomTask = nil
+            
+            contentUnavailableView.isHidden = !snapshot.itemIdentifiers.isEmpty
         }
     }
     

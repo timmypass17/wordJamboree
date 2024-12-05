@@ -766,7 +766,6 @@ class GameManager {
                var playerInfo = playersInfo[uid] as? [String: AnyObject],
                let currentPosition = playerInfo["position"] as? Int,
                let hearts = playerInfo["hearts"] as? Int,
-               var playersWord = game["playersWord"] as? [String: AnyObject],
                var shake = game["shake"] as? [String: Bool],
                var rounds = game["rounds"] as? Int,
                var secondsPerTurn = game["secondsPerTurn"] as? Int,
@@ -778,7 +777,6 @@ class GameManager {
                 case .notStarted:
                     // Remove player completely
                     playersInfo[uid] = nil
-                    playersWord[uid] = nil
                     shake[uid] = nil
                     
                     // Update positions after removal of player
@@ -800,7 +798,6 @@ class GameManager {
                     }
                     
                     game["playersInfo"] = playersInfo as AnyObject
-                    game["playersWord"] = playersWord as AnyObject
                     game["shake"] = shake as AnyObject
                     print("Players info after removal: \(playersInfo.count)")
                 case .inProgress:
@@ -819,11 +816,12 @@ class GameManager {
                     } else {
                         // Player exited while it was their turn, get next player turn
                         if currentPlayerTurn == uid,
-                           let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo) {
-                            playersWord[nextPlayerID] = "" as AnyObject
-                            
-                            game["currentPlayerTurn"] = nextPlayerID as AnyObject
-                            game["playersWord"] = playersWord as AnyObject
+                           let nextPlayerID = self.getNextPlayersTurn(currentPosition: currentPosition, playersInfo: playersInfo),
+                           var nextPlayerInfo = playersInfo[nextPlayerID] as? [String: AnyObject]
+                        {
+                            nextPlayerInfo["enteredWord"] = "" as AnyObject
+                            playersInfo[nextPlayerID] = nextPlayerInfo as AnyObject
+                            game["playersInfo"] = playersInfo as AnyObject
                             
                             let isLastTurn = currentPosition == playersInfo.count - 1
                             if isLastTurn {
