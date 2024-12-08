@@ -87,7 +87,6 @@ class GameViewController: UIViewController {
     }()
     
     var afkTimer: Timer?
-//    var currentCountdownValue = 15 // TODO: Change to 15
     
     var settingsButton: UIBarButtonItem!
     var messageButton: UIBarButtonItem!

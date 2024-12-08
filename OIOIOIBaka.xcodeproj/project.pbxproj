@@ -18,6 +18,7 @@
 		321398452CBDFB6500A636A7 /* snip.wav in Resources */ = {isa = PBXBuildFile; fileRef = 321398442CBDFB6400A636A7 /* snip.wav */; };
 		321398472CC04F2500A636A7 /* thud.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 321398462CC04F2500A636A7 /* thud.mp3 */; };
 		32367FAA2CEADB91001AF2A5 /* LetterSequences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32367FA92CEADB91001AF2A5 /* LetterSequences.swift */; };
+		323EE7A52D027E0E00DEEF50 /* EULAViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323EE7A42D027E0E00DEEF50 /* EULAViewController.swift */; };
 		32469AA22CC1CCD2002606D7 /* explosion.wav in Resources */ = {isa = PBXBuildFile; fileRef = 32469AA12CC1CCD2002606D7 /* explosion.wav */; };
 		32610AEC2C98C9440011946E /* ArrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AEB2C98C9440011946E /* ArrowView.swift */; };
 		32610AF12C9929390011946E /* ding.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF02C9929390011946E /* ding.mp3 */; };
@@ -82,6 +83,7 @@
 		321398442CBDFB6400A636A7 /* snip.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = snip.wav; sourceTree = "<group>"; };
 		321398462CC04F2500A636A7 /* thud.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = thud.mp3; sourceTree = "<group>"; };
 		32367FA92CEADB91001AF2A5 /* LetterSequences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterSequences.swift; sourceTree = "<group>"; };
+		323EE7A42D027E0E00DEEF50 /* EULAViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EULAViewController.swift; sourceTree = "<group>"; };
 		32469AA12CC1CCD2002606D7 /* explosion.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = explosion.wav; sourceTree = "<group>"; };
 		32610AEB2C98C9440011946E /* ArrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrowView.swift; sourceTree = "<group>"; };
 		32610AF02C9929390011946E /* ding.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = ding.mp3; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 				321398352CBAF78400A636A7 /* AuthViewController.swift */,
 				3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */,
 				32A511B92CDAE5CC00EC768A /* HowToPlayViewController.swift */,
+				323EE7A42D027E0E00DEEF50 /* EULAViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -429,6 +432,7 @@
 				32BF02222CE5480C007B3C40 /* ThemeTableViewController.swift in Sources */,
 				3291FA642CE04CA4005C490F /* HomeHeaderCollectionReusableView.swift in Sources */,
 				32C06C612C9106A200D3676D /* CurrentWordView.swift in Sources */,
+				323EE7A52D027E0E00DEEF50 /* EULAViewController.swift in Sources */,
 				32C06C5F2C9104DB00D3676D /* GameViewController.swift in Sources */,
 				32F9566B2CB3275C00DAA6E6 /* MessageTableViewCell.swift in Sources */,
 				32F956692CB3256A00DAA6E6 /* ChatViewController.swift in Sources */,

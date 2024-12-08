@@ -105,6 +105,10 @@ class HomeViewController: UIViewController {
             activityView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             activityView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
+        
+        let vc = UINavigationController(rootViewController: EULAViewController())
+        vc.isModalInPresentation = true // disables swipe down dismiss
+        present(vc, animated: true)
     }
     
     // class func is similar to static func but class func is overridable

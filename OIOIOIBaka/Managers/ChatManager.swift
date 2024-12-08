@@ -21,14 +21,12 @@ class ChatManager {
     weak var delegate: ChatManagerDelegate?
     
     init(roomID: String, service: FirebaseService) {
-        print("init chatManager")
         self.roomID = roomID
         self.service = service
         observeNewMessages()
     }
     
     deinit {
-        print("deinit chatManager")
         ref.child("messages").child(roomID).removeAllObservers()
     }
     
@@ -39,13 +37,6 @@ class ChatManager {
             "message": message.message,
             "createdAt": message.createdAt
         ])
-        
-//        try await ref.child("messages").child(roomID).setValue([
-//            "uid": message.uid,
-//            "name": message.name,
-//            "message": message.message,
-//            "createdAt": message.createdAt
-//        ])
     }
 
     func observeNewMessages() {
