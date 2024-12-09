@@ -20,6 +20,8 @@ class ChatManager {
     var ref = Database.database().reference()   // RTDB
     weak var delegate: ChatManagerDelegate?
     
+    static let badWords = ["ass", "bitch", "cunt", "cock", "dick", "faggot", "fuck", "nigger", "pussy", "shit", "slut", "whore"]
+    
     init(roomID: String, service: FirebaseService) {
         self.roomID = roomID
         self.service = service
@@ -48,7 +50,7 @@ class ChatManager {
                 guard let messageDict = snapshot.value as? [String: AnyObject],
                       let uid = messageDict["uid"] as? String,
                       let name = messageDict["name"] as? String,
-                      let textMessage = messageDict["message"] as? String
+                      let chatMessage = messageDict["message"] as? String
                 else { return }
                 
                 let isBlockedUser = service.blockedUserIDs.contains(uid)
@@ -56,10 +58,27 @@ class ChatManager {
                 guard uid != service.uid,
                       !isBlockedUser
                 else { return }
+
+                let filteredChatMessage = ChatManager.censorBadWords(in: chatMessage)
                 
-                let message = Message(uid: uid, name: name, message: textMessage)
+                let message = Message(uid: uid, name: name, message: filteredChatMessage)
                 self.messages.append(message)
                 self.delegate?.chatManager(self, didReceiveNewMessage: message)
             }
     }
+    
+    static func censorBadWords(in text: String) -> String {
+        var censoredText = text
+        for badWord in ChatManager.badWords {
+            let replacement = String(repeating: "*", count: badWord.count)
+            censoredText = censoredText.replacingOccurrences(of: badWord, with: replacement, options: .caseInsensitive)
+        }
+        return censoredText
+    }
+    
+//
+//    // Example Usage
+//    let badWords = ["badword", "anotherbadword"]
+//    let input = "This is a badword and anotherbadword example."
+//    let output = censorBadWords(in: input, badWords: badWords)
 }

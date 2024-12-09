@@ -109,16 +109,16 @@ class ChatViewController: UIViewController {
     
     func didTapSendButton() {
         guard let uid = gameManager.service.uid,
-              let text = addMessageView.textField.text,
-              text != ""
+              let chatMessage = addMessageView.textField.text,
+              chatMessage != ""
         else { return }
         
-//        textField.resignFirstResponder()
         addMessageView.textField.text = ""
     
         Task {
             do {
-                let message = Message(uid: uid, name: chatManager.service.name, message: text)
+                let filteredChatMessage = ChatManager.censorBadWords(in: chatMessage)
+                let message = Message(uid: uid, name: chatManager.service.name, message: filteredChatMessage)
                 chatManager.messages.append(message)
                 let indexPath = IndexPath(row: chatManager.messages.count - 1, section: 0)
                 tableView.insertRows(at: [indexPath], with: .automatic)
