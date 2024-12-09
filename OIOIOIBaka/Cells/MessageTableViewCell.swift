@@ -7,6 +7,12 @@
 
 import UIKit
 
+protocol MessageTableViewCellDelegate: AnyObject {
+    func messageTableViewCell(_ cell: MessageTableViewCell, didTapReportUser: Bool)
+    func messageTableViewCell(_ cell: MessageTableViewCell, didTapBlockUser blockedUid: String)
+    func messageTableViewCell(_ cell: MessageTableViewCell, didTapUnblockUser blockedUid: String)
+}
+
 class MessageTableViewCell: UITableViewCell {
     
     static let reuseIdentifier = "MessageTableViewCell"
@@ -41,6 +47,15 @@ class MessageTableViewCell: UITableViewCell {
         return profileImageView
     }()
     
+    let optionButton: UIButton = {
+        let button = UIButton()
+        button.menu = UIMenu(title: "")
+        button.showsMenuAsPrimaryAction = true
+        button.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        button.tintColor = .secondaryLabel
+        return button
+    }()
+    
     let hstack: UIStackView = {
         let stackView = UIStackView()
         stackView.spacing = 8
@@ -63,22 +78,28 @@ class MessageTableViewCell: UITableViewCell {
         return stackView
     }()
     
+    var gameManager: GameManager!
+    weak var delegate: MessageTableViewCellDelegate?
+    
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
+        
         hstack.addArrangedSubview(nameLabel)
         hstack.addArrangedSubview(dateLabel)
+        hstack.addArrangedSubview(optionButton)
+        
         vstack.addArrangedSubview(hstack)
         vstack.addArrangedSubview(messageLabel)
         container.addArrangedSubview(profileImageView)
         container.addArrangedSubview(vstack)
         
-        addSubview(container)
+        contentView.addSubview(container)   // always use contentView in cells. fix issue of button not being clickable
         
         NSLayoutConstraint.activate([
-            container.topAnchor.constraint(equalTo: layoutMarginsGuide.topAnchor),
-            container.bottomAnchor.constraint(equalTo: layoutMarginsGuide.bottomAnchor),
-            container.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
-            container.trailingAnchor.constraint(equalTo: layoutMarginsGuide.trailingAnchor),
+            container.topAnchor.constraint(equalTo: contentView.layoutMarginsGuide.topAnchor),
+            container.bottomAnchor.constraint(equalTo: contentView.layoutMarginsGuide.bottomAnchor),
+            container.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
 
         ])
         
@@ -103,6 +124,37 @@ class MessageTableViewCell: UITableViewCell {
         
         messageLabel.textColor = .label
         messageLabel.font = .systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .regular)
+        
+        optionButton.addAction(didTapOptionButton(uid: message.uid), for: .menuActionTriggered)
+    }
+    
+    func didTapOptionButton(uid: String) -> UIAction {
+        return UIAction { [weak self] _ in
+            guard let self else { return }
+            var menuItems: [UIAction] = [didTapReportUserButton(), didTapBlockUserButton(uid: uid)]
+            self.optionButton.menu = UIMenu(children: menuItems)
+        }
+    }
+    
+    func didTapReportUserButton() -> UIAction {
+        return UIAction(title: "Report User", image: UIImage(systemName: "exclamationmark.bubble"), attributes: .destructive) { [weak self] _ in
+            guard let self else { return }
+            delegate?.messageTableViewCell(self, didTapReportUser: true)
+        }
+    }
+    
+    func didTapBlockUserButton(uid: String) -> UIAction {
+        if gameManager.service.blockedUserIDs.contains(uid) {
+            return UIAction(title: "Unblock User", image: UIImage(systemName: "nosign"), attributes: .destructive) { [weak self] _ in
+                guard let self else { return }
+                delegate?.messageTableViewCell(self, didTapUnblockUser: uid)
+            }
+        } else {
+            return UIAction(title: "Block User", image: UIImage(systemName: "nosign"), attributes: .destructive) { [weak self] _ in
+                guard let self else { return }
+                delegate?.messageTableViewCell(self, didTapBlockUser: uid)
+            }
+        }
     }
 }
 

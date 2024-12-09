@@ -31,11 +31,11 @@ enum AuthenticationState {
 // - anonymous accounts don’t let users have the same account on multiple devices
 // - unrecoverable if the user ever gets signed out or unistalls app
 class FirebaseService {
-    
     var name: String = ""
     var pfpImage: UIImage? = nil
     var uid: String? = nil
     var currentNonce: String?
+    var blockedUserIDs: [String] = []
 
     var ref = Database.database().reference()   // Realtime Database
     let db = Firestore.firestore()              // Firestore
@@ -60,6 +60,8 @@ class FirebaseService {
                             self.uid = user.uid
                             self.pfpImage = try? await self.getProfilePicture(uid: user.uid) ?? nil
                             Settings.shared.name = existingUser.name
+                            self.blockedUserIDs = await self.getBlockedUsers(uid: user.uid)
+                            
                         } else {
                             print("Creating new user!")
                             let newUser = try await self.createUser(uid: user.uid)
@@ -81,6 +83,22 @@ class FirebaseService {
             }
         }
         
+    }
+    
+    func getBlockedUsers(uid: String) async -> [String] {
+        do {
+            var blockedUserIDs: [String] = []
+            let querySnapshot = try await db.collection("users/\(uid)/blockedUsers").getDocuments()
+            for document in querySnapshot.documents {
+                let blockedUid = document.documentID
+                blockedUserIDs.append(blockedUid)
+            }
+            print("Blocked users: \(blockedUserIDs)")
+            return blockedUserIDs
+        } catch {
+            print("Error getting blocked users: \(error)")
+            return []
+        }
     }
 
     func signInWithGoogle(_ viewControlller: UIViewController) async throws -> AuthDataResult? {

@@ -15,7 +15,7 @@ extension Notification.Name {
 class ChatViewController: UIViewController {
         
     var gameManager: GameManager!
-    var chatManager: ChatManager!
+    var chatManager: ChatManager!   // TODO: Move chatManager stuff into gameManager
     
     let tableView: UITableView = {
         let tableView = UITableView()
@@ -158,12 +158,9 @@ extension ChatViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: MessageTableViewCell.reuseIdentifier, for: indexPath) as! MessageTableViewCell
-        var message = chatManager.messages[indexPath.row]
-//        if let playerInfo = gameManager.playersInfo[message.uid] as? [String: AnyObject],
-//           let additionalInfo = playerInfo["additionalInfo"] as? [String: String],
-//           let name = additionalInfo["name"] {
-//            message.name = name
-//        }
+        cell.gameManager = gameManager
+        cell.delegate = self
+        let message = chatManager.messages[indexPath.row]
         
         var pfpImage: UIImage?
         if let image = gameManager.pfps[message.uid] {
@@ -191,5 +188,141 @@ extension ChatViewController: ChatManagerDelegate {
            visiblePaths.contains(oldLastIndexPath) {
             self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
         }
+    }
+}
+
+extension ChatViewController: MessageTableViewCellDelegate {
+    func messageTableViewCell(_ cell: MessageTableViewCell, didTapReportUser: Bool) {
+        guard let indexPath = tableView.indexPath(for: cell) else { return }
+        let message = chatManager.messages[indexPath.row]
+        
+        showReportUserAlert(uid: message.uid, chatMessage: message.message)
+    }
+    
+    func showReportUserAlert(uid: String, chatMessage: String) {
+        let alert = UIAlertController(title: "Report User", message: "Please enter reason for report.", preferredStyle: .alert)
+        
+        alert.addTextField { textField in
+            textField.placeholder = "Ex. Innapropriate messaging"
+            
+            let textFieldChangedAction = UIAction { _ in
+                alert.actions[1].isEnabled = textField.text!.count > 0 && textField.text!.count <= 20
+            }
+            
+            textField.addAction(textFieldChangedAction, for: .allEditingEvents)
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        alert.addAction(UIAlertAction(title: "Confirm", style: .destructive) { _ in
+            guard let textField = alert.textFields?[0],
+                  let reason = textField.text
+            else {
+                return
+            }
+            
+            let report = Report(uid: uid, chatMessage: chatMessage, reason: reason)
+            self.gameManager.reportUser(report: report)
+            self.showReportUserAlertSuccess()
+        })
+        
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func showReportUserAlertSuccess() {
+        let alert = UIAlertController(
+            title: "Report Sent",
+            message: "Thank you for helping us keep the community safe. Your report has been submitted and will be reviewed shortly.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Got It!", style: .default) { _ in
+            self.navigationController?.popViewController(animated: true)
+        })
+
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func messageTableViewCell(_ cell: MessageTableViewCell, didTapBlockUser blockedUid: String) {
+        guard let indexPath = tableView.indexPath(for: cell) else { return }
+        let message = chatManager.messages[indexPath.row]
+        showBlockAlert(blockedUserName: message.name, blockedUserID: message.uid)
+    }
+    
+    
+    func messageTableViewCell(_ cell: MessageTableViewCell, didTapUnblockUser blockedUid: String) {
+        guard let indexPath = tableView.indexPath(for: cell) else { return }
+        let message = chatManager.messages[indexPath.row]
+        showUnblockAlert(blockedUserName: message.name, blockedUserID: message.uid)
+
+    }
+    
+    func showBlockAlert(blockedUserName: String, blockedUserID: String) {
+        let alert = UIAlertController(
+            title: "Block User?",
+            message: "Are you sure you want to block \"\(blockedUserName)\"? You will no longer see chat messages they create.",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel)) // .cancel = dismiss automatically
+
+        alert.addAction(UIAlertAction(title: "Block", style: .destructive) { _ in
+            self.navigationController?.popViewController(animated: true)
+            Task {
+                await self.gameManager.blockUser(blockedUserID)
+                self.showBlockAlertSuccess()
+            }
+        })
+
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    
+    func showUnblockAlert(blockedUserName: String, blockedUserID: String) {
+        let alert = UIAlertController(
+            title: "Unblock User?",
+            message: "Are you sure you want to bunlock \"\(blockedUserName)\"? You will see chat messages they create.",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        alert.addAction(UIAlertAction(title: "Unblock", style: .destructive) { _ in
+            self.navigationController?.popViewController(animated: true)
+            Task {
+                await self.gameManager.unblockUser(blockedUserID)
+                self.showUnblockAlertSuccess()
+            }
+        })
+
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func showBlockAlertSuccess() {
+        let alert = UIAlertController(
+            title: "User Blocked",
+            message: "You will no longer see chat messages they create.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Ok", style: .default) { _ in
+            self.navigationController?.popViewController(animated: true)
+        })
+
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func showUnblockAlertSuccess() {
+        let alert = UIAlertController(
+            title: "User Unblocked",
+            message: "You have successfully unblocked this user. You will see chat messages they create.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Ok", style: .default) { _ in
+            self.navigationController?.popViewController(animated: true)
+        })
+
+        self.present(alert, animated: true, completion: nil)
     }
 }

@@ -889,6 +889,39 @@ class GameManager {
         ref.child("games/\(roomID)/secondsPerTurn").removeObserver(withHandle: handles["secondsPerTurn"]!)
         ref.child("games/\(roomID)/currentPlayerTurn").removeObserver(withHandle: handles["currentPlayerTurn"]!)
     }
+    
+    func reportUser(report: Report) {
+        do {
+            try db.collection("reports").document().setData(from: report)
+        } catch {
+            print("Fail to report user: \(error)")
+        }
+    }
+    
+    func blockUser(_ blockedUid: String) async {
+        guard let uid = service.uid else { return }
+        do {
+            try await db.collection("users").document(uid).collection("blockedUsers").document(blockedUid).setData([
+                "createdAt": Date.now
+            ])
+            service.blockedUserIDs.append(blockedUid)
+            print("Blocked \(blockedUid) successfully")
+        } catch {
+            print("Fail to block user: \(error)")
+        }
+    }
+    
+    func unblockUser(_ blockedUid: String) async {
+        guard let uid = service.uid else { return }
+        do {
+            // note: deleting documents do not delete subcollections. I use Delete User Data extension and edit configurations to allow so
+            try await db.collection("users").document(uid).collection("blockedUsers").document(blockedUid).delete()
+            service.blockedUserIDs = service.blockedUserIDs.filter { $0 != blockedUid }
+            print("Unblocked \(blockedUid) successfully")
+        } catch {
+            print("Error unblocking user: \(error)")
+        }
+    }
 }
 
 extension GameManager: TurnTimerDelegate {

@@ -25,6 +25,7 @@
 		32610AF32C992D2B0011946E /* bonk.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 32610AF22C992D2B0011946E /* bonk.mp3 */; };
 		32610AF52C9930140011946E /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AF42C9930140011946E /* SoundManager.swift */; };
 		32610AF72C9A28CB0011946E /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32610AF62C9A28CB0011946E /* GameView.swift */; };
+		3267F0DB2D06606D002CEA04 /* Report.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3267F0DA2D06606D002CEA04 /* Report.swift */; };
 		326F93B12C8B928E00B28F04 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B02C8B928E00B28F04 /* AppDelegate.swift */; };
 		326F93B32C8B928E00B28F04 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B22C8B928E00B28F04 /* SceneDelegate.swift */; };
 		326F93B52C8B928E00B28F04 /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326F93B42C8B928E00B28F04 /* HomeViewController.swift */; };
@@ -90,6 +91,7 @@
 		32610AF22C992D2B0011946E /* bonk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bonk.mp3; sourceTree = "<group>"; };
 		32610AF42C9930140011946E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		32610AF62C9A28CB0011946E /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		3267F0DA2D06606D002CEA04 /* Report.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Report.swift; sourceTree = "<group>"; };
 		326F93AD2C8B928E00B28F04 /* Word Jamboree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Word Jamboree.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		326F93B02C8B928E00B28F04 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		326F93B22C8B928E00B28F04 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -295,6 +297,7 @@
 				32EF33DB2C8E8E2D000850A5 /* Room.swift */,
 				32C06C682C92163A00D3676D /* Game.swift */,
 				32F9566C2CB32AE800DAA6E6 /* Message.swift */,
+				3267F0DA2D06606D002CEA04 /* Report.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -409,6 +412,7 @@
 				32610AEC2C98C9440011946E /* ArrowView.swift in Sources */,
 				32F144802CE2F32300AEB35B /* PrivacyViewController.swift in Sources */,
 				32D23A2E2CA264F6002C4F04 /* KeyboardView.swift in Sources */,
+				3267F0DB2D06606D002CEA04 /* Report.swift in Sources */,
 				32367FAA2CEADB91001AF2A5 /* LetterSequences.swift in Sources */,
 				326F93D22C8BD95600B28F04 /* LineView.swift in Sources */,
 				3213983A2CBAFA2200A636A7 /* LoginViewController.swift in Sources */,
