@@ -11,7 +11,7 @@ class LetterSequences {
     static let shared = LetterSequences()
     var letterDistrbution: [(String, Double)] = []
     
-    private init() { // can't create LetterSequences() instance
+    private init() { // can't create LetterSequences() instance outside this class
         loadLetterSequences()
     }
     
@@ -20,7 +20,6 @@ class LetterSequences {
         
         do {
             let fileContent = try String(contentsOfFile: filePath)
-            print(fileContent)
             let lines: [String] = fileContent.components(separatedBy: .newlines).filter { !$0.isEmpty }
             for line in lines {
                 let parts = line.components(separatedBy: "\t")
@@ -28,7 +27,6 @@ class LetterSequences {
                 let cumulativeWeight = Double(parts[1])!
                 letterDistrbution.append((letters, cumulativeWeight))
             }
-            print(letterDistrbution)
         } catch {
             print("Error reading file: \(error)")
         }

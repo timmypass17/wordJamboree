@@ -8,7 +8,7 @@
 import UIKit
 
 extension Notification.Name {
-    static let newMessageNotification = Notification.Name("newMessage")
+//    static let newMessageNotification = Notification.Name("newMessage")
     static let userStateChangedNotification = Notification.Name("userStateChanged")
 }
 
@@ -68,7 +68,7 @@ class ChatViewController: UIViewController {
         view.addGestureRecognizer(tap)
         scrollToBottom(animated: false)
         
-        NotificationCenter.default.addObserver(self, selector: #selector(handleInsertingNewMessage), name: .newMessageNotification, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(handleInsertingNewMessage), name: .newMessageNotification, object: nil)
     }
 
     // Handle keyboard showing
@@ -174,10 +174,6 @@ extension ChatViewController: UITableViewDataSource {
 
 extension ChatViewController: ChatManagerDelegate {
     func chatManager(_ chatManager: ChatManager, didReceiveNewMessage message: Message) {
-        handleInsertingNewMessage()
-    }
-    
-    @objc func handleInsertingNewMessage() {
         let indexPath = IndexPath(row: chatManager.messages.count - 1, section: 0)
         tableView.insertRows(at: [indexPath], with: .automatic)
         

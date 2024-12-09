@@ -20,7 +20,7 @@ enum AuthenticationState {
     case guest
 }
 
-// Note: deleting user auth from firebase will not remove user in app. Ex. So if i delete userA in firebase console, userA still exists in my app and I am still signed in even though it's deleted. Need to sign out explicity within app.
+// Note: deleting user auth from firebase will not remove user in app (uninstalling app doesn't work either). Ex. So if i delete userA in firebase console, userA still exists in my app and I am still signed in even though it's deleted. Need to sign out explicity within app using auth.signOut(). Or wait till user session expires (~1hr?)
 // Enabled anonymous account auto clean up
 // - 30 days anonymous users deleted
 // - Also added "Delete User Data" extension to delete related user data (e.g. name, pfp)
@@ -79,9 +79,13 @@ class FirebaseService {
                 } else {
                     // Create guest user
                     try await auth.signInAnonymously() // triggers auth state again
+                    print("Sign in anonymously")
                 }
             }
         }
+        
+        
+//        try? auth.signOut()
         
     }
     

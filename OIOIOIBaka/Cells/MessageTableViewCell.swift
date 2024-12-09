@@ -131,30 +131,42 @@ class MessageTableViewCell: UITableViewCell {
     func didTapOptionButton(uid: String) -> UIAction {
         return UIAction { [weak self] _ in
             guard let self else { return }
-            var menuItems: [UIAction] = [didTapReportUserButton(), didTapBlockUserButton(uid: uid)]
+            var menuItems: [UIAction] = [didTapReportUserButton(uid: uid), didTapBlockUserButton(uid: uid)]
             self.optionButton.menu = UIMenu(children: menuItems)
         }
     }
     
-    func didTapReportUserButton() -> UIAction {
-        return UIAction(title: "Report User", image: UIImage(systemName: "exclamationmark.bubble"), attributes: .destructive) { [weak self] _ in
+    func didTapReportUserButton(uid: String) -> UIAction {
+        var attributes: UIMenuElement.Attributes = [.destructive]
+        let myUid = gameManager.service.uid ?? ""
+        if myUid == uid {
+            attributes.insert(.disabled)
+        }
+        
+        return UIAction(title: "Report User", image: UIImage(systemName: "exclamationmark.bubble"), attributes: attributes) { [weak self] _ in
             guard let self else { return }
             delegate?.messageTableViewCell(self, didTapReportUser: true)
         }
     }
     
     func didTapBlockUserButton(uid: String) -> UIAction {
-        if gameManager.service.blockedUserIDs.contains(uid) {
-            return UIAction(title: "Unblock User", image: UIImage(systemName: "nosign"), attributes: .destructive) { [weak self] _ in
-                guard let self else { return }
+        var attributes: UIMenuElement.Attributes = [.destructive]
+        if gameManager.service.uid == uid {
+            attributes.insert(.disabled)
+        }
+        
+        let isBlocked = gameManager.service.blockedUserIDs.contains(uid)
+        let title = isBlocked ? "Unblock User" : "Block User"
+        let actionHandler: (UIAction) -> Void = { [weak self] _ in
+            guard let self else { return }
+            if isBlocked {
                 delegate?.messageTableViewCell(self, didTapUnblockUser: uid)
-            }
-        } else {
-            return UIAction(title: "Block User", image: UIImage(systemName: "nosign"), attributes: .destructive) { [weak self] _ in
-                guard let self else { return }
+            } else {
                 delegate?.messageTableViewCell(self, didTapBlockUser: uid)
             }
         }
+        
+        return UIAction(title: title, image: UIImage(systemName: "nosign"), attributes: attributes, handler: actionHandler)
     }
 }
 

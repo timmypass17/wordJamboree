@@ -51,8 +51,12 @@ class ChatManager {
                       let textMessage = messageDict["message"] as? String
                 else { return }
                 
+                let isBlockedUser = service.blockedUserIDs.contains(uid)
                 // Add message to messages (that is not from current user)
-                guard uid != self.service.uid else { return }
+                guard uid != service.uid,
+                      !isBlockedUser
+                else { return }
+                
                 let message = Message(uid: uid, name: name, message: textMessage)
                 self.messages.append(message)
                 self.delegate?.chatManager(self, didReceiveNewMessage: message)
