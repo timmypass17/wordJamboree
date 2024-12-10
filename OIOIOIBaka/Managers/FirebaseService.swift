@@ -84,7 +84,6 @@ class FirebaseService {
             }
         }
         
-        
 //        try? auth.signOut()
         
     }
@@ -104,7 +103,39 @@ class FirebaseService {
             return []
         }
     }
+    
+    func linkWithGoogle(_ viewControlller: UIViewController) async throws -> AuthDataResult? {
+        guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
+        
+        let config = GIDConfiguration(clientID: clientID)
+        GIDSignIn.sharedInstance.configuration = config
+        let result: GIDSignInResult = try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.main.async {
+                GIDSignIn.sharedInstance.signIn(withPresenting: viewControlller) { userResult, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else if let userResult = userResult {
+                        continuation.resume(returning: userResult)
+                    }
+                }
+            }
+        }
 
+        let user: GIDGoogleUser = result.user
+        guard let idToken = user.idToken?.tokenString else { return nil }
+
+        let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
+        if let guestUser = auth.currentUser, guestUser.isAnonymous {
+            let res = try await guestUser.link(with: credential)
+            self.authState = .permanent
+            NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+            print("Successfully linked account to Google!")
+            return res
+        }
+        
+        return nil
+    }
+    
     func signInWithGoogle(_ viewControlller: UIViewController) async throws -> AuthDataResult? {
         guard let clientID = FirebaseApp.app()?.options.clientID else { return nil }
         
@@ -129,30 +160,15 @@ class FirebaseService {
         // Have to attemp to link and then sign in because in my app, there is always a anon account being used.
         // Ex. User signs in and link account to google successfully, user later sign outs -> generates new anon user/uid, user attempts to sign in again using new anon uid but fails link because there is already a uid associated with that google account
         let credential: AuthCredential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
-        if let guestUser = auth.currentUser, guestUser.isAnonymous {
-            do {
-                // Convert anonymous account -> Google account
-                let res = try await guestUser.link(with: credential)
-                self.authState = .permanent
-                NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
-                print("Successfully linked guest account to Google account!")
-                return res
-            } catch let error as NSError {
-                if error.code == AuthErrorCode.credentialAlreadyInUse.rawValue {
-                    print("This Google account is already linked to another account.")
-                }
-                
-                // Google account exists already, log into it
-                do {
-                    let res = try await auth.signIn(with: credential)
-                    print("Signed in to Google account!")
-                    self.authState = .permanent
-                    NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
-                    return res
-                } catch {
-                    print("Error signing into Google account: \(error.localizedDescription)")
-                }
-            }
+
+        do {
+            let res = try await auth.signIn(with: credential)
+            print("Signed in to Google account!")
+            self.authState = .permanent
+            NotificationCenter.default.post(name: .userStateChangedNotification, object: nil)
+            return res
+        } catch {
+            print("Error signing into Google account: \(error.localizedDescription)")
         }
         
         return nil
@@ -328,6 +344,48 @@ class FirebaseService {
             .observeSingleEventAndPreviousSiblingKey(of: .value)
         
         return roomSnapshot.exists()
+    }
+    
+    func credentialsAlreadyInUseAlert(_ viewController: UIViewController, provider: String) {
+        let alert = UIAlertController(
+            title: "Credentials Already In Use",
+            message: "This \(provider) account is already linked to another account. Please login instead.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            viewController.navigationController?.popViewController(animated: true)    // hide alert
+        })
+
+        viewController.present(alert, animated: true, completion: nil)
+    }
+    
+    func linkSuccessAlert(_ viewController: UIViewController, provider: String) {
+        let alert = UIAlertController(
+            title: "Account Linked Successfully",
+            message: "Your account has been successfully linked to your \(provider) account. You can now use \(provider) to sign in and access your data seamlessly.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            viewController.dismiss(animated: true) // hide alert and dismiss modal
+        })
+
+        viewController.present(alert, animated: true, completion: nil)
+    }
+    
+    func loginSuccessAlert(_ viewController: UIViewController) {
+        let alert = UIAlertController(
+            title: "Login Successful",
+            message: "You have logged in successfully. Welcome back!",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            viewController.dismiss(animated: true) // hide alert and dismiss modal
+        })
+
+        viewController.present(alert, animated: true, completion: nil)
     }
 }
 

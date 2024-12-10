@@ -191,7 +191,7 @@ class SettingsViewController: UIViewController {
                 do {
                     try Auth.auth().signOut()
                     service.authState = .guest
-                    print("User signed out")
+                    
                 } catch{
                     print("Error signing out: \(error)")
                 }
@@ -361,7 +361,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
                 cell.label.text = "Sign Out"
                 cell.label.textColor = .red
             } else {
-                cell.label.text = "Sign In"
+                cell.label.text = "Link Account"
                 cell.label.textColor = .link
             }
             cell.selectionStyle = .default
@@ -445,7 +445,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if section == signInOutIndexPath.section {
-            return "Sign up to save your profile data permanently. Guest accounts are automatically deleted after 30 days."
+            return "Link your guest account to save profile data permanently. Guest accounts are automatically deleted after 30 days."
         }
         
         return nil

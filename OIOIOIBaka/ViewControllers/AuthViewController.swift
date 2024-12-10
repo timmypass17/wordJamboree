@@ -15,8 +15,8 @@ class AuthViewController: UIViewController {
         return viewController
     }()
 
-    let signUpViewController: SignUpViewController = {
-        let viewController = SignUpViewController()
+    let signUpViewController: LinkViewController = {
+        let viewController = LinkViewController()
         viewController.view.translatesAutoresizingMaskIntoConstraints = false
         return viewController
     }()
@@ -25,19 +25,20 @@ class AuthViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Sign In Providers"
+        navigationItem.title = "Link Providers"
         view.backgroundColor = .systemBackground
 
         loginViewController.delegate = self
         signUpViewController.delegate = self
         
         loginViewController.service = service
+        signUpViewController.service = service
         
         add(asChildViewController: loginViewController)
         add(asChildViewController: signUpViewController)
 
-        loginViewController.view.isHidden = false
-        signUpViewController.view.isHidden = true
+        signUpViewController.view.isHidden = false
+        loginViewController.view.isHidden = true
     }
 
     // Function to add a child view controller without removing it later
@@ -65,12 +66,14 @@ class AuthViewController: UIViewController {
 extension AuthViewController: LoginViewControllerDelegate {
     func loginViewController(_ viewController: LoginViewController, didTapSignUpButton: Bool) {
         toggleAuthView(showingLogin: false)
+        navigationItem.title = "Link Providers"
     }
 }
 
-extension AuthViewController: SignUpViewControllerDelegate {
-    func signUpViewController(_ viewController: SignUpViewController, didTapLoginButton: Bool) {
+extension AuthViewController: LinkViewControllerDelegate {
+    func linkViewController(_ viewController: LinkViewController, didTapLoginButton: Bool) {
         toggleAuthView(showingLogin: true)
+        navigationItem.title = "Login Providers"
     }
 }
 

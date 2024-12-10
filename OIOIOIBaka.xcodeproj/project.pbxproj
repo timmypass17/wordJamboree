@@ -12,7 +12,7 @@
 		321398322CB4630A00A636A7 /* AddMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398312CB4630A00A636A7 /* AddMessageView.swift */; };
 		321398362CBAF78400A636A7 /* AuthViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398352CBAF78400A636A7 /* AuthViewController.swift */; };
 		3213983A2CBAFA2200A636A7 /* LoginViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398392CBAFA2200A636A7 /* LoginViewController.swift */; };
-		3213983C2CBAFB5400A636A7 /* SignUpViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */; };
+		3213983C2CBAFB5400A636A7 /* LinkViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3213983B2CBAFB5400A636A7 /* LinkViewController.swift */; };
 		3213983E2CBB08DE00A636A7 /* DividerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3213983D2CBB08DD00A636A7 /* DividerView.swift */; };
 		321398412CBCD89E00A636A7 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321398402CBCD89D00A636A7 /* Settings.swift */; };
 		321398452CBDFB6500A636A7 /* snip.wav in Resources */ = {isa = PBXBuildFile; fileRef = 321398442CBDFB6400A636A7 /* snip.wav */; };
@@ -77,7 +77,7 @@
 		321398312CB4630A00A636A7 /* AddMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMessageView.swift; sourceTree = "<group>"; };
 		321398352CBAF78400A636A7 /* AuthViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewController.swift; sourceTree = "<group>"; };
 		321398392CBAFA2200A636A7 /* LoginViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewController.swift; sourceTree = "<group>"; };
-		3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpViewController.swift; sourceTree = "<group>"; };
+		3213983B2CBAFB5400A636A7 /* LinkViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkViewController.swift; sourceTree = "<group>"; };
 		3213983D2CBB08DD00A636A7 /* DividerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DividerView.swift; sourceTree = "<group>"; };
 		3213983F2CBC6B0200A636A7 /* OIOIOIBaka.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OIOIOIBaka.entitlements; sourceTree = "<group>"; };
 		321398402CBCD89D00A636A7 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
@@ -243,7 +243,7 @@
 				32F9565A2CB0620F00DAA6E6 /* SettingsViewController.swift */,
 				32F956682CB3256A00DAA6E6 /* ChatViewController.swift */,
 				321398352CBAF78400A636A7 /* AuthViewController.swift */,
-				3213983B2CBAFB5400A636A7 /* SignUpViewController.swift */,
+				3213983B2CBAFB5400A636A7 /* LinkViewController.swift */,
 				32A511B92CDAE5CC00EC768A /* HowToPlayViewController.swift */,
 				323EE7A42D027E0E00DEEF50 /* EULAViewController.swift */,
 			);
@@ -430,7 +430,7 @@
 				32F9565D2CB0628E00DAA6E6 /* SettingsTableViewCell.swift in Sources */,
 				3213983E2CBB08DE00A636A7 /* DividerView.swift in Sources */,
 				32EF33D32C8E70D4000850A5 /* FirebaseService.swift in Sources */,
-				3213983C2CBAFB5400A636A7 /* SignUpViewController.swift in Sources */,
+				3213983C2CBAFB5400A636A7 /* LinkViewController.swift in Sources */,
 				32610AF52C9930140011946E /* SoundManager.swift in Sources */,
 				321398302CB4476600A636A7 /* ChatManager.swift in Sources */,
 				32BF02222CE5480C007B3C40 /* ThemeTableViewController.swift in Sources */,
